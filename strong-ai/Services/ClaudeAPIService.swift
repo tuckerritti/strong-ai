@@ -9,7 +9,7 @@ struct ClaudeAPIService: Sendable {
     func send(systemPrompt: String, userMessage: String) async throws -> String {
         let response = try await client.messages.createMessage(
             [Message(role: .user, content: [.text(userMessage)])],
-            model: .custom("claude-sonnet-4-6-20250514"),
+            model: .custom("claude-sonnet-4-6"),
             system: [.text(systemPrompt, nil)],
             maxTokens: 2048
         )
@@ -25,7 +25,7 @@ struct ClaudeAPIService: Sendable {
     func stream(systemPrompt: String, userMessage: String) async throws -> AsyncThrowingStream<String, Error> {
         let stream = try await client.messages.streamMessage(
             [Message(role: .user, content: [.text(userMessage)])],
-            model: .custom("claude-sonnet-4-6-20250514"),
+            model: .custom("claude-sonnet-4-6"),
             system: [.text(systemPrompt, nil)],
             maxTokens: 2048
         )
