@@ -1,6 +1,10 @@
 import Foundation
+import os
 import UserNotifications
 
+private let logger = Logger(subsystem: "com.strong-ai", category: "TimerService")
+
+@MainActor
 @Observable
 final class TimerService {
     var remainingSeconds: Int = 0
@@ -11,6 +15,10 @@ final class TimerService {
 
     func start(seconds: Int) {
         stop()
+        guard seconds > 0 else {
+            logger.warning("Attempted to start timer with \(seconds) seconds, ignoring")
+            return
+        }
         remainingSeconds = seconds
         isRunning = true
         fireDate = Date().addingTimeInterval(TimeInterval(seconds))
@@ -18,12 +26,14 @@ final class TimerService {
         scheduleNotification(seconds: seconds)
 
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            let left = Int(ceil((self.fireDate ?? .now).timeIntervalSince(.now)))
-            if left <= 0 {
-                self.stop()
-            } else {
-                self.remainingSeconds = left
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let left = Int(ceil((self.fireDate ?? .now).timeIntervalSince(.now)))
+                if left <= 0 {
+                    self.stop()
+                } else {
+                    self.remainingSeconds = left
+                }
             }
         }
     }
@@ -38,7 +48,13 @@ final class TimerService {
     }
 
     func requestPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error {
+                logger.error("Notification permission error: \(error)")
+            } else if !granted {
+                logger.info("Notification permission denied by user")
+            }
+        }
     }
 
     private func scheduleNotification(seconds: Int) {
@@ -49,7 +65,11 @@ final class TimerService {
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(seconds), repeats: false)
         let request = UNNotificationRequest(identifier: "rest-timer", content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error {
+                logger.error("Failed to schedule notification: \(error)")
+            }
+        }
     }
 
     var formattedTime: String {

@@ -1,20 +1,24 @@
 import Foundation
 
-struct Workout: Codable {
+struct Workout: Codable, Sendable {
     var name: String
     var exercises: [WorkoutExercise]
 
     var totalSets: Int { exercises.reduce(0) { $0 + $1.sets.count } }
-    var estimatedMinutes: Int { totalSets * 3 }
+    var estimatedMinutes: Int {
+        let totalRest = exercises.flatMap(\.sets).reduce(0) { $0 + $1.restSeconds }
+        let workTime = totalSets * 45 // ~45s per set
+        return (totalRest + workTime) / 60
+    }
 }
 
-struct WorkoutExercise: Codable {
+struct WorkoutExercise: Codable, Sendable {
     var name: String
     var muscleGroup: String
     var sets: [WorkoutSet]
 }
 
-struct WorkoutSet: Codable {
+struct WorkoutSet: Codable, Sendable {
     var reps: Int
     var weight: Double
     var restSeconds: Int

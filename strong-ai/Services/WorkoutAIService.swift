@@ -1,4 +1,7 @@
 import Foundation
+import os
+
+private let logger = Logger(subsystem: "com.strong-ai", category: "WorkoutAI")
 
 struct WorkoutAIService {
 
@@ -118,15 +121,8 @@ struct WorkoutAIService {
         return parts.joined(separator: "\n\n")
     }
 
-    private static func parseWorkout(from response: String) throws -> Workout {
-        // Extract JSON from response (handle markdown code fences)
-        let jsonString: String
-        if let start = response.range(of: "{"),
-           let end = response.range(of: "}", options: .backwards) {
-            jsonString = String(response[start.lowerBound...end.lowerBound])
-        } else {
-            jsonString = response
-        }
+    static func parseWorkout(from response: String) throws -> Workout {
+        let jsonString = JSONExtractor.extractObject(from: response)
 
         guard let data = jsonString.data(using: .utf8) else {
             throw ParseError.invalidJSON
@@ -135,7 +131,8 @@ struct WorkoutAIService {
         do {
             return try JSONDecoder().decode(Workout.self, from: data)
         } catch {
-            throw ParseError.decodingFailed(error.localizedDescription)
+            logger.error("Workout decode failed: \(String(describing: error))")
+            throw ParseError.decodingFailed(String(describing: error))
         }
     }
 
@@ -149,6 +146,40 @@ struct WorkoutAIService {
             case .decodingFailed(let msg): "Failed to parse workout: \(msg)"
             }
         }
+    }
+}
+
+// MARK: - Shared JSON extraction
+
+enum JSONExtractor {
+    /// Extracts the outermost JSON object from a string by matching balanced braces.
+    static func extractObject(from text: String) -> String {
+        guard let openIndex = text.firstIndex(of: "{") else { return text }
+
+        var depth = 0
+        var inString = false
+        var escape = false
+
+        for i in text.indices[openIndex...] {
+            let ch = text[i]
+
+            if escape { escape = false; continue }
+            if ch == "\\" && inString { escape = true; continue }
+            if ch == "\"" { inString.toggle(); continue }
+
+            guard !inString else { continue }
+
+            if ch == "{" { depth += 1 }
+            else if ch == "}" {
+                depth -= 1
+                if depth == 0 {
+                    return String(text[openIndex...i])
+                }
+            }
+        }
+
+        // Fallback: return from first brace to end
+        return String(text[openIndex...])
     }
 }
 

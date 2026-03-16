@@ -1,5 +1,8 @@
 import Foundation
 import HealthKit
+import os
+
+private let logger = Logger(subsystem: "com.strong-ai", category: "HealthKit")
 
 struct HealthContext: Sendable {
     var sleepHours: Double?
@@ -37,17 +40,29 @@ final class HealthKitService: Sendable {
         try await store.requestAuthorization(toShare: [], read: readTypes)
     }
 
-    func fetchRecentHealthData() async throws -> HealthContext {
-        async let sleep = fetchSleepHours()
-        async let rhr = fetchLatestQuantity(.restingHeartRate, unit: HKUnit(from: "count/min"))
-        async let hrv = fetchLatestQuantity(.heartRateVariabilitySDNN, unit: HKUnit.secondUnit(with: .milli))
-        async let cal = fetchTodaySum(.activeEnergyBurned, unit: .kilocalorie())
+    func fetchRecentHealthData() async -> HealthContext {
+        var sleepHours: Double?
+        var rhr: Double?
+        var hrv: Double?
+        var cal: Double?
 
-        return await HealthContext(
-            sleepHours: try? sleep,
-            restingHeartRate: try? rhr,
-            hrv: try? hrv,
-            activeCaloriesToday: try? cal
+        do { sleepHours = try await fetchSleepHours() }
+        catch { logger.error("Failed to fetch sleep data: \(error)") }
+
+        do { rhr = try await fetchLatestQuantity(.restingHeartRate, unit: HKUnit(from: "count/min")) }
+        catch { logger.error("Failed to fetch resting heart rate: \(error)") }
+
+        do { hrv = try await fetchLatestQuantity(.heartRateVariabilitySDNN, unit: HKUnit.secondUnit(with: .milli)) }
+        catch { logger.error("Failed to fetch HRV: \(error)") }
+
+        do { cal = try await fetchTodaySum(.activeEnergyBurned, unit: .kilocalorie()) }
+        catch { logger.error("Failed to fetch active calories: \(error)") }
+
+        return HealthContext(
+            sleepHours: sleepHours,
+            restingHeartRate: rhr,
+            hrv: hrv,
+            activeCaloriesToday: cal
         )
     }
 
@@ -56,7 +71,10 @@ final class HealthKitService: Sendable {
     private func fetchSleepHours() async throws -> Double? {
         let sleepType = HKCategoryType(.sleepAnalysis)
         let now = Date()
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now)!
+        guard let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now) else {
+            logger.warning("Could not compute yesterday's date")
+            return nil
+        }
         let predicate = HKQuery.predicateForSamples(withStart: yesterday, end: now, options: .strictEndDate)
 
         let samples = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<[HKCategorySample], Error>) in
@@ -92,7 +110,10 @@ final class HealthKitService: Sendable {
     ) async throws -> Double? {
         let type = HKQuantityType(identifier)
         let now = Date()
-        let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: now)!
+        guard let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: now) else {
+            logger.warning("Could not compute week-ago date")
+            return nil
+        }
         let predicate = HKQuery.predicateForSamples(withStart: weekAgo, end: now)
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
 

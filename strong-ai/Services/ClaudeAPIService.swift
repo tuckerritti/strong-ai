@@ -31,7 +31,7 @@ struct ClaudeAPIService: Sendable {
         )
 
         return AsyncThrowingStream { continuation in
-            Task {
+            let task = Task {
                 do {
                     for try await chunk in stream {
                         if let delta = chunk as? StreamingContentBlockDeltaResponse,
@@ -45,6 +45,7 @@ struct ClaudeAPIService: Sendable {
                     continuation.finish(throwing: error)
                 }
             }
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 

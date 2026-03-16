@@ -89,11 +89,13 @@ private struct AddExerciseSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") {
-                        let exercise = Exercise(name: name.trimmingCharacters(in: .whitespaces), muscleGroup: muscleGroup)
+                        let trimmedName = name.trimmingCharacters(in: .whitespaces)
+                        let trimmedGroup = muscleGroup.trimmingCharacters(in: .whitespaces)
+                        let exercise = Exercise(name: trimmedName, muscleGroup: trimmedGroup)
                         modelContext.insert(exercise)
                         dismiss()
                     }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || muscleGroup.isEmpty)
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || muscleGroup.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
         }

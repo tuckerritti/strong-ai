@@ -1,7 +1,10 @@
 import Foundation
+import os
 import SwiftData
 
-struct LogSet: Codable, Hashable {
+private let logger = Logger(subsystem: "com.strong-ai", category: "WorkoutLog")
+
+struct LogSet: Codable, Hashable, Sendable {
     var reps: Int
     var weight: Double
     var isWarmup: Bool = false
@@ -10,7 +13,7 @@ struct LogSet: Codable, Hashable {
     var completedAt: Date?
 }
 
-struct LogEntry: Codable, Hashable {
+struct LogEntry: Codable, Hashable, Sendable {
     var exerciseName: String
     var muscleGroup: String
     var sets: [LogSet]
@@ -24,13 +27,26 @@ final class WorkoutLog {
     var entriesData: Data
 
     var entries: [LogEntry] {
-        get { (try? JSONDecoder().decode([LogEntry].self, from: entriesData)) ?? [] }
-        set { entriesData = (try? JSONEncoder().encode(newValue)) ?? Data() }
+        get {
+            do {
+                return try JSONDecoder().decode([LogEntry].self, from: entriesData)
+            } catch {
+                logger.error("Failed to decode workout entries: \(error)")
+                return []
+            }
+        }
+        set {
+            do {
+                entriesData = try JSONEncoder().encode(newValue)
+            } catch {
+                logger.error("Failed to encode workout entries: \(error)")
+            }
+        }
     }
 
     var totalSets: Int { entries.reduce(0) { $0 + $1.sets.filter { $0.completedAt != nil }.count } }
     var durationMinutes: Int {
-        guard let end = finishedAt else { return 0 }
+        let end = finishedAt ?? .now
         return Int(end.timeIntervalSince(startedAt) / 60)
     }
     var totalVolume: Double {
@@ -43,6 +59,11 @@ final class WorkoutLog {
     init(workoutName: String, entries: [LogEntry] = [], startedAt: Date = .now) {
         self.workoutName = workoutName
         self.startedAt = startedAt
-        self.entriesData = (try? JSONEncoder().encode(entries)) ?? Data()
+        do {
+            self.entriesData = try JSONEncoder().encode(entries)
+        } catch {
+            logger.error("Failed to encode initial workout entries: \(error)")
+            self.entriesData = Data()
+        }
     }
 }

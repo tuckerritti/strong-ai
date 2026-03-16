@@ -1,4 +1,7 @@
 import Foundation
+import os
+
+private let logger = Logger(subsystem: "com.strong-ai", category: "ChatAI")
 
 enum ChatStreamEvent: Sendable {
     case text(String)
@@ -60,7 +63,7 @@ struct ChatAIService {
         let tokenStream = try await api.stream(systemPrompt: systemPrompt, userMessage: userMessage)
 
         return AsyncThrowingStream { continuation in
-            Task {
+            let task = Task {
                 var accumulated = ""
                 var sentExplanationUpTo = 0
 
@@ -91,9 +94,11 @@ struct ChatAIService {
                     continuation.yield(.result(result))
                     continuation.finish()
                 } catch {
+                    logger.error("Chat stream failed: \(error)")
                     continuation.finish(throwing: error)
                 }
             }
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 
@@ -105,26 +110,35 @@ struct ChatAIService {
             explanation = response[response.startIndex..<separatorRange.lowerBound]
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let afterSeparator = String(response[separatorRange.upperBound...])
-            jsonString = extractJSON(from: afterSeparator)
+            jsonString = JSONExtractor.extractObject(from: afterSeparator)
         } else {
             // Fallback: try to find JSON in the whole response
             explanation = ""
-            jsonString = extractJSON(from: response)
+            jsonString = JSONExtractor.extractObject(from: response)
         }
 
         guard let data = jsonString.data(using: .utf8) else {
-            throw WorkoutAIService.ParseError.invalidJSON
+            throw ChatParseError.invalidJSON
         }
 
-        let workout = try JSONDecoder().decode(Workout.self, from: data)
-        return ChatResult(workout: workout, explanation: explanation)
+        do {
+            let workout = try JSONDecoder().decode(Workout.self, from: data)
+            return ChatResult(workout: workout, explanation: explanation)
+        } catch {
+            logger.error("Chat workout decode failed: \(String(describing: error))")
+            throw ChatParseError.decodingFailed(String(describing: error))
+        }
     }
 
-    private static func extractJSON(from text: String) -> String {
-        if let start = text.range(of: "{"),
-           let end = text.range(of: "}", options: .backwards) {
-            return String(text[start.lowerBound...end.lowerBound])
+    enum ChatParseError: LocalizedError {
+        case invalidJSON
+        case decodingFailed(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .invalidJSON: "Could not find valid JSON in chat response"
+            case .decodingFailed(let msg): "Failed to parse chat workout: \(msg)"
+            }
         }
-        return text
     }
 }

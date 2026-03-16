@@ -5,12 +5,7 @@ struct SettingsView: View {
     @Query private var profiles: [UserProfile]
     @Environment(\.modelContext) private var modelContext
 
-    private var profile: UserProfile {
-        if let existing = profiles.first { return existing }
-        let new = UserProfile()
-        modelContext.insert(new)
-        return new
-    }
+    private var profile: UserProfile? { profiles.first }
 
     var body: some View {
         NavigationStack {
@@ -49,6 +44,11 @@ struct SettingsView: View {
                     .padding(.bottom, 100)
                 }
             }
+            .onAppear {
+                if profiles.isEmpty {
+                    modelContext.insert(UserProfile())
+                }
+            }
         }
     }
 
@@ -69,8 +69,8 @@ struct SettingsView: View {
 
     private func binding(_ keyPath: ReferenceWritableKeyPath<UserProfile, String>) -> Binding<String> {
         Binding(
-            get: { profile[keyPath: keyPath] },
-            set: { profile[keyPath: keyPath] = $0 }
+            get: { profile?[keyPath: keyPath] ?? "" },
+            set: { profile?[keyPath: keyPath] = $0 }
         )
     }
 }

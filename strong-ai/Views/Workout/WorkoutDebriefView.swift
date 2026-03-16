@@ -1,4 +1,7 @@
+import os
 import SwiftUI
+
+private let logger = Logger(subsystem: "com.strong-ai", category: "WorkoutDebrief")
 
 struct WorkoutDebriefView: View {
     let log: WorkoutLog
@@ -88,6 +91,7 @@ struct WorkoutDebriefView: View {
                 profile: profile
             )
         } catch {
+            logger.error("Debrief generation failed: \(error)")
             debrief = "Nice work finishing \(log.workoutName)! \(log.totalSets) sets, \(Int(log.totalVolume).formatted()) lbs total volume in \(log.durationMinutes) minutes."
         }
 

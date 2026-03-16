@@ -76,7 +76,8 @@ struct HistoryListView: View {
 
         while logDates.contains(currentDate) {
             count += 1
-            currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate) ?? currentDate
+            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDate) else { break }
+            currentDate = previousDay
         }
         return count
     }

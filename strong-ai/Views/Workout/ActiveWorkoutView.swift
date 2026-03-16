@@ -1,5 +1,8 @@
+import os
 import SwiftUI
 import SwiftData
+
+private let logger = Logger(subsystem: "com.strong-ai", category: "ActiveWorkout")
 
 struct ActiveWorkoutView: View {
     @Environment(\.modelContext) private var modelContext
@@ -33,18 +36,16 @@ struct ActiveWorkoutView: View {
 
     var body: some View {
         ZStack {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        headerSection
-                        timerSection
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    headerSection
+                    timerSection
 
-                        ForEach(Array(viewModel.entries.enumerated()), id: \.offset) { exerciseIndex, entry in
-                            exerciseSection(exerciseIndex: exerciseIndex, entry: entry)
-                        }
+                    ForEach(Array(viewModel.entries.enumerated()), id: \.offset) { exerciseIndex, entry in
+                        exerciseSection(exerciseIndex: exerciseIndex, entry: entry)
                     }
-                    .padding(.bottom, 120)
                 }
+                .padding(.bottom, 120)
             }
             .safeAreaInset(edge: .bottom) {
                 bottomBar
@@ -314,7 +315,7 @@ struct ActiveWorkoutView: View {
 
             // Wrap to intercept results and apply workout changes
             return AsyncThrowingStream { continuation in
-                Task {
+                let task = Task {
                     do {
                         for try await event in stream {
                             if case .result(let result) = event {
@@ -324,11 +325,14 @@ struct ActiveWorkoutView: View {
                         }
                         continuation.finish()
                     } catch {
+                        logger.error("Mid-workout chat stream failed: \(error)")
                         continuation.finish(throwing: error)
                     }
                 }
+                continuation.onTermination = { _ in task.cancel() }
             }
         } catch {
+            logger.error("Mid-workout chat setup failed: \(error)")
             return AsyncThrowingStream { continuation in
                 continuation.yield(.text("Error: \(error.localizedDescription)"))
                 continuation.finish()
@@ -384,8 +388,14 @@ final class ActiveWorkoutViewModel {
 
         elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self else { return }
-            self.elapsedSeconds = Int(Date().timeIntervalSince(self.startedAt))
+            MainActor.assumeIsolated {
+                self.elapsedSeconds = Int(Date().timeIntervalSince(self.startedAt))
+            }
         }
+    }
+
+    deinit {
+        elapsedTimer?.invalidate()
     }
 
     func plannedSet(exerciseIndex: Int, setIndex: Int) -> WorkoutSet? {

@@ -1,5 +1,8 @@
+import os
 import SwiftUI
 import SwiftData
+
+private let logger = Logger(subsystem: "com.strong-ai", category: "HomeView")
 
 struct HomeView: View {
     @Query(
@@ -76,8 +79,9 @@ struct HomeView: View {
         errorMessage = nil
 
         if HealthKitService.shared.isAvailable {
-            try? await HealthKitService.shared.requestAuthorization()
-            healthContext = try? await HealthKitService.shared.fetchRecentHealthData()
+            do { try await HealthKitService.shared.requestAuthorization() }
+            catch { logger.error("HealthKit authorization failed: \(error)") }
+            healthContext = await HealthKitService.shared.fetchRecentHealthData()
         }
 
         do {
@@ -90,6 +94,7 @@ struct HomeView: View {
             )
             todayWorkout = workout
         } catch {
+            logger.error("Workout generation failed: \(error)")
             errorMessage = error.localizedDescription
         }
 
@@ -108,7 +113,7 @@ struct HomeView: View {
             )
 
             return AsyncThrowingStream { continuation in
-                Task {
+                let task = Task {
                     do {
                         for try await event in stream {
                             if case .result(let result) = event {
@@ -119,11 +124,14 @@ struct HomeView: View {
                         }
                         continuation.finish()
                     } catch {
+                        logger.error("Chat stream failed: \(error)")
                         continuation.finish(throwing: error)
                     }
                 }
+                continuation.onTermination = { _ in task.cancel() }
             }
         } catch {
+            logger.error("Chat stream setup failed: \(error)")
             return AsyncThrowingStream { continuation in
                 continuation.yield(.text("Error: \(error.localizedDescription)"))
                 continuation.finish()
@@ -207,7 +215,8 @@ struct HomeView: View {
 
         while logDates.contains(currentDate) {
             count += 1
-            currentDate = calendar.date(byAdding: .day, value: -1, to: currentDate) ?? currentDate
+            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDate) else { break }
+            currentDate = previousDay
         }
         return count
     }
