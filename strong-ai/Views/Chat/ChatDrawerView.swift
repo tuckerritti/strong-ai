@@ -27,40 +27,22 @@ struct ChatDrawerView<CollapsedExtra: View>: View {
     @State private var isSending = false
     @FocusState private var isInputFocused: Bool
     @State private var barText = ""
-    @FocusState private var isBarFocused: Bool
-    @State private var selectedDetent: PresentationDetent = .height(80)
 
     var body: some View {
-        Color.clear
-            .sheet(isPresented: .constant(true)) {
-                sheetContent
-                    .presentationDetents(
-                        [.height(collapsedHeight), .large],
-                        selection: $selectedDetent
-                    )
-                    .presentationDragIndicator(.visible)
-                    .presentationBackgroundInteraction(.enabled(upThrough: .height(collapsedHeight)))
-                    .interactiveDismissDisabled()
-                    .presentationCornerRadius(16)
-                    .presentationBackground(.white)
-            }
-            .onChange(of: selectedDetent) { _, newValue in
-                isExpanded = (newValue == .large)
-            }
-            .onChange(of: isExpanded) { _, newValue in
-                selectedDetent = newValue ? .large : .height(collapsedHeight)
-            }
-            .onAppear {
-                selectedDetent = isExpanded ? .large : .height(collapsedHeight)
-            }
-    }
-
-    @ViewBuilder
-    private var sheetContent: some View {
-        if selectedDetent == .large {
-            expandedContent
-        } else {
+        VStack {
+            Spacer()
             collapsedBar
+                .background {
+                    Color.white
+                        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 16, topTrailingRadius: 16))
+                        .ignoresSafeArea(.container, edges: .bottom)
+                }
+        }
+        .sheet(isPresented: $isExpanded) {
+            expandedContent
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(16)
+                .presentationBackground(.white)
         }
     }
 
@@ -68,50 +50,52 @@ struct ChatDrawerView<CollapsedExtra: View>: View {
 
     private var collapsedBar: some View {
         VStack(spacing: 10) {
+            // Grab handle
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.black.opacity(0.15))
+                .frame(width: 36, height: 4)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+                .contentShape(Rectangle())
+                .onTapGesture { isExpanded = true }
+                .gesture(
+                    DragGesture(minimumDistance: 10)
+                        .onEnded { value in
+                            if value.translation.height < -30 {
+                                isExpanded = true
+                            }
+                        }
+                )
+
             HStack(spacing: 12) {
-                if isBarFocused {
-                    TextField(placeholder, text: $barText, axis: .vertical)
-                        .font(.system(size: 15))
-                        .lineLimit(1...5)
-                        .focused($isBarFocused)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 11)
-                        .background(Color(hex: 0xF5F5F5))
-                        .clipShape(RoundedRectangle(cornerRadius: 21))
-                        .onSubmit { sendFromBar() }
-                } else {
-                    Text(placeholder)
-                        .font(.system(size: 15))
-                        .foregroundStyle(Color.black.opacity(0.3))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 11)
-                        .background(Color(hex: 0xF5F5F5))
-                        .clipShape(RoundedRectangle(cornerRadius: 21))
-                        .onTapGesture { isBarFocused = true }
-                }
+                TextField(placeholder, text: $barText, axis: .vertical)
+                    .font(.system(size: 15))
+                    .lineLimit(1...5)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 11)
+                    .background(Color(hex: 0xF5F5F5))
+                    .clipShape(RoundedRectangle(cornerRadius: 21))
+                    .onSubmit { sendFromBar() }
 
                 Button {
-                    if isBarFocused {
-                        sendFromBar()
-                    } else {
-                        isBarFocused = true
-                    }
+                    sendFromBar()
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 34))
                         .foregroundStyle(
-                            isBarFocused && !barText.trimmingCharacters(in: .whitespaces).isEmpty
+                            !barText.trimmingCharacters(in: .whitespaces).isEmpty
                             ? Color(hex: 0x0A0A0A)
                             : Color.black.opacity(0.15)
                         )
                 }
+                .disabled(barText.trimmingCharacters(in: .whitespaces).isEmpty)
             }
 
             collapsedExtra()
         }
         .padding(.horizontal, 20)
-        .padding(.top, 6)
+        .padding(.bottom, 10)
     }
 
     // MARK: - Expanded Content
@@ -265,7 +249,6 @@ struct ChatDrawerView<CollapsedExtra: View>: View {
         guard !text.isEmpty else { return }
         pendingMessage = text
         barText = ""
-        isBarFocused = false
         isExpanded = true
     }
 
