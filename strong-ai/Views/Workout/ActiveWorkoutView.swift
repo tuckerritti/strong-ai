@@ -76,13 +76,14 @@ struct ActiveWorkoutView: View {
                     if viewModel.completedSets > 0 {
                         showingCancelAlert = true
                     } else {
+                        viewModel.stop()
                         dismiss()
                     }
                 }
             }
         }
         .alert("Discard Workout?", isPresented: $showingCancelAlert) {
-            Button("Discard", role: .destructive) { dismiss() }
+            Button("Discard", role: .destructive) { viewModel.stop(); dismiss() }
             Button("Keep Going", role: .cancel) { }
         } message: {
             Text("You've logged \(viewModel.completedSets) sets. This can't be undone.")
@@ -111,6 +112,7 @@ struct ActiveWorkoutView: View {
             }
         }
         .onAppear {
+            viewModel.start()
             viewModel.timerService.requestPermission()
         }
     }
@@ -353,6 +355,7 @@ final class ActiveWorkoutViewModel {
 
     private var workoutExercises: [WorkoutExercise]
     private var elapsedTimer: Timer?
+    private var hasStarted = false
 
     var elapsedSeconds: Int = 0
 
@@ -386,13 +389,26 @@ final class ActiveWorkoutViewModel {
                 }
             )
         }
+    }
 
+    func start() {
+        guard !hasStarted else { return }
+        hasStarted = true
+        startedAt = .now
+        elapsedSeconds = 0
+        elapsedTimer?.invalidate()
         elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self else { return }
             MainActor.assumeIsolated {
                 self.elapsedSeconds = Int(Date().timeIntervalSince(self.startedAt))
             }
         }
+    }
+
+    func stop() {
+        elapsedTimer?.invalidate()
+        elapsedTimer = nil
+        timerService.stop()
     }
 
     deinit {
@@ -473,8 +489,7 @@ final class ActiveWorkoutViewModel {
     }
 
     func finish() -> WorkoutLog {
-        elapsedTimer?.invalidate()
-        timerService.stop()
+        stop()
 
         let log = WorkoutLog(
             workoutName: workoutName,
