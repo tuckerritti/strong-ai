@@ -39,6 +39,7 @@ struct WorkoutAIService {
         - Include warmup sets where appropriate (mark isWarmup: true)
         - Rest seconds: 60-90 for hypertrophy, 120-180 for strength, 30-45 for accessories
         - Weight in lbs. Use 0 for bodyweight exercises.
+        - When the user's exercise library contains a matching exercise, use its EXACT name. Prefer library exercises over inventing new ones unless the workout calls for something different.
         """
 
         let userMessage = buildUserContext(profile: profile, recentLogs: recentLogs, exercises: exercises, healthContext: healthContext)

@@ -19,7 +19,8 @@ struct ChatAIService {
         apiKey: String,
         message: String,
         currentWorkout: Workout?,
-        profile: UserProfileSnapshot
+        profile: UserProfileSnapshot,
+        exercises: [ExerciseSnapshot]
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         let api = ClaudeAPIService(apiKey: apiKey)
 
@@ -52,6 +53,7 @@ struct ChatAIService {
         Goals: \(profile.goals.isEmpty ? "Not specified" : profile.goals)
         Equipment: \(profile.equipment.isEmpty ? "Not specified" : profile.equipment)
         Injuries: \(profile.injuries.isEmpty ? "None" : profile.injuries)
+        \(exercises.isEmpty ? "" : "\nExercise library (use exact names when referencing these):\n\(Dictionary(grouping: exercises, by: \.muscleGroup).map { "\($0.key): \($0.value.map(\.name).joined(separator: ", "))" }.joined(separator: "\n"))")
         """
 
         var userMessage = message

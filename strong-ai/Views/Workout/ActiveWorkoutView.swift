@@ -15,6 +15,7 @@ struct ActiveWorkoutView: View {
     ) private var recentLogs: [WorkoutLog]
 
     @Query private var profiles: [UserProfile]
+    @Query(sort: \Exercise.name) private var exercises: [Exercise]
 
     let workout: Workout
     @State private var viewModel: ActiveWorkoutViewModel
@@ -112,6 +113,7 @@ struct ActiveWorkoutView: View {
         }
         .onAppear {
             viewModel.timerService.requestPermission()
+            saveExercisesToLibrary(viewModel.currentWorkout.exercises)
         }
     }
 
@@ -290,6 +292,14 @@ struct ActiveWorkoutView: View {
         appState.isChatDrawerOpen = true
     }
 
+    private func saveExercisesToLibrary(_ workoutExercises: [WorkoutExercise]) {
+        ExerciseLibraryService.persist(
+            workoutExercises: workoutExercises,
+            existingExercises: exercises,
+            modelContext: modelContext
+        )
+    }
+
     private func finishWorkout() {
         let log = viewModel.finish()
         modelContext.insert(log)
@@ -311,7 +321,8 @@ struct ActiveWorkoutView: View {
                 apiKey: apiKey,
                 message: message,
                 currentWorkout: currentWorkout,
-                profile: profileSnapshot
+                profile: profileSnapshot,
+                exercises: exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup) }
             )
 
             // Wrap to intercept results and apply workout changes
@@ -321,6 +332,7 @@ struct ActiveWorkoutView: View {
                         for try await event in stream {
                             if case .result(let result) = event {
                                 viewModel.applyModifiedWorkout(result.workout)
+                                saveExercisesToLibrary(result.workout.exercises)
                             }
                             continuation.yield(event)
                         }
