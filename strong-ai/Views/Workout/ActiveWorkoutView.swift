@@ -211,12 +211,6 @@ struct ActiveWorkoutView: View {
                         isActive: viewModel.isActiveSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
                         onLog: { weight, reps, rpe in
                             viewModel.logSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight, reps: reps, rpe: rpe)
-                        },
-                        onToggleWarmup: {
-                            viewModel.entries[exerciseIndex].sets[setIndex].isWarmup.toggle()
-                        },
-                        onToggleFailure: {
-                            viewModel.entries[exerciseIndex].sets[setIndex].isFailure.toggle()
                         }
                     )
                     if setIndex < entry.sets.count - 1 {

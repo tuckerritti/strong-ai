@@ -41,7 +41,7 @@ struct ChatAIService {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
               "sets": [
-                { "reps": 8, "weight": 135, "restSeconds": 90, "isWarmup": false }
+                { "reps": 8, "weight": 135, "restSeconds": 90 }
               ]
             }
           ]

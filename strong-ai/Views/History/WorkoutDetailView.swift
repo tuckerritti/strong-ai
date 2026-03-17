@@ -57,6 +57,8 @@ struct WorkoutDetailView: View {
                     .frame(width: 72, alignment: .leading)
                 Text("REPS")
                     .frame(width: 64, alignment: .leading)
+                Text("RPE")
+                    .frame(width: 48, alignment: .leading)
                 Spacer()
             }
             .font(.system(size: 11, weight: .semibold))
@@ -81,14 +83,12 @@ struct WorkoutDetailView: View {
                             .font(.system(size: 14, weight: .medium))
                             .frame(width: 64, alignment: .leading)
 
-                        Spacer()
+                        Text(set.rpe.map { "\($0)" } ?? "—")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(set.rpe != nil ? Color(hex: 0x0A0A0A) : Color.black.opacity(0.3))
+                            .frame(width: 48, alignment: .leading)
 
-                        if set.isWarmup {
-                            TagBadge(text: "W", color: .orange)
-                        }
-                        if set.isFailure {
-                            TagBadge(text: "F", color: .red)
-                        }
+                        Spacer()
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 8)
@@ -99,23 +99,6 @@ struct WorkoutDetailView: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - Tag Badge
-
-private struct TagBadge: View {
-    let text: String
-    let color: Color
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(color)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(color.opacity(0.12))
-            .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 }
 

@@ -7,8 +7,6 @@ private let logger = Logger(subsystem: "com.strong-ai", category: "WorkoutLog")
 struct LogSet: Codable, Hashable, Sendable {
     var reps: Int
     var weight: Double
-    var isWarmup: Bool = false
-    var isFailure: Bool = false
     var rpe: Int?
     var completedAt: Date?
 }
