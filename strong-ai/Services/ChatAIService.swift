@@ -34,6 +34,7 @@ struct ChatAIService {
         ---JSON
         {
           "name": "Workout Name",
+          "insight": "One sentence explaining why this workout was programmed.",
           "exercises": [
             {
               "name": "Exercise Name",

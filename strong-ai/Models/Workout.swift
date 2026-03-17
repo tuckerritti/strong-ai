@@ -3,6 +3,7 @@ import Foundation
 struct Workout: Codable, Sendable {
     var name: String
     var exercises: [WorkoutExercise]
+    var insight: String?
 
     var totalSets: Int { exercises.reduce(0) { $0 + $1.sets.count } }
     var estimatedMinutes: Int {

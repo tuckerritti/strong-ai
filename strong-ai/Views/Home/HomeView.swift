@@ -284,35 +284,65 @@ struct HomeView: View {
             .padding(.top, 4)
 
             exerciseList(workout.exercises)
+
+            if let insight = workout.insight {
+                insightCallout(insight)
+            }
+
             startButton(workout)
         }
     }
 
+    private let maxVisibleExercises = 3
+
     private func exerciseList(_ exercises: [WorkoutExercise]) -> some View {
-        VStack(spacing: 0) {
-            ForEach(Array(exercises.enumerated()), id: \.offset) { index, exercise in
-                if index > 0 {
-                    Divider().padding(.horizontal, 16)
-                }
+        let visible = Array(exercises.prefix(maxVisibleExercises))
+        let remaining = exercises.count - visible.count
+
+        return VStack(spacing: 0) {
+            ForEach(Array(visible.enumerated()), id: \.offset) { _, exercise in
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(exercise.name)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color(hex: 0x0A0A0A))
-                        Text("\(exercise.sets.count) sets · \(exercise.sets.first.map { "\($0.reps) reps · \(Int($0.weight)) lbs" } ?? "")")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.black.opacity(0.35))
-                    }
+                    Text(exercise.name)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0x0A0A0A))
                     Spacer()
+                    Text("\(exercise.sets.count) sets · \(exercise.sets.first?.reps ?? 0) reps")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.black.opacity(0.35))
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .padding(.vertical, 10)
+            }
+
+            if remaining > 0 {
+                Text("+\(remaining) more")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.black.opacity(0.3))
+                    .padding(.vertical, 8)
             }
         }
         .background(Color(hex: 0xF5F5F5))
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal, 20)
         .padding(.top, 14)
+    }
+
+    private func insightCallout(_ insight: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "wand.and.stars")
+                .font(.system(size: 13))
+                .foregroundStyle(Color(red: 0.18, green: 0.39, blue: 0.78))
+                .padding(.top, 1)
+            Text(insight)
+                .font(.system(size: 13))
+                .lineSpacing(4)
+                .foregroundStyle(Color(red: 0.12, green: 0.24, blue: 0.47).opacity(0.6))
+        }
+        .padding(12)
+        .background(Color(red: 0.18, green: 0.39, blue: 0.78).opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
     }
 
     private func startButton(_ workout: Workout) -> some View {
@@ -329,7 +359,7 @@ struct HomeView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .padding(.horizontal, 20)
-        .padding(.top, 18)
+        .padding(.top, 16)
     }
 
     private var emptyWorkoutSection: some View {

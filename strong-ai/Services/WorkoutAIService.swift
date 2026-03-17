@@ -20,6 +20,7 @@ struct WorkoutAIService {
         Respond with ONLY valid JSON matching this schema — no markdown, no explanation:
         {
           "name": "Workout Name",
+          "insight": "One sentence explaining why you programmed this specific workout today.",
           "exercises": [
             {
               "name": "Exercise Name",
