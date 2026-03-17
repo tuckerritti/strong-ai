@@ -19,6 +19,7 @@ struct ActiveWorkoutView: View {
     let workout: Workout
     @State private var viewModel: ActiveWorkoutViewModel
     @State private var showingCancelAlert = false
+    @State private var showingFinishAlert = false
     @State private var showingDebrief = false
     @State private var finishedLog: WorkoutLog?
     @Environment(AppState.self) private var appState
@@ -80,12 +81,24 @@ struct ActiveWorkoutView: View {
                     }
                 }
             }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") {
+                    showingFinishAlert = true
+                }
+                .disabled(viewModel.completedSets == 0)
+            }
         }
         .alert("Discard Workout?", isPresented: $showingCancelAlert) {
             Button("Discard", role: .destructive) { dismiss() }
             Button("Keep Going", role: .cancel) { }
         } message: {
             Text("You've logged \(viewModel.completedSets) sets. This can't be undone.")
+        }
+        .alert("Finish Workout?", isPresented: $showingFinishAlert) {
+            Button("Finish") { finishWorkout() }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Save your workout with \(viewModel.completedSets) sets completed?")
         }
         .sheet(isPresented: $showingDebrief, onDismiss: { dismiss() }) {
             if let log = finishedLog {
@@ -260,19 +273,6 @@ struct ActiveWorkoutView: View {
                 }
             }
 
-            Button {
-                finishWorkout()
-            } label: {
-                Text("Finish Workout")
-                    .font(.custom("SpaceGrotesk-Bold", size: 17))
-                    .tracking(-0.2)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(viewModel.completedSets > 0 ? Color(hex: 0x34C759) : Color.black.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
-            .disabled(viewModel.completedSets == 0)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
