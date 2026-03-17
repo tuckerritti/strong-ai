@@ -41,6 +41,7 @@ struct ChatDrawerView<CollapsedExtra: View>: View {
         .sheet(isPresented: $isExpanded) {
             expandedContent
                 .presentationDragIndicator(.visible)
+                .presentationDetents([.large])
                 .presentationCornerRadius(16)
                 .presentationBackground(.white)
         }
@@ -120,8 +121,8 @@ struct ChatDrawerView<CollapsedExtra: View>: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .padding(.bottom, 16)
+            .padding(.top, 20)
+            .padding(.bottom, 8)
 
             Divider()
 
@@ -179,7 +180,6 @@ struct ChatDrawerView<CollapsedExtra: View>: View {
                     .background(Color(hex: 0xF5F5F5))
                     .clipShape(RoundedRectangle(cornerRadius: 21))
                     .onSubmit { Task { await send() } }
-                    .disabled(isSending)
 
                 Button {
                     Task { await send() }
