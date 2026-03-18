@@ -20,6 +20,7 @@ struct HomeView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var healthContext: HealthContext?
+    @State private var exercisesExpanded = false
     private var profile: UserProfile? { profiles.first }
     private var apiKey: String { profile?.apiKey ?? "" }
 
@@ -308,8 +309,8 @@ struct HomeView: View {
     private let maxVisibleExercises = 3
 
     private func exerciseList(_ exercises: [WorkoutExercise]) -> some View {
-        let visible = Array(exercises.prefix(maxVisibleExercises))
-        let remaining = exercises.count - visible.count
+        let visible = exercisesExpanded ? exercises : Array(exercises.prefix(maxVisibleExercises))
+        let remaining = exercises.count - maxVisibleExercises
 
         return VStack(spacing: 0) {
             ForEach(Array(visible.enumerated()), id: \.offset) { _, exercise in
@@ -327,10 +328,18 @@ struct HomeView: View {
             }
 
             if remaining > 0 {
-                Text("+\(remaining) more")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.black.opacity(0.3))
-                    .padding(.vertical, 8)
+                Button {
+                    withAnimation(.snappy(duration: 0.3)) {
+                        exercisesExpanded.toggle()
+                    }
+                } label: {
+                    Text(exercisesExpanded ? "Show less" : "+\(remaining) more")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.black.opacity(0.3))
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                }
             }
         }
         .background(Color(hex: 0xF5F5F5))
