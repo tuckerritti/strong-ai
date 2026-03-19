@@ -10,7 +10,6 @@ struct ExerciseLibraryView: View {
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
     @Query(filter: #Predicate<WorkoutLog> { $0.finishedAt != nil }) private var workoutLogs: [WorkoutLog]
     @Environment(\.modelContext) private var modelContext
-    @State private var showingAddExercise = false
     @State private var searchText = ""
     @State private var showingSearch = false
 
@@ -79,9 +78,6 @@ struct ExerciseLibraryView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddExercise) {
-                AddExerciseSheet()
-            }
         }
     }
 
@@ -98,7 +94,7 @@ struct ExerciseLibraryView: View {
                 Spacer()
 
                 Button {
-                    withAnimation { showingSearch.toggle() }
+                    withAnimation(.easeOut(duration: 0.15)) { showingSearch.toggle() }
                     if !showingSearch { searchText = "" }
                 } label: {
                     Image(systemName: "magnifyingglass")
@@ -109,16 +105,6 @@ struct ExerciseLibraryView: View {
                         .clipShape(Circle())
                 }
 
-                Button {
-                    showingAddExercise = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x1A1A1A))
-                        .frame(width: 36, height: 36)
-                        .background(Color(hex: 0xF0F0F0))
-                        .clipShape(Circle())
-                }
             }
             .padding(.top, 20)
             .padding(.horizontal, 20)
@@ -181,54 +167,6 @@ struct ExerciseLibraryView: View {
             Rectangle()
                 .fill(Color(hex: 0xF0F0F0))
                 .frame(height: 1)
-        }
-    }
-}
-
-private struct AddExerciseSheet: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
-    @State private var muscleGroup = ""
-
-    private let commonGroups = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Forearms"]
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                TextField("Exercise name", text: $name)
-                Section("Muscle Group") {
-                    TextField("Or type your own...", text: $muscleGroup)
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(commonGroups, id: \.self) { group in
-                                Button(group) {
-                                    muscleGroup = group
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(muscleGroup == group ? .green : .secondary)
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Add Exercise")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        let trimmedName = name.trimmingCharacters(in: .whitespaces)
-                        let trimmedGroup = muscleGroup.trimmingCharacters(in: .whitespaces)
-                        let exercise = Exercise(name: trimmedName, muscleGroup: trimmedGroup)
-                        modelContext.insert(exercise)
-                        dismiss()
-                    }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || muscleGroup.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-            }
         }
     }
 }
