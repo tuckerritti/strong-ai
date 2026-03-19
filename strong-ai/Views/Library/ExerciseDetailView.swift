@@ -14,6 +14,7 @@ struct ExerciseDetailView: View {
     private var exerciseLogs: [(date: Date, entry: LogEntry)] {
         allLogs.compactMap { log in
             guard let entry = log.entries.first(where: { $0.exerciseName == exercise.name }) else { return nil }
+            guard entry.sets.contains(where: { $0.completedAt != nil }) else { return nil }
             return (log.startedAt, entry)
         }
     }
@@ -273,7 +274,12 @@ struct ExerciseDetailView: View {
                     .padding(.bottom, 12)
 
                 ForEach(Array(recentEntries.enumerated()), id: \.offset) { index, log in
-                    historyRow(date: log.date, entry: log.entry, isPR: index == 0 && bestWeight == (log.entry.sets.map(\.weight).max() ?? 0))
+                    let completedMaxWeight = log.entry.sets
+                        .filter { $0.completedAt != nil }
+                        .map(\.weight)
+                        .max() ?? 0
+
+                    historyRow(date: log.date, entry: log.entry, isPR: index == 0 && bestWeight == completedMaxWeight)
 
                     if index < recentEntries.count - 1 {
                         Divider()
