@@ -12,6 +12,7 @@ struct ExerciseLibraryView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var searchText = ""
     @State private var showingSearch = false
+    @State private var showingAddExercise = false
 
     // MARK: - Computed Properties
 
@@ -19,9 +20,12 @@ struct ExerciseLibraryView: View {
         var map: [String: ExerciseStats] = [:]
         for log in workoutLogs {
             for entry in log.entries {
+                let completedSets = entry.sets.filter { $0.completedAt != nil }
+                guard !completedSets.isEmpty else { continue }
+
                 var stats = map[entry.exerciseName, default: ExerciseStats()]
                 stats.timesPerformed += 1
-                let maxWeight = entry.sets.compactMap({ $0.completedAt != nil ? $0.weight : nil }).max() ?? 0
+                let maxWeight = completedSets.map(\.weight).max() ?? 0
                 if maxWeight > stats.bestWeight { stats.bestWeight = maxWeight }
                 map[entry.exerciseName] = stats
             }
@@ -78,6 +82,9 @@ struct ExerciseLibraryView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingAddExercise) {
+                AddExerciseSheet()
+            }
         }
     }
 
@@ -98,6 +105,17 @@ struct ExerciseLibraryView: View {
                     if !showingSearch { searchText = "" }
                 } label: {
                     Image(systemName: "magnifyingglass")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(Color(hex: 0x1A1A1A))
+                        .frame(width: 36, height: 36)
+                        .background(Color(hex: 0xF0F0F0))
+                        .clipShape(Circle())
+                }
+
+                Button {
+                    showingAddExercise = true
+                } label: {
+                    Image(systemName: "plus")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(Color(hex: 0x1A1A1A))
                         .frame(width: 36, height: 36)
@@ -167,6 +185,56 @@ struct ExerciseLibraryView: View {
             Rectangle()
                 .fill(Color(hex: 0xF0F0F0))
                 .frame(height: 1)
+        }
+    }
+}
+
+private struct AddExerciseSheet: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var muscleGroup = ""
+
+    private let commonGroups = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Forearms"]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("Exercise name", text: $name)
+                Section("Muscle Group") {
+                    TextField("Or type your own...", text: $muscleGroup)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(commonGroups, id: \.self) { group in
+                                Button(group) {
+                                    muscleGroup = group
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(muscleGroup == group ? .green : .secondary)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Add Exercise")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let trimmedGroup = muscleGroup.trimmingCharacters(in: .whitespacesAndNewlines)
+                        modelContext.insert(Exercise(name: trimmedName, muscleGroup: trimmedGroup))
+                        dismiss()
+                    }
+                    .disabled(
+                        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                        muscleGroup.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    )
+                }
+            }
         }
     }
 }

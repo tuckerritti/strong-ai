@@ -151,9 +151,12 @@ struct ActiveWorkoutView: View {
 
     // MARK: - Timer
 
+    @ViewBuilder
     private var timerSection: some View {
-        RestTimerView(timerService: viewModel.timerService)
-            .padding(.horizontal, 20)
+        if viewModel.timerService.isRunning {
+            RestTimerView(timerService: viewModel.timerService)
+                .padding(.horizontal, 20)
+        }
     }
 
     // MARK: - Exercise Section
