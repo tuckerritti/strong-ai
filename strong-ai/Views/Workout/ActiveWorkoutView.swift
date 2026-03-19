@@ -146,18 +146,14 @@ struct ActiveWorkoutView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
         .padding(.top, 16)
-        .padding(.bottom, 16)
+        .padding(.bottom, 18)
     }
 
     // MARK: - Timer
 
-    @ViewBuilder
     private var timerSection: some View {
-        if viewModel.timerService.isRunning {
-            RestTimerView(timerService: viewModel.timerService)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-        }
+        RestTimerView(timerService: viewModel.timerService)
+            .padding(.horizontal, 20)
     }
 
     // MARK: - Exercise Section
