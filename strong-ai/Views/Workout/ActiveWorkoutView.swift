@@ -23,6 +23,8 @@ struct ActiveWorkoutView: View {
     @State private var showingFinishAlert = false
     @State private var showingDebrief = false
     @State private var finishedLog: WorkoutLog?
+    @State private var selectedExercise: Exercise?
+    @State private var debriefRecentLogs: [WorkoutLogSnapshot] = []
     @Environment(AppState.self) private var appState
 
     private var profile: UserProfile? { profiles.first }
@@ -95,19 +97,25 @@ struct ActiveWorkoutView: View {
         } message: {
             Text("Save your workout with \(viewModel.completedSets) sets completed?")
         }
-        .sheet(isPresented: $showingDebrief, onDismiss: { dismiss() }) {
+        .sheet(item: $selectedExercise) { exercise in
+            NavigationStack {
+                ExerciseDetailView(exercise: exercise)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") { selectedExercise = nil }
+                        }
+                    }
+            }
+        }
+        .sheet(isPresented: $showingDebrief, onDismiss: {
+            finishedLog = nil
+            debriefRecentLogs = []
+            dismiss()
+        }) {
             if let log = finishedLog {
                 WorkoutDebriefView(
                     log: log,
-                    recentLogs: recentLogs.prefix(5).map { l in
-                        WorkoutLogSnapshot(
-                            workoutName: l.workoutName,
-                            startedAt: l.startedAt,
-                            durationMinutes: l.durationMinutes,
-                            totalVolume: l.totalVolume,
-                            entries: l.entries
-                        )
-                    },
+                    recentLogs: debriefRecentLogs,
                     profile: UserProfileSnapshot(
                         goals: profile?.goals ?? "",
                         schedule: profile?.schedule ?? "",
@@ -163,17 +171,22 @@ struct ActiveWorkoutView: View {
 
     private func exerciseSection(exerciseIndex: Int, entry: LogEntry) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text(entry.exerciseName)
-                    .font(.custom("SpaceGrotesk-Bold", size: 18))
-                    .tracking(-0.18)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
-                Spacer()
-                Text(entry.muscleGroup.uppercased())
-                    .font(.system(size: 12, weight: .medium))
-                    .tracking(0.72)
-                    .foregroundStyle(Color.black.opacity(0.3))
+            Button {
+                selectedExercise = exercises.first { $0.name == entry.exerciseName }
+            } label: {
+                HStack {
+                    Text(entry.exerciseName)
+                        .font(.custom("SpaceGrotesk-Bold", size: 18))
+                        .tracking(-0.18)
+                        .foregroundStyle(Color(hex: 0x0A0A0A))
+                    Spacer()
+                    Text(entry.muscleGroup.uppercased())
+                        .font(.system(size: 12, weight: .medium))
+                        .tracking(0.72)
+                        .foregroundStyle(Color.black.opacity(0.3))
+                }
             }
+            .buttonStyle(.plain)
             .padding(.horizontal, 20)
             .padding(.top, 20)
             .padding(.bottom, 10)
@@ -228,10 +241,21 @@ struct ActiveWorkoutView: View {
 
 
     private func finishWorkout() {
+        debriefRecentLogs = recentLogs.prefix(5).map(makeSnapshot)
         let log = viewModel.finish()
         modelContext.insert(log)
         finishedLog = log
         showingDebrief = true
+    }
+
+    private func makeSnapshot(from log: WorkoutLog) -> WorkoutLogSnapshot {
+        WorkoutLogSnapshot(
+            workoutName: log.workoutName,
+            startedAt: log.startedAt,
+            durationMinutes: log.durationMinutes,
+            totalVolume: log.totalVolume,
+            entries: log.entries
+        )
     }
 
     private func streamMidWorkoutChat(_ message: String) async -> AsyncThrowingStream<ChatStreamEvent, Error>? {

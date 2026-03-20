@@ -61,9 +61,11 @@ struct ExerciseLibraryView: View {
                     ForEach(groupedExercises, id: \.0) { group, groupExercises in
                         Section {
                             ForEach(groupExercises) { exercise in
-                                exerciseRow(exercise)
-                                    .listRowSeparator(.hidden)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                                NavigationLink(value: exercise) {
+                                    exerciseRow(exercise)
+                                }
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
                             }
                             .onDelete { offsets in
                                 for index in offsets {
@@ -78,9 +80,16 @@ struct ExerciseLibraryView: View {
                 .listStyle(.plain)
                 .overlay {
                     if exercises.isEmpty {
-                        ContentUnavailableView("No Exercises", systemImage: "dumbbell.fill", description: Text("Add exercises to build your library."))
+                        ContentUnavailableView(
+                            "No Exercises",
+                            systemImage: "dumbbell.fill",
+                            description: Text("Add exercises to build your library.")
+                        )
                     }
                 }
+            }
+            .navigationDestination(for: Exercise.self) { exercise in
+                ExerciseDetailView(exercise: exercise)
             }
             .sheet(isPresented: $showingAddExercise) {
                 AddExerciseSheet()
@@ -100,29 +109,30 @@ struct ExerciseLibraryView: View {
 
                 Spacer()
 
-                Button {
-                    withAnimation(.easeOut(duration: 0.15)) { showingSearch.toggle() }
-                    if !showingSearch { searchText = "" }
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x1A1A1A))
-                        .frame(width: 36, height: 36)
-                        .background(Color(hex: 0xF0F0F0))
-                        .clipShape(Circle())
-                }
+                HStack(spacing: 10) {
+                    Button {
+                        withAnimation(.easeOut(duration: 0.15)) { showingSearch.toggle() }
+                        if !showingSearch { searchText = "" }
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(Color(hex: 0x1A1A1A))
+                            .frame(width: 36, height: 36)
+                            .background(Color(hex: 0xF0F0F0))
+                            .clipShape(Circle())
+                    }
 
-                Button {
-                    showingAddExercise = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x1A1A1A))
-                        .frame(width: 36, height: 36)
-                        .background(Color(hex: 0xF0F0F0))
-                        .clipShape(Circle())
+                    Button {
+                        showingAddExercise = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(Color(hex: 0x1A1A1A))
+                            .frame(width: 36, height: 36)
+                            .background(Color(hex: 0xF0F0F0))
+                            .clipShape(Circle())
+                    }
                 }
-
             }
             .padding(.top, 20)
             .padding(.horizontal, 20)
@@ -166,19 +176,17 @@ struct ExerciseLibraryView: View {
                         .foregroundStyle(Color(hex: 0x1A1A1A))
 
                     if let stats, stats.timesPerformed > 0 {
-                        Text(stats.bestWeight > 0
-                             ? "\(stats.timesPerformed) times · Best: \(Int(stats.bestWeight)) lbs"
-                             : "\(stats.timesPerformed) times")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color(hex: 0x999999))
+                        Text(
+                            stats.bestWeight > 0
+                                ? "\(stats.timesPerformed) times · Best: \(Int(stats.bestWeight)) lbs"
+                                : "\(stats.timesPerformed) times"
+                        )
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color(hex: 0x999999))
                     }
                 }
 
                 Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.black.opacity(0.2))
             }
             .padding(.vertical, 12)
 
