@@ -22,11 +22,6 @@ struct SetRowView: View {
                     .foregroundStyle(isCompleted ? Color(hex: 0x34C759) : Color.black.opacity(0.4))
                     .frame(width: 40, alignment: .leading)
 
-                Text(previousText)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.black.opacity(0.3))
-                    .frame(width: 72, alignment: .leading)
-
                 if isCompleted {
                     completedRow
                 } else if isActive {
@@ -149,8 +144,4 @@ struct SetRowView: View {
         }
     }
 
-    private var previousText: String {
-        guard let ps = plannedSet else { return "—" }
-        return "\(Int(ps.weight))×\(ps.reps)"
-    }
 }

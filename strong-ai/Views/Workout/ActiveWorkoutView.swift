@@ -175,8 +175,6 @@ struct ActiveWorkoutView: View {
             HStack(spacing: 0) {
                 Text("SET")
                     .frame(width: 40, alignment: .leading)
-                Text("PREV")
-                    .frame(width: 72, alignment: .leading)
                 Text("LBS")
                     .frame(width: 76, alignment: .center)
                 Text("REPS")
