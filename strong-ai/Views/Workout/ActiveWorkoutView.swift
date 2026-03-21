@@ -189,18 +189,17 @@ struct ActiveWorkoutView: View {
             .padding(.top, 20)
             .padding(.bottom, 10)
 
-            HStack(spacing: 0) {
+            HStack(spacing: 8) {
                 Text("SET")
                     .frame(width: 40, alignment: .leading)
-                Text("PREV")
-                    .frame(width: 72, alignment: .leading)
                 Text("LBS")
-                    .frame(width: 76, alignment: .center)
+                    .frame(maxWidth: .infinity)
                 Text("REPS")
-                    .frame(width: 64, alignment: .center)
+                    .frame(maxWidth: .infinity)
                 Text("RPE")
-                    .frame(width: 42, alignment: .center)
-                Spacer()
+                    .frame(width: 48, alignment: .center)
+                Color.clear
+                    .frame(width: 28)
             }
             .font(.system(size: 11, weight: .semibold))
             .tracking(0.5)
