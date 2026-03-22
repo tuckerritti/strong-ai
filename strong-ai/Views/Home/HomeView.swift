@@ -22,8 +22,8 @@ struct HomeView: View {
     @State private var healthContext: HealthContext?
     @State private var exercisesExpanded = false
     @State private var muscleMapExpanded = false
+    @State private var apiKey = ""
     private var profile: UserProfile? { profiles.first }
-    private var apiKey: String { profile?.apiKey ?? "" }
 
     var body: some View {
         @Bindable var state = appState
@@ -48,18 +48,22 @@ struct HomeView: View {
                 }
                 .overlay {
                     ChatDrawerView(
-                        isExpanded: $state.isChatDrawerOpen,
+                        selectedDetent: $state.chatDetent,
                         pendingMessage: $state.pendingMessage,
                         placeholder: "I only have 30 min today...",
                         onSend: { message in
                             await streamChat(message)
                         }
-                    ) {
-                        // No extra collapsed content
+                    )
+                }
+                .onAppear {
+                    syncAPIKeyFromProfile()
+                    Task {
+                        await generateWorkoutIfNeeded()
                     }
                 }
-                .task {
-                    await generateWorkoutIfNeeded()
+                .onChange(of: profiles.count) { _, _ in
+                    syncAPIKeyFromProfile()
                 }
             }
 
@@ -176,6 +180,10 @@ struct HomeView: View {
         )
     }
 
+    private func syncAPIKeyFromProfile() {
+        apiKey = UserProfileService.loadAPIKey()
+    }
+
     // MARK: - Header
 
     private var headerSection: some View {
@@ -186,16 +194,32 @@ struct HomeView: View {
                 .foregroundStyle(Color.black.opacity(0.35))
             HStack(alignment: .center) {
                 Text(greeting)
-                    .font(.custom("SpaceGrotesk-Bold", size: 36))
-                    .tracking(-1.4)
+                    .font(.custom("SpaceGrotesk-Bold", size: 28))
+                    .tracking(-1.0)
                     .foregroundStyle(Color(hex: 0x0A0A0A))
                 Spacer()
-                NavigationLink {
-                    SettingsView()
-                } label: {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color(hex: 0x0A0A0A))
+                HStack(spacing: 16) {
+                    NavigationLink {
+                        ExerciseLibraryView()
+                    } label: {
+                        Image(systemName: "book.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color(hex: 0x0A0A0A))
+                    }
+                    NavigationLink {
+                        HistoryListView()
+                    } label: {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color(hex: 0x0A0A0A))
+                    }
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color(hex: 0x0A0A0A))
+                    }
                 }
             }
         }
