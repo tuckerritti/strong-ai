@@ -25,7 +25,8 @@ struct ActiveWorkoutView: View {
     @State private var finishedLog: WorkoutLog?
     @State private var selectedExercise: Exercise?
     @State private var debriefRecentLogs: [WorkoutLogSnapshot] = []
-    @Environment(AppState.self) private var appState
+    @State private var isChatOpen = false
+    @State private var chatPendingMessage: String?
 
     private var profile: UserProfile? { profiles.first }
     private var apiKey: String { profile?.apiKey ?? "" }
@@ -36,7 +37,6 @@ struct ActiveWorkoutView: View {
     }
 
     var body: some View {
-        @Bindable var state = appState
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 headerSection
@@ -51,8 +51,8 @@ struct ActiveWorkoutView: View {
         .overlay {
             if !apiKey.isEmpty {
                 ChatDrawerView(
-                    isExpanded: $state.isChatDrawerOpen,
-                    pendingMessage: $state.pendingMessage,
+                    isExpanded: $isChatOpen,
+                    pendingMessage: $chatPendingMessage,
                     placeholder: "Add more tricep work...",
                     workoutName: viewModel.workoutName,
                     elapsedTime: viewModel.elapsedFormatted,
