@@ -24,7 +24,7 @@ struct ChatDrawerView: View {
     @State private var messages: [ChatMessage] = []
     @State private var inputText = ""
     @State private var isSending = false
-    @State private var isExpanded = false
+    private var isExpanded: Bool { selectedDetent != smallDetent }
     @FocusState private var isInputFocused: Bool
 
     private let smallDetent: PresentationDetent = .height(90)
@@ -66,7 +66,6 @@ struct ChatDrawerView: View {
                 Spacer()
                 Button {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                    isExpanded = false
                     selectedDetent = smallDetent
                 } label: {
                     Image(systemName: "xmark")
@@ -164,15 +163,7 @@ struct ChatDrawerView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
             if !isExpanded {
-                isExpanded = true
                 selectedDetent = .large
-            }
-        }
-        .onChange(of: selectedDetent) { oldValue, newValue in
-            if newValue == smallDetent && oldValue != smallDetent {
-                isExpanded = false
-            } else if newValue != smallDetent && !isExpanded {
-                isExpanded = true
             }
         }
         .onChange(of: pendingMessage) { _, newValue in
