@@ -23,13 +23,13 @@ struct ActiveWorkoutView: View {
     @State private var showingFinishAlert = false
     @State private var showingDebrief = false
     @State private var finishedLog: WorkoutLog?
+    @State private var apiKey = ""
     @State private var selectedExercise: Exercise?
     @State private var debriefRecentLogs: [WorkoutLogSnapshot] = []
-    @State private var isChatOpen = false
+    @State private var chatDetent: PresentationDetent = .height(90)
     @State private var chatPendingMessage: String?
 
     private var profile: UserProfile? { profiles.first }
-    private var apiKey: String { profile?.apiKey ?? "" }
 
     init(workout: Workout) {
         self.workout = workout
@@ -51,18 +51,16 @@ struct ActiveWorkoutView: View {
         .overlay {
             if !apiKey.isEmpty {
                 ChatDrawerView(
-                    isExpanded: $isChatOpen,
+                    selectedDetent: $chatDetent,
                     pendingMessage: $chatPendingMessage,
                     placeholder: "Add more tricep work...",
                     workoutName: viewModel.workoutName,
                     elapsedTime: viewModel.elapsedFormatted,
                     exerciseProgress: "\(viewModel.completedSets) of \(viewModel.totalSets) sets",
-                    collapsedHeight: 140,
                     onSend: { message, history in
                         await streamMidWorkoutChat(message, history: history)
                     }
-                ) {
-                }
+                )
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -127,6 +125,7 @@ struct ActiveWorkoutView: View {
             }
         }
         .onAppear {
+            syncAPIKeyFromProfile()
             viewModel.start()
             viewModel.timerService.requestPermission()
             saveExercisesToLibrary(viewModel.currentWorkout.exercises)
@@ -236,6 +235,10 @@ struct ActiveWorkoutView: View {
             existingExercises: exercises,
             modelContext: modelContext
         )
+    }
+
+    private func syncAPIKeyFromProfile() {
+        apiKey = UserProfileService.loadAPIKey()
     }
 
 
