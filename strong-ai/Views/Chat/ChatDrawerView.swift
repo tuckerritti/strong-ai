@@ -124,6 +124,7 @@ struct ChatDrawerView: View {
                         }
                     }
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
             .frame(height: isExpanded ? nil : 0)
             .clipped()
