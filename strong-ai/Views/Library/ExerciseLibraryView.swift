@@ -12,6 +12,7 @@ struct ExerciseLibraryView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var searchText = ""
     @State private var showingSearch = false
+    @State private var showingAddExercise = false
 
     // MARK: - Computed Properties
 
@@ -78,6 +79,9 @@ struct ExerciseLibraryView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingAddExercise) {
+                AddExerciseSheet()
+            }
         }
     }
 
@@ -93,16 +97,29 @@ struct ExerciseLibraryView: View {
 
                 Spacer()
 
-                Button {
-                    withAnimation(.easeOut(duration: 0.15)) { showingSearch.toggle() }
-                    if !showingSearch { searchText = "" }
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x1A1A1A))
-                        .frame(width: 36, height: 36)
-                        .background(Color(hex: 0xF0F0F0))
-                        .clipShape(Circle())
+                HStack(spacing: 10) {
+                    Button {
+                        showingAddExercise = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(Color(hex: 0x1A1A1A))
+                            .frame(width: 36, height: 36)
+                            .background(Color(hex: 0xF0F0F0))
+                            .clipShape(Circle())
+                    }
+
+                    Button {
+                        withAnimation(.easeOut(duration: 0.15)) { showingSearch.toggle() }
+                        if !showingSearch { searchText = "" }
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(Color(hex: 0x1A1A1A))
+                            .frame(width: 36, height: 36)
+                            .background(Color(hex: 0xF0F0F0))
+                            .clipShape(Circle())
+                    }
                 }
 
             }
@@ -167,6 +184,84 @@ struct ExerciseLibraryView: View {
             Rectangle()
                 .fill(Color(hex: 0xF0F0F0))
                 .frame(height: 1)
+        }
+    }
+}
+
+private struct AddExerciseSheet: View {
+    @Query(sort: \Exercise.name) private var exercises: [Exercise]
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var muscleGroup = ""
+
+    private let commonGroups = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Forearms"]
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedMuscleGroup: String {
+        muscleGroup.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var hasDuplicateName: Bool {
+        ExerciseLibraryService.containsExercise(named: trimmedName, existingExercises: exercises)
+    }
+
+    private var canAddExercise: Bool {
+        !trimmedName.isEmpty && !trimmedMuscleGroup.isEmpty && !hasDuplicateName
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                VStack(alignment: .leading, spacing: 8) {
+                    TextField("Exercise name", text: $name)
+
+                    if hasDuplicateName {
+                        Text("Exercise already exists in your library.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.red)
+                    }
+                }
+                Section("Muscle Group") {
+                    TextField("Or type your own...", text: $muscleGroup)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(commonGroups, id: \.self) { group in
+                                Button(group) {
+                                    muscleGroup = group
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(muscleGroup == group ? .green : .secondary)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Add Exercise")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        let didInsert = ExerciseLibraryService.addExercise(
+                            name: trimmedName,
+                            muscleGroup: trimmedMuscleGroup,
+                            existingExercises: exercises,
+                            modelContext: modelContext
+                        )
+
+                        if didInsert {
+                            dismiss()
+                        }
+                    }
+                    .disabled(!canAddExercise)
+                }
+            }
         }
     }
 }

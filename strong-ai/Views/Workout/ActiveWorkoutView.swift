@@ -23,10 +23,10 @@ struct ActiveWorkoutView: View {
     @State private var showingFinishAlert = false
     @State private var showingDebrief = false
     @State private var finishedLog: WorkoutLog?
+    @State private var apiKey = ""
     @Environment(AppState.self) private var appState
 
     private var profile: UserProfile? { profiles.first }
-    private var apiKey: String { profile?.apiKey ?? "" }
 
     init(workout: Workout) {
         self.workout = workout
@@ -119,6 +119,7 @@ struct ActiveWorkoutView: View {
             }
         }
         .onAppear {
+            syncAPIKeyFromProfile()
             viewModel.start()
             viewModel.timerService.requestPermission()
             saveExercisesToLibrary(viewModel.currentWorkout.exercises)
@@ -221,6 +222,10 @@ struct ActiveWorkoutView: View {
             existingExercises: exercises,
             modelContext: modelContext
         )
+    }
+
+    private func syncAPIKeyFromProfile() {
+        apiKey = UserProfileService.loadAPIKey()
     }
 
 
