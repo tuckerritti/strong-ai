@@ -21,43 +21,50 @@ struct HomeView: View {
     @State private var errorMessage: String?
     @State private var healthContext: HealthContext?
     @State private var exercisesExpanded = false
+    @State private var muscleMapExpanded = false
     private var profile: UserProfile? { profiles.first }
     private var apiKey: String { profile?.apiKey ?? "" }
 
     var body: some View {
         @Bindable var state = appState
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    headerSection
-                    statCards
+        ZStack {
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        headerSection
+                        statCards
 
-                    if isLoading {
-                        loadingSection
-                    } else if let error = errorMessage {
-                        errorSection(error)
-                    } else if let workout = todayWorkout {
-                        workoutSection(workout)
-                    } else {
-                        emptyWorkoutSection
+                        if isLoading {
+                            loadingSection
+                        } else if let error = errorMessage {
+                            errorSection(error)
+                        } else if let workout = todayWorkout {
+                            workoutSection(workout)
+                        } else {
+                            emptyWorkoutSection
+                        }
+                    }
+                    .padding(.bottom, 100)
+                }
+                .overlay {
+                    ChatDrawerView(
+                        isExpanded: $state.isChatDrawerOpen,
+                        pendingMessage: $state.pendingMessage,
+                        placeholder: "I only have 30 min today...",
+                        onSend: { message in
+                            await streamChat(message)
+                        }
+                    ) {
+                        // No extra collapsed content
                     }
                 }
-                .padding(.bottom, 100)
-            }
-            .overlay {
-                ChatDrawerView(
-                    isExpanded: $state.isChatDrawerOpen,
-                    pendingMessage: $state.pendingMessage,
-                    placeholder: "I only have 30 min today...",
-                    onSend: { message in
-                        await streamChat(message)
-                    }
-                ) {
-                    // No extra collapsed content
+                .task {
+                    await generateWorkoutIfNeeded()
                 }
             }
-            .task {
-                await generateWorkoutIfNeeded()
+
+            if muscleMapExpanded {
+                ExpandedMuscleMapView(logs: recentLogs, isPresented: $muscleMapExpanded)
             }
         }
     }
@@ -207,10 +214,11 @@ struct HomeView: View {
 
     private var statCards: some View {
         HStack(spacing: 10) {
-            StatCard(title: "WORKOUTS", value: "\(recentLogs.count)")
             StatCard(title: "THIS WEEK", value: "\(workoutsThisWeek)")
             StatCard(title: "STREAK", value: "\(streak)", highlight: streak > 0)
+            MuscleBodyMapCard(logs: recentLogs, isExpanded: $muscleMapExpanded)
         }
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 20)
         .padding(.top, 20)
     }

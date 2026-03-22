@@ -41,6 +41,27 @@ enum SeedData {
             Exercise(name: "Barbell Curl", muscleGroup: "Biceps",
                      exerciseDescription: "Standing barbell curl",
                      instructions: ["Grip bar at shoulder width", "Curl to shoulder height", "Lower with control, no swinging"]),
+            Exercise(name: "Leg Press", muscleGroup: "Quads",
+                     exerciseDescription: "Machine leg press",
+                     instructions: ["Sit in leg press machine", "Lower sled with control", "Press through heels to extend"]),
+            Exercise(name: "Leg Curl", muscleGroup: "Hamstrings",
+                     exerciseDescription: "Lying leg curl machine",
+                     instructions: ["Lie face down on machine", "Curl pad toward glutes", "Lower with control"]),
+            Exercise(name: "Hip Thrust", muscleGroup: "Glutes",
+                     exerciseDescription: "Barbell hip thrust",
+                     instructions: ["Sit with upper back on bench", "Roll bar over hips", "Drive hips up, squeeze at top"]),
+            Exercise(name: "Calf Raise", muscleGroup: "Calves",
+                     exerciseDescription: "Standing calf raise",
+                     instructions: ["Stand on edge of platform", "Rise onto toes", "Lower slowly past parallel"]),
+            Exercise(name: "Barbell Shrug", muscleGroup: "Traps",
+                     exerciseDescription: "Barbell shrug for upper traps",
+                     instructions: ["Hold bar at hip level", "Shrug shoulders toward ears", "Hold at top, lower slowly"]),
+            Exercise(name: "Wrist Curl", muscleGroup: "Forearms",
+                     exerciseDescription: "Seated barbell wrist curl",
+                     instructions: ["Rest forearms on thighs", "Curl bar up using wrists only", "Lower slowly"]),
+            Exercise(name: "Cable Crunch", muscleGroup: "Core",
+                     exerciseDescription: "Kneeling cable crunch",
+                     instructions: ["Kneel facing cable machine", "Crunch down bringing elbows to knees", "Return with control"]),
         ]
 
         for exercise in exercises {
@@ -187,6 +208,43 @@ enum SeedData {
                 LogEntry(exerciseName: "Barbell Curl", muscleGroup: "Biceps", sets: [
                     LogSet(reps: 12, weight: 55, completedAt: daysAgo(2)),
                     LogSet(reps: 12, weight: 55, completedAt: daysAgo(2)),
+                ]),
+            ]),
+            ("Lower Body", 3, [
+                LogEntry(exerciseName: "Leg Press", muscleGroup: "Quads", sets: [
+                    LogSet(reps: 10, weight: 200, rpe: 7, completedAt: daysAgo(3)),
+                    LogSet(reps: 10, weight: 200, rpe: 8, completedAt: daysAgo(3)),
+                    LogSet(reps: 10, weight: 200, rpe: 8, completedAt: daysAgo(3)),
+                ]),
+                LogEntry(exerciseName: "Leg Curl", muscleGroup: "Hamstrings", sets: [
+                    LogSet(reps: 12, weight: 60, rpe: 7, completedAt: daysAgo(3)),
+                    LogSet(reps: 12, weight: 60, rpe: 8, completedAt: daysAgo(3)),
+                ]),
+                LogEntry(exerciseName: "Hip Thrust", muscleGroup: "Glutes", sets: [
+                    LogSet(reps: 10, weight: 135, rpe: 7, completedAt: daysAgo(3)),
+                    LogSet(reps: 10, weight: 135, rpe: 8, completedAt: daysAgo(3)),
+                    LogSet(reps: 10, weight: 135, rpe: 8, completedAt: daysAgo(3)),
+                ]),
+                LogEntry(exerciseName: "Calf Raise", muscleGroup: "Calves", sets: [
+                    LogSet(reps: 15, weight: 90, completedAt: daysAgo(3)),
+                    LogSet(reps: 15, weight: 90, completedAt: daysAgo(3)),
+                    LogSet(reps: 15, weight: 90, completedAt: daysAgo(3)),
+                ]),
+            ]),
+            ("Accessories", 1, [
+                LogEntry(exerciseName: "Barbell Shrug", muscleGroup: "Traps", sets: [
+                    LogSet(reps: 12, weight: 135, rpe: 7, completedAt: daysAgo(1)),
+                    LogSet(reps: 12, weight: 135, rpe: 8, completedAt: daysAgo(1)),
+                    LogSet(reps: 12, weight: 135, rpe: 8, completedAt: daysAgo(1)),
+                ]),
+                LogEntry(exerciseName: "Wrist Curl", muscleGroup: "Forearms", sets: [
+                    LogSet(reps: 15, weight: 30, completedAt: daysAgo(1)),
+                    LogSet(reps: 15, weight: 30, completedAt: daysAgo(1)),
+                ]),
+                LogEntry(exerciseName: "Cable Crunch", muscleGroup: "Core", sets: [
+                    LogSet(reps: 15, weight: 50, rpe: 7, completedAt: daysAgo(1)),
+                    LogSet(reps: 15, weight: 50, rpe: 8, completedAt: daysAgo(1)),
+                    LogSet(reps: 15, weight: 50, rpe: 8, completedAt: daysAgo(1)),
                 ]),
             ]),
         ]

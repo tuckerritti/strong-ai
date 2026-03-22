@@ -66,6 +66,7 @@
 			name = "strong-ai";
 			packageProductDependencies = (
 				AA00000200000000003BDB5D /* AnthropicSwiftSDK */,
+				AA00000400000000003BDB5D /* MuscleMap */,
 			);
 			productName = "strong-ai";
 			productReference = FECA7CB12F64E0A6003BDB5D /* strong-ai.app */;
@@ -101,6 +102,7 @@
 			projectRoot = "";
 			packageReferences = (
 				AA00000100000000003BDB5D /* AnthropicSwiftSDK */,
+				AA00000300000000003BDB5D /* MuscleMap */,
 			);
 			targets = (
 				FECA7CB02F64E0A6003BDB5D /* strong-ai */,
@@ -360,6 +362,14 @@
 				minimumVersion = 0.14.0;
 			};
 		};
+		AA00000300000000003BDB5D /* MuscleMap */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/melihcolpan/MuscleMap.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.6.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -367,6 +377,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AA00000100000000003BDB5D /* AnthropicSwiftSDK */;
 			productName = AnthropicSwiftSDK;
+		};
+		AA00000400000000003BDB5D /* MuscleMap */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA00000300000000003BDB5D /* MuscleMap */;
+			productName = MuscleMap;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -458,9 +458,10 @@ final class ActiveWorkoutViewModel {
     func finish() -> WorkoutLog {
         stop()
 
+        let completedEntries = entries.filter { $0.sets.contains(where: { $0.completedAt != nil }) }
         let log = WorkoutLog(
             workoutName: workoutName,
-            entries: entries,
+            entries: completedEntries,
             startedAt: startedAt
         )
         log.finishedAt = .now
