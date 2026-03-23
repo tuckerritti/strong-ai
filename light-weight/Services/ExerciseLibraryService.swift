@@ -17,7 +17,7 @@ enum ExerciseLibraryService {
             guard !normalizedName.isEmpty, !trimmedGroup.isEmpty else { continue }
             guard knownNames.insert(normalizedName).inserted else { continue }
 
-            modelContext.insert(Exercise(name: trimmedName, muscleGroup: trimmedGroup))
+            modelContext.insert(Exercise(name: trimmedName, muscleGroup: trimmedGroup, targetMuscles: workoutExercise.targetMuscles))
         }
     }
 

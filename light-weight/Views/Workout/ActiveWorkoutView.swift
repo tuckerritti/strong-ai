@@ -275,7 +275,7 @@ struct ActiveWorkoutView: View {
                 message: message,
                 currentWorkout: currentWorkout,
                 profile: profileSnapshot,
-                exercises: exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup) }
+                exercises: exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) }
             )
 
             // Wrap to intercept results and apply workout changes
@@ -353,6 +353,7 @@ final class ActiveWorkoutViewModel {
             LogEntry(
                 exerciseName: exercise.name,
                 muscleGroup: exercise.muscleGroup,
+                targetMuscles: exercise.targetMuscles,
                 sets: exercise.sets.map { plannedSet in
                     LogSet(reps: plannedSet.reps, weight: plannedSet.weight)
                 }
@@ -437,12 +438,14 @@ final class ActiveWorkoutViewModel {
                     updatedEntries.append(LogEntry(
                         exerciseName: existing.exerciseName,
                         muscleGroup: existing.muscleGroup,
+                        targetMuscles: existing.targetMuscles,
                         sets: sets
                     ))
                 } else {
                     updatedEntries.append(LogEntry(
                         exerciseName: newExercise.name,
                         muscleGroup: newExercise.muscleGroup,
+                        targetMuscles: newExercise.targetMuscles,
                         sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight) }
                     ))
                 }
@@ -450,6 +453,7 @@ final class ActiveWorkoutViewModel {
                 updatedEntries.append(LogEntry(
                     exerciseName: newExercise.name,
                     muscleGroup: newExercise.muscleGroup,
+                    targetMuscles: newExercise.targetMuscles,
                     sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight) }
                 ))
             }
@@ -461,9 +465,10 @@ final class ActiveWorkoutViewModel {
     func finish() -> WorkoutLog {
         stop()
 
+        let completedEntries = entries.filter { $0.sets.contains(where: { $0.completedAt != nil }) }
         let log = WorkoutLog(
             workoutName: workoutName,
-            entries: entries,
+            entries: completedEntries,
             startedAt: startedAt
         )
         log.finishedAt = .now

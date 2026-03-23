@@ -120,7 +120,7 @@ struct StatCard: View {
                 .tracking(0.8)
                 .foregroundStyle(Color.black.opacity(0.3))
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.vertical, 16)
         .background(Color(hex: 0xF5F5F5))
         .clipShape(RoundedRectangle(cornerRadius: 16))

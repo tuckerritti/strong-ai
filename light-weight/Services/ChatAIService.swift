@@ -1,4 +1,5 @@
 import Foundation
+import MuscleMap
 import os
 
 private let logger = Logger(subsystem: "com.light-weight", category: "ChatAI")
@@ -40,12 +41,15 @@ struct ChatAIService {
             {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
+              "targetMuscles": ["chest", "front-deltoid", "triceps"],
               "sets": [
                 { "reps": 8, "weight": 135, "restSeconds": 90 }
               ]
             }
           ]
         }
+
+        targetMuscles: list the specific muscles each exercise works. Valid values: \(Muscle.validPromptValues)
 
         \(currentWorkout != nil ? "The user has an existing workout. Modify it based on their request — keep exercises they didn't mention, adjust what they asked about." : "Create a new workout from scratch based on the user's request.")
 

@@ -11,6 +11,8 @@ final class Exercise {
     var exerciseDescription: String?
     var instructionsData: Data?
 
+    var targetMusclesData: Data?
+
     var instructions: [String] {
         get {
             guard let data = instructionsData else { return [] }
@@ -30,7 +32,17 @@ final class Exercise {
         }
     }
 
-    init(name: String, muscleGroup: String, exerciseDescription: String? = nil, instructions: [String] = []) {
+    var targetMuscles: [String] {
+        get {
+            guard let data = targetMusclesData else { return [] }
+            return (try? JSONDecoder().decode([String].self, from: data)) ?? []
+        }
+        set {
+            targetMusclesData = try? JSONEncoder().encode(newValue)
+        }
+    }
+
+    init(name: String, muscleGroup: String, exerciseDescription: String? = nil, instructions: [String] = [], targetMuscles: [String] = []) {
         self.name = name
         self.muscleGroup = muscleGroup
         self.exerciseDescription = exerciseDescription
@@ -40,6 +52,9 @@ final class Exercise {
             } catch {
                 logger.error("Failed to encode initial instructions: \(error)")
             }
+        }
+        if !targetMuscles.isEmpty {
+            self.targetMusclesData = try? JSONEncoder().encode(targetMuscles)
         }
     }
 }

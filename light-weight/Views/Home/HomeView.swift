@@ -21,47 +21,54 @@ struct HomeView: View {
     @State private var errorMessage: String?
     @State private var healthContext: HealthContext?
     @State private var exercisesExpanded = false
+    @State private var muscleMapExpanded = false
     @State private var apiKey = ""
     private var profile: UserProfile? { profiles.first }
 
     var body: some View {
         @Bindable var state = appState
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    headerSection
-                    statCards
+        ZStack {
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        headerSection
+                        statCards
 
-                    if isLoading {
-                        loadingSection
-                    } else if let error = errorMessage {
-                        errorSection(error)
-                    } else if let workout = todayWorkout {
-                        workoutSection(workout)
-                    } else {
-                        emptyWorkoutSection
+                        if isLoading {
+                            loadingSection
+                        } else if let error = errorMessage {
+                            errorSection(error)
+                        } else if let workout = todayWorkout {
+                            workoutSection(workout)
+                        } else {
+                            emptyWorkoutSection
+                        }
+                    }
+                    .padding(.bottom, 100)
+                }
+                .overlay {
+                    ChatDrawerView(
+                        selectedDetent: $state.chatDetent,
+                        pendingMessage: $state.pendingMessage,
+                        placeholder: "I only have 30 min today...",
+                        onSend: { message in
+                            await streamChat(message)
+                        }
+                    )
+                }
+                .onAppear {
+                    syncAPIKeyFromProfile()
+                    Task {
+                        await generateWorkoutIfNeeded()
                     }
                 }
-                .padding(.bottom, 100)
-            }
-            .overlay {
-                ChatDrawerView(
-                    selectedDetent: $state.chatDetent,
-                    pendingMessage: $state.pendingMessage,
-                    placeholder: "I only have 30 min today...",
-                    onSend: { message in
-                        await streamChat(message)
-                    }
-                )
-            }
-            .onAppear {
-                syncAPIKeyFromProfile()
-                Task {
-                    await generateWorkoutIfNeeded()
+                .onChange(of: profiles.count) { _, _ in
+                    syncAPIKeyFromProfile()
                 }
             }
-            .onChange(of: profiles.count) { _, _ in
-                syncAPIKeyFromProfile()
+
+            if muscleMapExpanded {
+                ExpandedMuscleMapView(logs: recentLogs, isPresented: $muscleMapExpanded)
             }
         }
     }
@@ -107,7 +114,7 @@ struct HomeView: View {
                 message: message,
                 currentWorkout: todayWorkout,
                 profile: profileSnapshot,
-                exercises: exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup) }
+                exercises: exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) }
             )
 
             return AsyncThrowingStream { continuation in
@@ -162,7 +169,7 @@ struct HomeView: View {
     }
 
     private var exerciseSnapshots: [ExerciseSnapshot] {
-        exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup) }
+        exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) }
     }
 
     private func saveExercisesToLibrary(_ workoutExercises: [WorkoutExercise]) {
@@ -231,10 +238,11 @@ struct HomeView: View {
 
     private var statCards: some View {
         HStack(spacing: 10) {
-            StatCard(title: "WORKOUTS", value: "\(recentLogs.count)")
             StatCard(title: "THIS WEEK", value: "\(workoutsThisWeek)")
             StatCard(title: "STREAK", value: "\(streak)", highlight: streak > 0)
+            MuscleBodyMapCard(logs: recentLogs, isExpanded: $muscleMapExpanded)
         }
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 20)
         .padding(.top, 20)
     }

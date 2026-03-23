@@ -1,5 +1,5 @@
 {
-  "originHash" : "2a2fa8275f32a33c977413cf8c37adb7b22a0bd35f045ad04239de7247b7c650",
+  "originHash" : "d90ff0fdeb7072cb44b4985a3ef62b46c07917a24c33a94b357b4626dc25fed3",
   "pins" : [
     {
       "identity" : "anthropicswiftsdk",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "16460981405215d83a14746a106564e53376bc32",
         "version" : "0.14.0"
+      }
+    },
+    {
+      "identity" : "musclemap",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/melihcolpan/MuscleMap.git",
+      "state" : {
+        "revision" : "7e3be9ec97db0929e69e5d316b6a687200c170f0",
+        "version" : "1.6.0"
       }
     },
     {

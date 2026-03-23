@@ -14,7 +14,23 @@ struct LogSet: Codable, Hashable, Sendable {
 struct LogEntry: Codable, Hashable, Sendable {
     var exerciseName: String
     var muscleGroup: String
+    var targetMuscles: [String]
     var sets: [LogSet]
+
+    init(exerciseName: String, muscleGroup: String, targetMuscles: [String] = [], sets: [LogSet]) {
+        self.exerciseName = exerciseName
+        self.muscleGroup = muscleGroup
+        self.targetMuscles = targetMuscles
+        self.sets = sets
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        exerciseName = try container.decode(String.self, forKey: .exerciseName)
+        muscleGroup = try container.decode(String.self, forKey: .muscleGroup)
+        targetMuscles = try container.decodeIfPresent([String].self, forKey: .targetMuscles) ?? []
+        sets = try container.decode([LogSet].self, forKey: .sets)
+    }
 }
 
 @Model
