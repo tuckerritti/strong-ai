@@ -465,7 +465,11 @@ final class ActiveWorkoutViewModel {
     func finish() -> WorkoutLog {
         stop()
 
-        let completedEntries = entries.filter { $0.sets.contains(where: { $0.completedAt != nil }) }
+        let completedEntries = entries.compactMap { entry -> LogEntry? in
+            let completedSets = entry.sets.filter { $0.completedAt != nil }
+            guard !completedSets.isEmpty else { return nil }
+            return LogEntry(exerciseName: entry.exerciseName, muscleGroup: entry.muscleGroup, targetMuscles: entry.targetMuscles, sets: completedSets)
+        }
         let log = WorkoutLog(
             workoutName: workoutName,
             entries: completedEntries,

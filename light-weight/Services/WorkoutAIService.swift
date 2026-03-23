@@ -26,7 +26,7 @@ struct WorkoutAIService {
             {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
-              "targetMuscles": ["chest", "front-deltoid", "triceps"],
+              "targetMuscles": [{"muscle": "chest", "weight": 0.6}, {"muscle": "front-deltoid", "weight": 0.2}, {"muscle": "triceps", "weight": 0.2}],
               "sets": [
                 { "reps": 8, "weight": 135, "restSeconds": 90 }
               ]
@@ -41,7 +41,7 @@ struct WorkoutAIService {
         - Rest seconds: 60-90 for hypertrophy, 120-180 for strength, 30-45 for accessories
         - Weight in lbs. Use 0 for bodyweight exercises.
         - When the user's exercise library contains a matching exercise, use its EXACT name. Prefer library exercises over inventing new ones unless the workout calls for something different.
-        - targetMuscles: list the specific muscles each exercise works. Valid values: \(Muscle.validPromptValues)
+        - targetMuscles: for each exercise, list muscles worked with a weight (0-1) representing that muscle's share of the work. Weights should sum to ~1.0. Valid muscle values: \(Muscle.validPromptValues)
         """
 
         let userMessage = buildUserContext(profile: profile, recentLogs: recentLogs, exercises: exercises, healthContext: healthContext)
@@ -207,7 +207,7 @@ struct WorkoutLogSnapshot: Sendable {
 struct ExerciseSnapshot: Sendable {
     var name: String
     var muscleGroup: String
-    var targetMuscles: [String]
+    var targetMuscles: [TargetMuscle]
 }
 
 // MARK: - Valid muscle values for AI prompts

@@ -32,17 +32,17 @@ final class Exercise {
         }
     }
 
-    var targetMuscles: [String] {
+    var targetMuscles: [TargetMuscle] {
         get {
             guard let data = targetMusclesData else { return [] }
-            return (try? JSONDecoder().decode([String].self, from: data)) ?? []
+            return (try? JSONDecoder().decode([TargetMuscle].self, from: data)) ?? []
         }
         set {
             targetMusclesData = try? JSONEncoder().encode(newValue)
         }
     }
 
-    init(name: String, muscleGroup: String, exerciseDescription: String? = nil, instructions: [String] = [], targetMuscles: [String] = []) {
+    init(name: String, muscleGroup: String, exerciseDescription: String? = nil, instructions: [String] = [], targetMuscles: [TargetMuscle] = []) {
         self.name = name
         self.muscleGroup = muscleGroup
         self.exerciseDescription = exerciseDescription

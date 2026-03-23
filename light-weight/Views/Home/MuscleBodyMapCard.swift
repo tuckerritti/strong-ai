@@ -8,7 +8,7 @@ struct MuscleBodyMapCard: View {
     var body: some View {
         VStack(spacing: 4) {
             BodyView(gender: .male, side: .front, style: .minimal)
-                .heatmap(muscleIntensities(from: logs), colorScale: readinessColorScale)
+                .heatmap(muscleIntensities(from: logs), colorScale: volumeColorScale)
                 .frame(height: 80)
                 .allowsHitTesting(false)
             Text("VOLUME")
@@ -54,7 +54,7 @@ struct ExpandedMuscleMapView: View {
                 HStack(spacing: 20) {
                     VStack(spacing: 8) {
                         BodyView(gender: .male, side: .front, style: .minimal)
-                            .heatmap(muscleIntensities(from: logs), colorScale: readinessColorScale)
+                            .heatmap(muscleIntensities(from: logs), colorScale: volumeColorScale)
                             .frame(height: 240)
                             .allowsHitTesting(false)
                         Text("FRONT")
@@ -65,7 +65,7 @@ struct ExpandedMuscleMapView: View {
 
                     VStack(spacing: 8) {
                         BodyView(gender: .male, side: .back, style: .minimal)
-                            .heatmap(muscleIntensities(from: logs), colorScale: readinessColorScale)
+                            .heatmap(muscleIntensities(from: logs), colorScale: volumeColorScale)
                             .frame(height: 240)
                             .allowsHitTesting(false)
                         Text("BACK")
@@ -91,8 +91,8 @@ private let exerciseMuscles: [Muscle] = Muscle.allCases.filter {
     ![Muscle.head, .hands, .feet, .knees, .ankles].contains($0)
 }
 
-/// Green (ready) → yellow → orange → red (recently hit).
-private let readinessColorScale = HeatmapColorScale(colors: [
+/// Green (low volume) → yellow → orange → red (high volume).
+private let volumeColorScale = HeatmapColorScale(colors: [
     Color(hex: 0x34C759),
     .yellow,
     .orange,
@@ -102,21 +102,31 @@ private let readinessColorScale = HeatmapColorScale(colors: [
 private func muscleIntensities(from logs: [WorkoutLog]) -> [MuscleIntensity] {
     let calendar = Calendar.current
     let today = calendar.startOfDay(for: .now)
-    var intensityByMuscle: [Muscle: Double] = Dictionary(uniqueKeysWithValues: exerciseMuscles.map { ($0, 0.0) })
+    var volumeByMuscle: [Muscle: Double] = Dictionary(uniqueKeysWithValues: exerciseMuscles.map { ($0, 0.0) })
 
     for log in logs {
         guard let finishedAt = log.finishedAt else { continue }
         let daysSince = calendar.dateComponents([.day], from: calendar.startOfDay(for: finishedAt), to: today).day ?? 999
         guard daysSince <= 6 else { continue }
 
-        let recency = max(0, 1.0 - Double(daysSince) * 0.15)
+        for entry in log.entries {
+            let entryVolume = entry.sets
+                .filter { $0.completedAt != nil }
+                .reduce(0.0) { $0 + $1.weight * Double($1.reps) }
+            guard entryVolume > 0 else { continue }
 
-        for entry in log.entries where entry.sets.contains(where: { $0.completedAt != nil }) {
-            for muscle in entry.targetMuscles.compactMap({ Muscle(rawValue: $0) }) {
-                intensityByMuscle[muscle] = max(intensityByMuscle[muscle] ?? 0, recency)
+            for target in entry.targetMuscles {
+                if let muscle = Muscle(rawValue: target.muscle) {
+                    volumeByMuscle[muscle, default: 0] += entryVolume * target.weight
+                }
             }
         }
     }
 
-    return intensityByMuscle.map { MuscleIntensity(muscle: $0.key, intensity: $0.value) }
+    let maxVolume = volumeByMuscle.values.max() ?? 0
+    guard maxVolume > 0 else {
+        return volumeByMuscle.map { MuscleIntensity(muscle: $0.key, intensity: 0) }
+    }
+
+    return volumeByMuscle.map { MuscleIntensity(muscle: $0.key, intensity: $0.value / maxVolume) }
 }

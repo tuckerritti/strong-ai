@@ -4,6 +4,11 @@ import SwiftData
 
 private let logger = Logger(subsystem: "com.light-weight", category: "WorkoutLog")
 
+struct TargetMuscle: Codable, Hashable, Sendable {
+    var muscle: String
+    var weight: Double // 0.0–1.0, proportion of volume attributed to this muscle
+}
+
 struct LogSet: Codable, Hashable, Sendable {
     var reps: Int
     var weight: Double
@@ -14,10 +19,10 @@ struct LogSet: Codable, Hashable, Sendable {
 struct LogEntry: Codable, Hashable, Sendable {
     var exerciseName: String
     var muscleGroup: String
-    var targetMuscles: [String]
+    var targetMuscles: [TargetMuscle]
     var sets: [LogSet]
 
-    init(exerciseName: String, muscleGroup: String, targetMuscles: [String] = [], sets: [LogSet]) {
+    init(exerciseName: String, muscleGroup: String, targetMuscles: [TargetMuscle] = [], sets: [LogSet]) {
         self.exerciseName = exerciseName
         self.muscleGroup = muscleGroup
         self.targetMuscles = targetMuscles
@@ -28,7 +33,7 @@ struct LogEntry: Codable, Hashable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         exerciseName = try container.decode(String.self, forKey: .exerciseName)
         muscleGroup = try container.decode(String.self, forKey: .muscleGroup)
-        targetMuscles = try container.decodeIfPresent([String].self, forKey: .targetMuscles) ?? []
+        targetMuscles = try container.decodeIfPresent([TargetMuscle].self, forKey: .targetMuscles) ?? []
         sets = try container.decode([LogSet].self, forKey: .sets)
     }
 }
