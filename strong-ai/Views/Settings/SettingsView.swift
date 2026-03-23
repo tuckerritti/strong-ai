@@ -6,6 +6,9 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var apiKey = ""
     @State private var apiKeyError: String?
+    @State private var selectedSound: RestSound = .selected
+
+    private let soundPreview = RestSoundService()
 
     private var profile: UserProfile? { profiles.first }
 
@@ -50,6 +53,35 @@ struct SettingsView: View {
                         settingsSection("INJURIES / LIMITATIONS") {
                             TextField("e.g. Bad left shoulder, avoid overhead", text: binding(\.injuries), axis: .vertical)
                                 .lineLimit(2...4)
+                        }
+                        settingsSection("REST TIMER SOUND") {
+                            VStack(spacing: 0) {
+                                ForEach(RestSound.allCases) { sound in
+                                    Button {
+                                        selectedSound = sound
+                                        RestSound.selected = sound
+                                        soundPreview.previewSound(sound)
+                                    } label: {
+                                        HStack {
+                                            Text(sound.displayName)
+                                                .font(.system(size: 15))
+                                                .foregroundStyle(Color(hex: 0x0A0A0A))
+                                            Spacer()
+                                            if sound == selectedSound {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 14, weight: .semibold))
+                                                    .foregroundStyle(Color(hex: 0x34C759))
+                                            }
+                                        }
+                                        .padding(.vertical, 12)
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    if sound != RestSound.allCases.last {
+                                        Divider()
+                                    }
+                                }
+                            }
                         }
                     }
                     .padding(.horizontal, 20)
