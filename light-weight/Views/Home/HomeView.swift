@@ -2,7 +2,7 @@ import os
 import SwiftUI
 import SwiftData
 
-private let logger = Logger(subsystem: "com.strong-ai", category: "HomeView")
+private let logger = Logger(subsystem: "com.light-weight", category: "HomeView")
 
 struct HomeView: View {
     @Query(

@@ -5,10 +5,10 @@ set -euo pipefail
 # The simulator UDID is saved to .context/simulator-udid.txt for use with MCP tools.
 
 WORKTREE_NAME=$(basename "$PWD")
-SIM_NAME="strong-ai-${WORKTREE_NAME}"
+SIM_NAME="light-weight-${WORKTREE_NAME}"
 CONTEXT_DIR=".context"
 UDID_FILE="${CONTEXT_DIR}/simulator-udid.txt"
-BUNDLE_ID="com.tuckerr.strong-ai"
+BUNDLE_ID="com.tuckerr.light-weight"
 
 mkdir -p "$CONTEXT_DIR"
 
@@ -38,15 +38,15 @@ fi
 echo "Simulator UDID: $UDID"
 
 # Build the app
-echo "Building strong-ai for simulator..."
-xcodebuild -project strong-ai.xcodeproj \
-  -scheme strong-ai \
+echo "Building light-weight for simulator..."
+xcodebuild -project light-weight.xcodeproj \
+  -scheme light-weight \
   -destination "platform=iOS Simulator,id=$UDID" \
   -derivedDataPath "$CONTEXT_DIR/DerivedData" \
   build 2>&1 | tail -3
 
 # Find and install the .app
-APP_PATH=$(find "$CONTEXT_DIR/DerivedData" -name "strong-ai.app" -type d | head -1)
+APP_PATH=$(find "$CONTEXT_DIR/DerivedData" -name "light-weight.app" -type d | head -1)
 
 if [ -z "$APP_PATH" ]; then
   echo "Error: Build succeeded but .app not found" >&2

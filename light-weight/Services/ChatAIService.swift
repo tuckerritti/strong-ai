@@ -2,7 +2,7 @@ import Foundation
 import MuscleMap
 import os
 
-private let logger = Logger(subsystem: "com.strong-ai", category: "ChatAI")
+private let logger = Logger(subsystem: "com.light-weight", category: "ChatAI")
 
 enum ChatStreamEvent: Sendable {
     case text(String)

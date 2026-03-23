@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Build for simulator
-xcodebuild -project strong-ai.xcodeproj -scheme strong-ai \
+xcodebuild -project light-weight.xcodeproj -scheme light-weight \
   -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build
 
 # No test targets exist yet

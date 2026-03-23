@@ -2,7 +2,7 @@ import Foundation
 import HealthKit
 import os
 
-private let logger = Logger(subsystem: "com.strong-ai", category: "HealthKit")
+private let logger = Logger(subsystem: "com.light-weight", category: "HealthKit")
 
 struct HealthContext: Sendable {
     var sleepHours: Double?

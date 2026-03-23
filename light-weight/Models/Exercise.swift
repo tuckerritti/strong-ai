@@ -2,7 +2,7 @@ import Foundation
 import os
 import SwiftData
 
-private let logger = Logger(subsystem: "com.strong-ai", category: "Exercise")
+private let logger = Logger(subsystem: "com.light-weight", category: "Exercise")
 
 @Model
 final class Exercise {
