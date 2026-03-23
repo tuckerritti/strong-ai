@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct strong_aiApp: App {
+struct light_weightApp: App {
     let container: ModelContainer
 
     init() {

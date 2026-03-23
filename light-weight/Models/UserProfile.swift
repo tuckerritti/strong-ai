@@ -3,7 +3,7 @@ import Security
 import SwiftData
 
 private enum APIKeychainStore {
-    static let service = "com.strong-ai.credentials"
+    static let service = "com.light-weight.credentials"
     static let account = "anthropic_api_key"
 
     static func load() -> String {

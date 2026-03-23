@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-private let logger = Logger(subsystem: "com.strong-ai", category: "WorkoutAI")
+private let logger = Logger(subsystem: "com.light-weight", category: "WorkoutAI")
 
 struct WorkoutAIService {
 

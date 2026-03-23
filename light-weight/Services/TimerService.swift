@@ -2,7 +2,7 @@ import Foundation
 import os
 import UserNotifications
 
-private let logger = Logger(subsystem: "com.strong-ai", category: "TimerService")
+private let logger = Logger(subsystem: "com.light-weight", category: "TimerService")
 
 @MainActor
 @Observable

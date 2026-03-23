@@ -2,7 +2,7 @@ import Foundation
 import os
 import SwiftData
 
-private let logger = Logger(subsystem: "com.strong-ai", category: "WorkoutLog")
+private let logger = Logger(subsystem: "com.light-weight", category: "WorkoutLog")
 
 struct LogSet: Codable, Hashable, Sendable {
     var reps: Int
