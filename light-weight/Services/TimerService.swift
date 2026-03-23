@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import os
 import UserNotifications
@@ -10,6 +11,8 @@ final class TimerService {
     var remainingSeconds: Int = 0
     var totalSeconds: Int = 0
     var isRunning: Bool = false
+
+    let soundService = RestSoundService()
 
     private var timer: Timer?
     private var fireDate: Date?
@@ -26,13 +29,14 @@ final class TimerService {
         fireDate = Date().addingTimeInterval(TimeInterval(seconds))
 
         scheduleNotification(seconds: seconds)
+        soundService.startBackgroundAudio()
 
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
                 let left = Int(ceil((self.fireDate ?? .now).timeIntervalSince(.now)))
                 if left <= 0 {
-                    self.stop()
+                    self.timerExpired()
                 } else {
                     self.remainingSeconds = left
                 }
@@ -40,6 +44,7 @@ final class TimerService {
         }
     }
 
+    /// User tapped skip — stop everything immediately.
     func stop() {
         timer?.invalidate()
         timer = nil
@@ -47,6 +52,7 @@ final class TimerService {
         remainingSeconds = 0
         totalSeconds = 0
         fireDate = nil
+        soundService.stopBackgroundAudio()
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest-timer"])
     }
 
@@ -60,11 +66,39 @@ final class TimerService {
         }
     }
 
+    var formattedTime: String {
+        formatSeconds(remainingSeconds)
+    }
+
+    var formattedTotal: String {
+        formatSeconds(totalSeconds)
+    }
+
+    // MARK: - Private
+
+    /// Timer reached zero — play sound and clean up.
+    private func timerExpired() {
+        timer?.invalidate()
+        timer = nil
+        isRunning = false
+        remainingSeconds = 0
+        totalSeconds = 0
+        fireDate = nil
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest-timer"])
+
+        soundService.playCompletionSound()
+
+        // Delay stopping background audio so the completion sound can finish playing.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 12) { [weak self] in
+            self?.soundService.stopBackgroundAudio()
+        }
+    }
+
     private func scheduleNotification(seconds: Int) {
         let content = UNMutableNotificationContent()
         content.title = "Rest Over"
         content.body = "Time for your next set"
-        content.sound = .default
+        content.sound = nil
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(seconds), repeats: false)
         let request = UNNotificationRequest(identifier: "rest-timer", content: content, trigger: trigger)
@@ -73,14 +107,6 @@ final class TimerService {
                 logger.error("Failed to schedule notification: \(error)")
             }
         }
-    }
-
-    var formattedTime: String {
-        formatSeconds(remainingSeconds)
-    }
-
-    var formattedTotal: String {
-        formatSeconds(totalSeconds)
     }
 
     private func formatSeconds(_ seconds: Int) -> String {
