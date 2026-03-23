@@ -1,4 +1,5 @@
 import Foundation
+import MuscleMap
 import os
 
 private let logger = Logger(subsystem: "com.strong-ai", category: "WorkoutAI")
@@ -40,7 +41,7 @@ struct WorkoutAIService {
         - Rest seconds: 60-90 for hypertrophy, 120-180 for strength, 30-45 for accessories
         - Weight in lbs. Use 0 for bodyweight exercises.
         - When the user's exercise library contains a matching exercise, use its EXACT name. Prefer library exercises over inventing new ones unless the workout calls for something different.
-        - targetMuscles: list the specific muscles each exercise works. Valid values: abs, biceps, calves, chest, deltoids, forearm, gluteal, hamstring, obliques, quadriceps, tibialis, trapezius, triceps, serratus, rhomboids, adductors, neck, upper-back, lower-back, rotator-cuff, hip-flexors, upper-chest, lower-chest, inner-quad, outer-quad, upper-abs, lower-abs, front-deltoid, rear-deltoid, upper-trapezius, lower-trapezius
+        - targetMuscles: list the specific muscles each exercise works. Valid values: \(Muscle.validPromptValues)
         """
 
         let userMessage = buildUserContext(profile: profile, recentLogs: recentLogs, exercises: exercises, healthContext: healthContext)
@@ -207,4 +208,15 @@ struct ExerciseSnapshot: Sendable {
     var name: String
     var muscleGroup: String
     var targetMuscles: [String]
+}
+
+// MARK: - Valid muscle values for AI prompts
+
+extension Muscle {
+    private static let nonExerciseParts: Set<Muscle> = [.head, .hands, .feet, .knees, .ankles]
+
+    static let validPromptValues: String = Muscle.allCases
+        .filter { !nonExerciseParts.contains($0) }
+        .map(\.rawValue)
+        .joined(separator: ", ")
 }

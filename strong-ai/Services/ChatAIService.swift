@@ -1,4 +1,5 @@
 import Foundation
+import MuscleMap
 import os
 
 private let logger = Logger(subsystem: "com.strong-ai", category: "ChatAI")
@@ -48,7 +49,7 @@ struct ChatAIService {
           ]
         }
 
-        targetMuscles: list the specific muscles each exercise works. Valid values: abs, biceps, calves, chest, deltoids, forearm, gluteal, hamstring, obliques, quadriceps, tibialis, trapezius, triceps, serratus, rhomboids, adductors, neck, upper-back, lower-back, rotator-cuff, hip-flexors, upper-chest, lower-chest, inner-quad, outer-quad, upper-abs, lower-abs, front-deltoid, rear-deltoid, upper-trapezius, lower-trapezius
+        targetMuscles: list the specific muscles each exercise works. Valid values: \(Muscle.validPromptValues)
 
         \(currentWorkout != nil ? "The user has an existing workout. Modify it based on their request — keep exercises they didn't mention, adjust what they asked about." : "Create a new workout from scratch based on the user's request.")
 
