@@ -161,8 +161,8 @@ struct ChatDrawerView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-            if !isExpanded {
+        .onChange(of: isInputFocused) { _, focused in
+            if focused && !isExpanded {
                 selectedDetent = .large
             }
         }
