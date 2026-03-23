@@ -16,7 +16,7 @@ enum RestSound: String, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .boxingBell: "Boxing Bell"
-        case .yeahBuddy: "Yeah Buddy!"
+        case .yeahBuddy: "Light Weight Baby"
         case .dontKnowMe: "They Don't Know Me Son"
         case .carryTheBoats: "Who's Gonna Carry the Boats"
         case .bodybuilder: "Everybody Wants to Be a Bodybuilder"
@@ -31,7 +31,7 @@ enum RestSound: String, CaseIterable, Identifiable {
     static var selected: RestSound {
         get {
             guard let raw = UserDefaults.standard.string(forKey: "restSound"),
-                  let sound = RestSound(rawValue: raw) else { return .boxingBell }
+                  let sound = RestSound(rawValue: raw) else { return .yeahBuddy }
             return sound
         }
         set {
