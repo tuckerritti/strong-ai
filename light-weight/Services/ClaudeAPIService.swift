@@ -7,8 +7,12 @@ struct ClaudeAPIService: Sendable {
     private var client: Anthropic { Anthropic(apiKey: apiKey) }
 
     func send(systemPrompt: String, userMessage: String) async throws -> String {
+        try await send(systemPrompt: systemPrompt, messages: [Message(role: .user, content: [.text(userMessage)])])
+    }
+
+    func send(systemPrompt: String, messages: [Message]) async throws -> String {
         let response = try await client.messages.createMessage(
-            [Message(role: .user, content: [.text(userMessage)])],
+            messages,
             model: .custom("claude-sonnet-4-6"),
             system: [.text(systemPrompt, nil)],
             maxTokens: 2048
@@ -23,8 +27,12 @@ struct ClaudeAPIService: Sendable {
     }
 
     func stream(systemPrompt: String, userMessage: String) async throws -> AsyncThrowingStream<String, Error> {
+        try await stream(systemPrompt: systemPrompt, messages: [Message(role: .user, content: [.text(userMessage)])])
+    }
+
+    func stream(systemPrompt: String, messages: [Message]) async throws -> AsyncThrowingStream<String, Error> {
         let stream = try await client.messages.streamMessage(
-            [Message(role: .user, content: [.text(userMessage)])],
+            messages,
             model: .custom("claude-sonnet-4-6"),
             system: [.text(systemPrompt, nil)],
             maxTokens: 2048

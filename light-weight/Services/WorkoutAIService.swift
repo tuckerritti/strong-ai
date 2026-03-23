@@ -26,7 +26,7 @@ struct WorkoutAIService {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
               "sets": [
-                { "reps": 8, "weight": 135, "restSeconds": 90 }
+                { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
               ]
             }
           ]
@@ -38,6 +38,7 @@ struct WorkoutAIService {
         - Vary muscle groups day-to-day so the user doesn't repeat the same muscles back-to-back
         - Rest seconds: 60-90 for hypertrophy, 120-180 for strength, 30-45 for accessories
         - Weight in lbs. Use 0 for bodyweight exercises.
+        - You MUST set targetRpe (1-10) for every set.
         - When the user's exercise library contains a matching exercise, use its EXACT name. Prefer library exercises over inventing new ones unless the workout calls for something different.
         """
 

@@ -1,4 +1,5 @@
 import Foundation
+import AnthropicSwiftSDK
 import os
 
 private let logger = Logger(subsystem: "com.light-weight", category: "ChatAI")
@@ -20,11 +21,14 @@ struct ChatAIService {
         message: String,
         currentWorkout: Workout?,
         profile: UserProfileSnapshot,
-        exercises: [ExerciseSnapshot]
+        exercises: [ExerciseSnapshot],
+        history: [ChatMessage] = [],
+        progress: [LogEntry]? = nil
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         let api = ClaudeAPIService(apiKey: apiKey)
 
         let mode = currentWorkout != nil ? "modify" : "create"
+        let isActiveWorkout = progress != nil
 
         let systemPrompt = """
         You are an expert strength coach. The user is asking you to \(mode) a workout via natural language.
@@ -41,13 +45,16 @@ struct ChatAIService {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
               "sets": [
-                { "reps": 8, "weight": 135, "restSeconds": 90 }
+                { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
               ]
             }
           ]
         }
 
+        You MUST set targetRpe (1-10) for every set.
+
         \(currentWorkout != nil ? "The user has an existing workout. Modify it based on their request — keep exercises they didn't mention, adjust what they asked about." : "Create a new workout from scratch based on the user's request.")
+        \(isActiveWorkout ? "\nIMPORTANT: This workout is in progress. Sets marked COMPLETED in the progress below cannot be changed. You MUST include them exactly as-is in your response. Only modify PLANNED sets and exercises." : "")
 
         User context:
         Goals: \(profile.goals.isEmpty ? "Not specified" : profile.goals)
@@ -57,13 +64,24 @@ struct ChatAIService {
         """
 
         var userMessage = message
+
         if let workout = currentWorkout,
            let json = try? JSONEncoder().encode(workout),
            let str = String(data: json, encoding: .utf8) {
             userMessage += "\n\nCurrent workout:\n\(str)"
         }
 
-        let tokenStream = try await api.stream(systemPrompt: systemPrompt, userMessage: userMessage)
+        if let progress {
+            userMessage += "\n\nWorkout progress:\n" + formatProgress(progress)
+        }
+
+        // Build multi-turn message array from history
+        var messages: [Message] = history.map { chatMsg in
+            Message(role: chatMsg.role == .user ? .user : .assistant, content: [.text(chatMsg.text)])
+        }
+        messages.append(Message(role: .user, content: [.text(userMessage)]))
+
+        let tokenStream = try await api.stream(systemPrompt: systemPrompt, messages: messages)
 
         return AsyncThrowingStream { continuation in
             let task = Task {
@@ -131,6 +149,20 @@ struct ChatAIService {
             logger.error("Chat workout decode failed: \(String(describing: error))")
             throw ChatParseError.decodingFailed(String(describing: error))
         }
+    }
+
+    private static func formatProgress(_ entries: [LogEntry]) -> String {
+        entries.map { entry in
+            let sets = entry.sets.enumerated().map { i, set in
+                if set.completedAt != nil {
+                    let rpeStr = set.rpe.map { " @RPE \($0)" } ?? ""
+                    return "  Set \(i + 1): COMPLETED - \(Int(set.weight))lbs x \(set.reps)\(rpeStr)"
+                } else {
+                    return "  Set \(i + 1): PLANNED - \(Int(set.weight))lbs x \(set.reps)"
+                }
+            }.joined(separator: "\n")
+            return "\(entry.exerciseName) (\(entry.muscleGroup)):\n\(sets)"
+        }.joined(separator: "\n")
     }
 
     enum ChatParseError: LocalizedError {
