@@ -1,7 +1,7 @@
 import os
 import SwiftUI
 
-private let logger = Logger(subsystem: "com.strong-ai", category: "WorkoutDebrief")
+private let logger = Logger(subsystem: "com.light-weight", category: "WorkoutDebrief")
 
 struct WorkoutDebriefView: View {
     let log: WorkoutLog

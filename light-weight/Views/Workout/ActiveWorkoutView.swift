@@ -2,7 +2,7 @@ import os
 import SwiftUI
 import SwiftData
 
-private let logger = Logger(subsystem: "com.strong-ai", category: "ActiveWorkout")
+private let logger = Logger(subsystem: "com.light-weight", category: "ActiveWorkout")
 
 struct ActiveWorkoutView: View {
     @Environment(\.modelContext) private var modelContext
