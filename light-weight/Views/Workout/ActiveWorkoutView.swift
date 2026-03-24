@@ -7,6 +7,7 @@ private let logger = Logger(subsystem: "com.light-weight", category: "ActiveWork
 struct ActiveWorkoutView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
 
     @Query(
         filter: #Predicate<WorkoutLog> { $0.finishedAt != nil },
@@ -125,11 +126,15 @@ struct ActiveWorkoutView: View {
             }
         }
         .onAppear {
+            appState.isWorkoutActive = true
             syncAPIKeyFromProfile()
             viewModel.apiKey = apiKey
             viewModel.start()
             viewModel.timerService.requestPermission()
             saveExercisesToLibrary(viewModel.currentWorkout.exercises)
+        }
+        .onDisappear {
+            appState.isWorkoutActive = false
         }
     }
 
