@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var apiKey = ""
     @State private var apiKeyError: String?
     @State private var selectedSounds: Set<RestSound> = RestSound.selected
+    @AppStorage("showTokenCost") private var showTokenCost = false
 
     @State private var soundPreview = RestSoundService()
 
@@ -97,6 +98,10 @@ struct SettingsView: View {
                             .padding(.horizontal, 16)
                             .background(Color(hex: 0xF5F5F5))
                             .clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
+                        settingsSection("TOKEN COST") {
+                            Toggle("Show cost per workout", isOn: $showTokenCost)
+                                .tint(Color(hex: 0x34C759))
                         }
                     }
                     .padding(.horizontal, 20)

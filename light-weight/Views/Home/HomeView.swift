@@ -23,6 +23,8 @@ struct HomeView: View {
     @State private var exercisesExpanded = false
     @State private var muscleMapExpanded = false
     @State private var apiKey = ""
+    @State private var workoutCost = TokenCost.zero
+    @AppStorage("showTokenCost") private var showTokenCost = false
     private var profile: UserProfile? { profiles.first }
 
     var body: some View {
@@ -88,7 +90,7 @@ struct HomeView: View {
         }
 
         do {
-            let workout = try await WorkoutAIService.generateDailyWorkout(
+            let (workout, cost) = try await WorkoutAIService.generateDailyWorkout(
                 apiKey: apiKey,
                 profile: profileSnapshot,
                 recentLogs: logSnapshots,
@@ -96,6 +98,7 @@ struct HomeView: View {
                 healthContext: healthContext
             )
             todayWorkout = workout
+            workoutCost = cost
             saveExercisesToLibrary(workout.exercises)
         } catch {
             logger.error("Workout generation failed: \(error)")
@@ -121,10 +124,15 @@ struct HomeView: View {
                 let task = Task {
                     do {
                         for try await event in stream {
-                            if case .result(let result) = event {
+                            switch event {
+                            case .result(let result):
                                 todayWorkout = result.workout
                                 saveExercisesToLibrary(result.workout.exercises)
                                 errorMessage = nil
+                            case .usage(let cost):
+                                workoutCost = workoutCost + cost
+                            case .text:
+                                break
                             }
                             continuation.yield(event)
                         }
@@ -337,6 +345,14 @@ struct HomeView: View {
 
             if let insight = workout.insight {
                 insightCallout(insight)
+            }
+
+            if showTokenCost, workoutCost.estimatedCost > 0 {
+                Text("~$\(workoutCost.estimatedCost, specifier: "%.4f")")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.black.opacity(0.25))
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
             }
 
             startButton(workout)

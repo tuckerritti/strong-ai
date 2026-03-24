@@ -12,7 +12,7 @@ struct WorkoutAIService {
         recentLogs: [WorkoutLogSnapshot],
         exercises: [ExerciseSnapshot],
         healthContext: HealthContext? = nil
-    ) async throws -> Workout {
+    ) async throws -> (Workout, TokenCost) {
         let api = ClaudeAPIService(apiKey: apiKey)
 
         let systemPrompt = """
@@ -45,8 +45,8 @@ struct WorkoutAIService {
         """
 
         let userMessage = buildUserContext(profile: profile, recentLogs: recentLogs, exercises: exercises, healthContext: healthContext)
-        let response = try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
-        return try parseWorkout(from: response)
+        let (response, cost) = try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
+        return (try parseWorkout(from: response), cost)
     }
 
     static func generateDebrief(
@@ -54,7 +54,7 @@ struct WorkoutAIService {
         log: WorkoutLogSnapshot,
         recentLogs: [WorkoutLogSnapshot],
         profile: UserProfileSnapshot
-    ) async throws -> String {
+    ) async throws -> (String, TokenCost) {
         let api = ClaudeAPIService(apiKey: apiKey)
 
         let systemPrompt = """
@@ -82,7 +82,8 @@ struct WorkoutAIService {
         Goals: \(profile.goals)
         """
 
-        return try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
+        let (text, cost) = try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
+        return (text, cost)
     }
 
     // MARK: - Private

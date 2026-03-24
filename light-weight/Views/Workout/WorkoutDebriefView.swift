@@ -84,7 +84,7 @@ struct WorkoutDebriefView: View {
                 totalVolume: log.totalVolume,
                 entries: log.entries
             )
-            debrief = try await WorkoutAIService.generateDebrief(
+            (debrief, _) = try await WorkoutAIService.generateDebrief(
                 apiKey: apiKey,
                 log: logSnapshot,
                 recentLogs: recentLogs,

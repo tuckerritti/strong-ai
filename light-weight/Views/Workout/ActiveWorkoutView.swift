@@ -283,9 +283,12 @@ struct ActiveWorkoutView: View {
                 let task = Task {
                     do {
                         for try await event in stream {
-                            if case .result(let result) = event {
+                            switch event {
+                            case .result(let result):
                                 viewModel.applyModifiedWorkout(result.workout)
                                 saveExercisesToLibrary(result.workout.exercises)
+                            case .text, .usage:
+                                break
                             }
                             continuation.yield(event)
                         }

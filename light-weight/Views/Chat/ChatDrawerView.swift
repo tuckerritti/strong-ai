@@ -6,6 +6,7 @@ struct ChatMessage: Identifiable {
     let role: Role
     var text: String
     var isApplied: Bool = false
+    var tokenCost: TokenCost?
 
     enum Role {
         case user, assistant
@@ -24,6 +25,7 @@ struct ChatDrawerView: View {
     @State private var messages: [ChatMessage] = []
     @State private var inputText = ""
     @State private var isSending = false
+    @AppStorage("showTokenCost") private var showTokenCost = false
     private var isExpanded: Bool { selectedDetent != smallDetent }
     @FocusState private var isInputFocused: Bool
 
@@ -207,6 +209,12 @@ struct ChatDrawerView: View {
                     }
                     .foregroundStyle(Color(hex: 0x34C759))
                 }
+
+                if showTokenCost, let cost = message.tokenCost, cost.estimatedCost > 0 {
+                    Text("~$\(cost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.black.opacity(0.25))
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -245,6 +253,8 @@ struct ChatDrawerView: View {
                         messages[assistantIndex].text = result.explanation
                     }
                     messages[assistantIndex].isApplied = true
+                case .usage(let cost):
+                    messages[assistantIndex].tokenCost = cost
                 }
             }
         } catch {
