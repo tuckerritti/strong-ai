@@ -25,6 +25,7 @@ enum WorkoutCacheService {
         do {
             let data = try JSONEncoder().encode(workout)
             try data.write(to: todayFile, options: .atomic)
+            cleanOldFiles()
         } catch {
             logger.error("Failed to cache workout: \(error)")
         }
@@ -32,5 +33,14 @@ enum WorkoutCacheService {
 
     static func clear() {
         try? FileManager.default.removeItem(at: todayFile)
+    }
+
+    private static func cleanOldFiles() {
+        let fileManager = FileManager.default
+        guard let files = try? fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else { return }
+        let todayURL = todayFile
+        for file in files where file.lastPathComponent.hasPrefix("daily-workout-") && file != todayURL {
+            try? fileManager.removeItem(at: file)
+        }
     }
 }
