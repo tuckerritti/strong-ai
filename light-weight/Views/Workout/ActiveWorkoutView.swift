@@ -48,6 +48,15 @@ struct ActiveWorkoutView: View {
             }
             .padding(.bottom, 120)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            }
+        }
         .overlay {
             if !apiKey.isEmpty {
                 ChatDrawerView(

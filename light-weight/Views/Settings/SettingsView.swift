@@ -103,6 +103,15 @@ struct SettingsView: View {
                     .padding(.top, 16)
                     .padding(.bottom, 100)
                 }
+                .scrollDismissesKeyboard(.interactively)
+            }
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                }
             }
             .onAppear {
                 syncProfileState()
