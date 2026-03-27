@@ -20,6 +20,7 @@ struct HomeView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var healthContext: HealthContext?
+    @State private var workoutDate = Date.now
     @State private var exercisesExpanded = false
     @State private var muscleMapExpanded = false
     @State private var apiKey = ""
@@ -46,16 +47,6 @@ struct HomeView: View {
                     }
                     .padding(.bottom, 100)
                 }
-                .overlay {
-                    ChatDrawerView(
-                        selectedDetent: $state.chatDetent,
-                        pendingMessage: $state.pendingMessage,
-                        placeholder: "I only have 30 min today...",
-                        onSend: { message in
-                            await streamChat(message)
-                        }
-                    )
-                }
                 .onAppear {
                     syncAPIKeyFromProfile()
                     Task {
@@ -64,6 +55,18 @@ struct HomeView: View {
                 }
                 .onChange(of: profiles.count) { _, _ in
                     syncAPIKeyFromProfile()
+                }
+                .overlay {
+                    if !appState.isWorkoutActive {
+                        ChatDrawerView(
+                            selectedDetent: $state.chatDetent,
+                            pendingMessage: $state.pendingMessage,
+                            placeholder: "I only have 30 min today...",
+                            onSend: { message, history in
+                                await streamChat(message, history: history)
+                            }
+                        )
+                    }
                 }
             }
 
@@ -76,7 +79,14 @@ struct HomeView: View {
     // MARK: - AI Generation
 
     private func generateWorkoutIfNeeded() async {
-        guard todayWorkout == nil, !apiKey.isEmpty else { return }
+        guard todayWorkout == nil else { return }
+
+        if let cached = WorkoutCacheService.loadToday() {
+            todayWorkout = cached
+            return
+        }
+
+        guard !apiKey.isEmpty else { return }
 
         isLoading = true
         errorMessage = nil
@@ -96,7 +106,8 @@ struct HomeView: View {
                 healthContext: healthContext
             )
             todayWorkout = workout
-            appState.dailyCost = cost
+            appState.dailyCost = appState.dailyCost + cost
+            WorkoutCacheService.save(workout)
             saveExercisesToLibrary(workout.exercises)
         } catch {
             logger.error("Workout generation failed: \(error)")
@@ -106,7 +117,7 @@ struct HomeView: View {
         isLoading = false
     }
 
-    private func streamChat(_ message: String) async -> AsyncThrowingStream<ChatStreamEvent, Error>? {
+    private func streamChat(_ message: String, history: [ChatMessage]) async -> AsyncThrowingStream<ChatStreamEvent, Error>? {
         guard !apiKey.isEmpty else { return nil }
 
         do {
@@ -115,7 +126,8 @@ struct HomeView: View {
                 message: message,
                 currentWorkout: todayWorkout,
                 profile: profileSnapshot,
-                exercises: exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) }
+                exercises: exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) },
+                history: history
             )
 
             return AsyncThrowingStream { continuation in
@@ -125,6 +137,9 @@ struct HomeView: View {
                             switch event {
                             case .result(let result):
                                 todayWorkout = result.workout
+                                if Calendar.current.isDateInToday(workoutDate) {
+                                    WorkoutCacheService.save(result.workout)
+                                }
                                 saveExercisesToLibrary(result.workout.exercises)
                                 errorMessage = nil
                             case .usage(let cost):

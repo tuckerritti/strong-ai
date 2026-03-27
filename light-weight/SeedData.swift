@@ -120,8 +120,8 @@ enum SeedData {
                     LogSet(reps: 9, weight: 55, rpe: 9, completedAt: daysAgo(25)),
                 ]),
                 LogEntry(exerciseName: "Tricep Pushdown", muscleGroup: "Triceps", targetMuscles: [tm("triceps", 1.0)], sets: [
-                    LogSet(reps: 15, weight: 25, completedAt: daysAgo(25)),
-                    LogSet(reps: 15, weight: 25, completedAt: daysAgo(25)),
+                    LogSet(reps: 15, weight: 25, rpe: 7, completedAt: daysAgo(25)),
+                    LogSet(reps: 15, weight: 25, rpe: 7, completedAt: daysAgo(25)),
                 ]),
             ]),
             ("Upper Body Pull", 23, [
@@ -136,8 +136,8 @@ enum SeedData {
                     LogSet(reps: 6, weight: 0, rpe: 9, completedAt: daysAgo(23)),
                 ]),
                 LogEntry(exerciseName: "Barbell Curl", muscleGroup: "Biceps", targetMuscles: [tm("biceps", 0.75), tm("forearm", 0.25)], sets: [
-                    LogSet(reps: 12, weight: 45, completedAt: daysAgo(23)),
-                    LogSet(reps: 12, weight: 45, completedAt: daysAgo(23)),
+                    LogSet(reps: 12, weight: 45, rpe: 7, completedAt: daysAgo(23)),
+                    LogSet(reps: 12, weight: 45, rpe: 7, completedAt: daysAgo(23)),
                 ]),
             ]),
             // Week 3
@@ -165,8 +165,8 @@ enum SeedData {
                     LogSet(reps: 10, weight: 40, rpe: 8, completedAt: daysAgo(16)),
                 ]),
                 LogEntry(exerciseName: "Lateral Raise", muscleGroup: "Shoulders", targetMuscles: [tm("deltoids", 1.0)], sets: [
-                    LogSet(reps: 15, weight: 15, completedAt: daysAgo(16)),
-                    LogSet(reps: 15, weight: 15, completedAt: daysAgo(16)),
+                    LogSet(reps: 15, weight: 15, rpe: 7, completedAt: daysAgo(16)),
+                    LogSet(reps: 15, weight: 15, rpe: 7, completedAt: daysAgo(16)),
                 ]),
             ]),
             // Week 2
@@ -182,8 +182,8 @@ enum SeedData {
                     LogSet(reps: 7, weight: 0, rpe: 9, completedAt: daysAgo(11)),
                 ]),
                 LogEntry(exerciseName: "Barbell Curl", muscleGroup: "Biceps", targetMuscles: [tm("biceps", 0.75), tm("forearm", 0.25)], sets: [
-                    LogSet(reps: 12, weight: 50, completedAt: daysAgo(11)),
-                    LogSet(reps: 12, weight: 50, completedAt: daysAgo(11)),
+                    LogSet(reps: 12, weight: 50, rpe: 7, completedAt: daysAgo(11)),
+                    LogSet(reps: 12, weight: 50, rpe: 7, completedAt: daysAgo(11)),
                 ]),
             ]),
             ("Lower Body", 9, [
@@ -211,8 +211,8 @@ enum SeedData {
                     LogSet(reps: 9, weight: 65, rpe: 9, completedAt: daysAgo(4)),
                 ]),
                 LogEntry(exerciseName: "Tricep Pushdown", muscleGroup: "Triceps", targetMuscles: [tm("triceps", 1.0)], sets: [
-                    LogSet(reps: 15, weight: 30, completedAt: daysAgo(4)),
-                    LogSet(reps: 15, weight: 30, completedAt: daysAgo(4)),
+                    LogSet(reps: 15, weight: 30, rpe: 7, completedAt: daysAgo(4)),
+                    LogSet(reps: 15, weight: 30, rpe: 7, completedAt: daysAgo(4)),
                 ]),
             ]),
             ("Upper Body Pull", 2, [
@@ -227,8 +227,8 @@ enum SeedData {
                     LogSet(reps: 8, weight: 0, rpe: 9, completedAt: daysAgo(2)),
                 ]),
                 LogEntry(exerciseName: "Barbell Curl", muscleGroup: "Biceps", targetMuscles: [tm("biceps", 0.75), tm("forearm", 0.25)], sets: [
-                    LogSet(reps: 12, weight: 55, completedAt: daysAgo(2)),
-                    LogSet(reps: 12, weight: 55, completedAt: daysAgo(2)),
+                    LogSet(reps: 12, weight: 55, rpe: 7, completedAt: daysAgo(2)),
+                    LogSet(reps: 12, weight: 55, rpe: 7, completedAt: daysAgo(2)),
                 ]),
             ]),
             ("Lower Body", 3, [
@@ -247,9 +247,9 @@ enum SeedData {
                     LogSet(reps: 10, weight: 135, rpe: 8, completedAt: daysAgo(3)),
                 ]),
                 LogEntry(exerciseName: "Calf Raise", muscleGroup: "Calves", targetMuscles: [tm("calves", 1.0)], sets: [
-                    LogSet(reps: 15, weight: 90, completedAt: daysAgo(3)),
-                    LogSet(reps: 15, weight: 90, completedAt: daysAgo(3)),
-                    LogSet(reps: 15, weight: 90, completedAt: daysAgo(3)),
+                    LogSet(reps: 15, weight: 90, rpe: 7, completedAt: daysAgo(3)),
+                    LogSet(reps: 15, weight: 90, rpe: 7, completedAt: daysAgo(3)),
+                    LogSet(reps: 15, weight: 90, rpe: 7, completedAt: daysAgo(3)),
                 ]),
             ]),
             ("Accessories", 1, [
@@ -259,8 +259,8 @@ enum SeedData {
                     LogSet(reps: 12, weight: 135, rpe: 8, completedAt: daysAgo(1)),
                 ]),
                 LogEntry(exerciseName: "Wrist Curl", muscleGroup: "Forearms", targetMuscles: [tm("forearm", 1.0)], sets: [
-                    LogSet(reps: 15, weight: 30, completedAt: daysAgo(1)),
-                    LogSet(reps: 15, weight: 30, completedAt: daysAgo(1)),
+                    LogSet(reps: 15, weight: 30, rpe: 7, completedAt: daysAgo(1)),
+                    LogSet(reps: 15, weight: 30, rpe: 7, completedAt: daysAgo(1)),
                 ]),
                 LogEntry(exerciseName: "Cable Crunch", muscleGroup: "Core", targetMuscles: [tm("abs", 1.0)], sets: [
                     LogSet(reps: 15, weight: 50, rpe: 7, completedAt: daysAgo(1)),

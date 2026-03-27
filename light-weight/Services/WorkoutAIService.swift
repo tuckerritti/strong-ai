@@ -28,7 +28,7 @@ struct WorkoutAIService {
               "muscleGroup": "Muscle Group",
               "targetMuscles": [{"muscle": "chest", "weight": 0.6}, {"muscle": "front-deltoid", "weight": 0.2}, {"muscle": "triceps", "weight": 0.2}],
               "sets": [
-                { "reps": 8, "weight": 135, "restSeconds": 90 }
+                { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
               ]
             }
           ]
@@ -40,6 +40,7 @@ struct WorkoutAIService {
         - Vary muscle groups day-to-day so the user doesn't repeat the same muscles back-to-back
         - Rest seconds: 60-90 for hypertrophy, 120-180 for strength, 30-45 for accessories
         - Weight in lbs. Use 0 for bodyweight exercises.
+        - You MUST set targetRpe (1-10) for every set.
         - When the user's exercise library contains a matching exercise, use its EXACT name. Prefer library exercises over inventing new ones unless the workout calls for something different.
         - targetMuscles: for each exercise, list muscles worked with a weight (0-1) representing that muscle's share of the work. Weights should sum to ~1.0. Valid muscle values: \(Muscle.validPromptValues)
         """
@@ -73,7 +74,7 @@ struct WorkoutAIService {
         Duration: \(log.durationMinutes) min
         Exercises:
         \(log.entries.map { entry in
-            "- \(entry.exerciseName): \(entry.sets.map { "\(Int($0.weight))lbs x\($0.reps)\($0.rpe.map { " @RPE\($0)" } ?? "")" }.joined(separator: ", "))"
+            "- \(entry.exerciseName): \(entry.sets.map { "\(Int($0.weight))lbs x\($0.reps) @RPE\($0.rpe)" }.joined(separator: ", "))"
         }.joined(separator: "\n"))
 
         Recent history:

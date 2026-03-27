@@ -39,11 +39,13 @@ struct WorkoutSet: Codable, Sendable {
     var reps: Int
     var weight: Double
     var restSeconds: Int
+    var targetRpe: Int?
 
-    init(reps: Int, weight: Double, restSeconds: Int) {
+    init(reps: Int, weight: Double, restSeconds: Int, targetRpe: Int? = nil) {
         self.reps = reps
         self.weight = weight
         self.restSeconds = restSeconds
+        self.targetRpe = targetRpe
     }
 
     init(from decoder: Decoder) throws {
@@ -51,43 +53,6 @@ struct WorkoutSet: Codable, Sendable {
         reps = try container.decode(Int.self, forKey: .reps)
         weight = try container.decode(Double.self, forKey: .weight)
         restSeconds = try container.decodeIfPresent(Int.self, forKey: .restSeconds) ?? 90
+        targetRpe = try container.decodeIfPresent(Int.self, forKey: .targetRpe)
     }
-}
-
-// MARK: - Sample (placeholder until AI generates workouts)
-
-extension Workout {
-    static let sample = Workout(
-        name: "Upper Body Push",
-        exercises: [
-            WorkoutExercise(name: "Bench Press", muscleGroup: "Chest", targetMuscles: [
-                TargetMuscle(muscle: "chest", weight: 0.6), TargetMuscle(muscle: "front-deltoid", weight: 0.2), TargetMuscle(muscle: "triceps", weight: 0.2),
-            ], sets: [
-                WorkoutSet(reps: 8, weight: 135, restSeconds: 90),
-                WorkoutSet(reps: 8, weight: 135, restSeconds: 90),
-                WorkoutSet(reps: 8, weight: 135, restSeconds: 90),
-            ]),
-            WorkoutExercise(name: "Overhead Press", muscleGroup: "Shoulders", targetMuscles: [
-                TargetMuscle(muscle: "deltoids", weight: 0.6), TargetMuscle(muscle: "triceps", weight: 0.25), TargetMuscle(muscle: "upper-trapezius", weight: 0.15),
-            ], sets: [
-                WorkoutSet(reps: 10, weight: 65, restSeconds: 75),
-                WorkoutSet(reps: 10, weight: 65, restSeconds: 75),
-                WorkoutSet(reps: 10, weight: 65, restSeconds: 75),
-            ]),
-            WorkoutExercise(name: "Incline Dumbbell Press", muscleGroup: "Chest", targetMuscles: [
-                TargetMuscle(muscle: "upper-chest", weight: 0.5), TargetMuscle(muscle: "front-deltoid", weight: 0.25), TargetMuscle(muscle: "triceps", weight: 0.25),
-            ], sets: [
-                WorkoutSet(reps: 12, weight: 40, restSeconds: 60),
-                WorkoutSet(reps: 12, weight: 40, restSeconds: 60),
-                WorkoutSet(reps: 12, weight: 40, restSeconds: 60),
-            ]),
-            WorkoutExercise(name: "Tricep Pushdown", muscleGroup: "Triceps", targetMuscles: [
-                TargetMuscle(muscle: "triceps", weight: 1.0),
-            ], sets: [
-                WorkoutSet(reps: 15, weight: 30, restSeconds: 45),
-                WorkoutSet(reps: 15, weight: 30, restSeconds: 45),
-                WorkoutSet(reps: 15, weight: 30, restSeconds: 45),
-            ]),
-        ]
-    )
 }

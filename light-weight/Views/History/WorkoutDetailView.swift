@@ -83,9 +83,8 @@ struct WorkoutDetailView: View {
                             .font(.system(size: 14, weight: .medium))
                             .frame(width: 64, alignment: .leading)
 
-                        Text(set.rpe.map { "\($0)" } ?? "—")
+                        Text("\(set.rpe)")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(set.rpe != nil ? Color(hex: 0x0A0A0A) : Color.black.opacity(0.3))
                             .frame(width: 48, alignment: .leading)
 
                         Spacer()

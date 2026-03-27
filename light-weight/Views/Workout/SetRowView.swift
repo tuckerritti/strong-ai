@@ -5,14 +5,21 @@ struct SetRowView: View {
     let logSet: LogSet
     let plannedSet: WorkoutSet?
     let isActive: Bool
-    let onLog: (Double, Int, Int?) -> Void
+    let isUpdating: Bool
+    let onLog: (Double, Int, Int) -> Void
 
     @State private var weightText: String = ""
     @State private var repsText: String = ""
     @State private var rpeText: String = ""
     @State private var didInit = false
+    @State private var sweepPosition: CGFloat = 1.3
+    @State private var contentOpacity: Double = 1.0
 
     private var isCompleted: Bool { logSet.completedAt != nil }
+    private var canLog: Bool {
+        guard let rpe = Int(rpeText) else { return false }
+        return Double(weightText) != nil && Int(repsText) != nil && (0...10).contains(rpe)
+    }
 
     var body: some View {
         HStack(spacing: 8) {
@@ -39,9 +46,43 @@ struct SetRowView: View {
         .onAppear {
             guard !didInit else { return }
             didInit = true
-            if let ps = plannedSet {
-                weightText = ps.weight > 0 ? "\(Int(ps.weight))" : ""
-                repsText = "\(ps.reps)"
+            syncDisplayedValues()
+        }
+        .onChange(of: logSet.weight) {
+            syncPendingValues()
+        }
+        .onChange(of: logSet.reps) {
+            syncPendingValues()
+        }
+        .onChange(of: logSet.rpe) {
+            if isCompleted {
+                rpeText = String(logSet.rpe)
+            }
+        }
+        .overlay {
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: max(0, sweepPosition - 0.15)),
+                            .init(color: Color.black.opacity(0.22), location: max(0, min(1, sweepPosition))),
+                            .init(color: .clear, location: min(1, sweepPosition + 0.15)),
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .opacity(sweepPosition < 1.3 ? 1 : 0)
+                .allowsHitTesting(false)
+        }
+        .opacity(contentOpacity)
+        .onChange(of: isUpdating) {
+            guard isUpdating else { return }
+            sweepPosition = -0.3
+            contentOpacity = 0.3
+            withAnimation(.easeOut(duration: 0.8)) {
+                sweepPosition = 1.3
+                contentOpacity = 1.0
             }
         }
     }
@@ -87,7 +128,7 @@ struct SetRowView: View {
             .background(Color(hex: 0xF5F5F5))
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
-        TextField("—", text: $rpeText)
+        TextField(plannedSet?.targetRpe.map { "@\($0)" } ?? "—", text: $rpeText)
             .keyboardType(.numberPad)
             .multilineTextAlignment(.center)
             .font(.system(size: 14, weight: .medium))
@@ -97,15 +138,13 @@ struct SetRowView: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
         Button {
-            let weight = Double(weightText) ?? 0
-            let reps = Int(repsText) ?? 0
-            let rpe = Int(rpeText)
-            onLog(weight, reps, rpe)
+            onLog(Double(weightText)!, Int(repsText)!, Int(rpeText)!)
         } label: {
             Image(systemName: "checkmark.circle")
                 .font(.system(size: 20))
-                .foregroundStyle(Color.black.opacity(0.3))
+                .foregroundStyle(canLog ? Color(hex: 0x0A0A0A) : Color.black.opacity(0.15))
         }
+        .disabled(!canLog)
         .frame(width: 28)
     }
 
@@ -121,7 +160,7 @@ struct SetRowView: View {
             .font(.system(size: 14))
             .foregroundStyle(Color.black.opacity(0.2))
             .frame(maxWidth: .infinity)
-        Text("—")
+        Text(plannedSet?.targetRpe.map { "@\($0)" } ?? "—")
             .font(.system(size: 14))
             .foregroundStyle(Color.black.opacity(0.2))
             .frame(width: 48, alignment: .center)
@@ -130,4 +169,17 @@ struct SetRowView: View {
             .frame(width: 20, height: 20)
             .frame(width: 28)
     }
+
+    private func syncDisplayedValues() {
+        weightText = logSet.weight > 0 ? "\(Int(logSet.weight))" : ""
+        repsText = "\(logSet.reps)"
+        rpeText = String(logSet.rpe)
+    }
+
+    private func syncPendingValues() {
+        guard !isCompleted else { return }
+        weightText = logSet.weight > 0 ? "\(Int(logSet.weight))" : ""
+        repsText = "\(logSet.reps)"
+    }
 }
+

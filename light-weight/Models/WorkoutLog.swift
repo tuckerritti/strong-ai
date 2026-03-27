@@ -12,7 +12,7 @@ struct TargetMuscle: Codable, Hashable, Sendable {
 struct LogSet: Codable, Hashable, Sendable {
     var reps: Int
     var weight: Double
-    var rpe: Int?
+    var rpe: Int
     var completedAt: Date?
 }
 
