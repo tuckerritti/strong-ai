@@ -19,8 +19,6 @@ struct ActiveWorkoutView: View {
 
     let workout: Workout
     @State private var viewModel: ActiveWorkoutViewModel
-    @State private var showingCancelAlert = false
-    @State private var showingFinishAlert = false
     @State private var showingDebrief = false
     @State private var finishedLog: WorkoutLog?
     @State private var apiKey = ""
@@ -54,7 +52,12 @@ struct ActiveWorkoutView: View {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
                     if viewModel.completedSets > 0 {
-                        showingCancelAlert = true
+                        showNativeAlert(
+                            title: "Discard Workout?",
+                            message: "You've logged \(viewModel.completedSets) sets. This can't be undone.",
+                            confirmTitle: "Discard",
+                            isDestructive: true
+                        ) { viewModel.stop(); dismiss() }
                     } else {
                         viewModel.stop()
                         dismiss()
@@ -63,7 +66,12 @@ struct ActiveWorkoutView: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Done") {
-                    showingFinishAlert = true
+                    showNativeAlert(
+                        title: "Finish Workout?",
+                        message: "Save your workout with \(viewModel.completedSets) sets completed?",
+                        confirmTitle: "Finish",
+                        isDestructive: false
+                    ) { finishWorkout() }
                 }
                 .disabled(viewModel.completedSets == 0)
             }
@@ -80,27 +88,6 @@ struct ActiveWorkoutView: View {
                     onSend: { message in
                         await streamMidWorkoutChat(message)
                     }
-                )
-            }
-        }
-        .overlay {
-            if showingCancelAlert {
-                ConfirmationOverlay(
-                    title: "Discard Workout?",
-                    message: "You've logged \(viewModel.completedSets) sets. This can't be undone.",
-                    confirmTitle: "Discard",
-                    confirmRole: .destructive,
-                    onConfirm: { viewModel.stop(); dismiss() },
-                    onCancel: { showingCancelAlert = false }
-                )
-            }
-            if showingFinishAlert {
-                ConfirmationOverlay(
-                    title: "Finish Workout?",
-                    message: "Save your workout with \(viewModel.completedSets) sets completed?",
-                    confirmTitle: "Finish",
-                    onConfirm: { finishWorkout() },
-                    onCancel: { showingFinishAlert = false }
                 )
             }
         }
@@ -320,63 +307,29 @@ struct ActiveWorkoutView: View {
     }
 }
 
-// MARK: - Confirmation Overlay
+// MARK: - Native Alert Helper
 
-private struct ConfirmationOverlay: View {
-    let title: String
-    let message: String
-    let confirmTitle: String
-    var confirmRole: ButtonRole? = nil
-    let onConfirm: () -> Void
-    let onCancel: () -> Void
+private func showNativeAlert(
+    title: String,
+    message: String,
+    confirmTitle: String,
+    isDestructive: Bool,
+    onConfirm: @escaping () -> Void
+) {
+    guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+          let root = windowScene.windows.first?.rootViewController else { return }
 
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
-                .onTapGesture { onCancel() }
-
-            VStack(spacing: 0) {
-                VStack(spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 17, weight: .semibold))
-                    Text(message)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
-
-                Divider()
-
-                HStack(spacing: 0) {
-                    Button {
-                        onCancel()
-                    } label: {
-                        Text("Cancel")
-                            .font(.system(size: 17))
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-
-                    Divider().frame(height: 44)
-
-                    Button {
-                        onConfirm()
-                    } label: {
-                        Text(confirmTitle)
-                            .font(.system(size: 17, weight: confirmRole == .destructive ? .semibold : .regular))
-                            .foregroundStyle(confirmRole == .destructive ? .red : Color.accentColor)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                }
-            }
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .padding(.horizontal, 50)
-        }
+    var topVC = root
+    while let presented = topVC.presentedViewController {
+        topVC = presented
     }
+
+    let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.addAction(UIAlertAction(title: confirmTitle, style: isDestructive ? .destructive : .default) { _ in
+        onConfirm()
+    })
+    topVC.present(alert, animated: true)
 }
 
 // MARK: - View Model
