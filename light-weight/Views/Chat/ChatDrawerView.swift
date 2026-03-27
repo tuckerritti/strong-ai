@@ -25,7 +25,7 @@ struct ChatDrawerView: View {
     @State private var messages: [ChatMessage] = []
     @State private var inputText = ""
     @State private var isSending = false
-    @AppStorage("showTokenCost") private var showTokenCost = false
+    @Environment(AppState.self) private var appState
     @State private var tappedInputBar = false
     private var isExpanded: Bool { selectedDetent != smallDetent }
     @FocusState private var isInputFocused: Bool
@@ -66,6 +66,11 @@ struct ChatDrawerView: View {
                     .font(.custom("SpaceGrotesk-Bold", size: 20))
                     .tracking(-0.4)
                     .foregroundStyle(Color(hex: 0x0A0A0A))
+                if appState.showTokenCost, appState.dailyCost.estimatedCost > 0 {
+                    Text("~$\(appState.dailyCost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.black.opacity(0.3))
+                }
                 Spacer()
                 Button {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -214,11 +219,6 @@ struct ChatDrawerView: View {
                     .foregroundStyle(Color(hex: 0x34C759))
                 }
 
-                if showTokenCost, let cost = message.tokenCost, cost.estimatedCost > 0 {
-                    Text("~$\(cost.estimatedCost, specifier: "%.4f")")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.black.opacity(0.25))
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

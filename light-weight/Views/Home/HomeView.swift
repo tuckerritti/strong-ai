@@ -23,8 +23,6 @@ struct HomeView: View {
     @State private var exercisesExpanded = false
     @State private var muscleMapExpanded = false
     @State private var apiKey = ""
-    @State private var workoutCost = TokenCost.zero
-    @AppStorage("showTokenCost") private var showTokenCost = false
     private var profile: UserProfile? { profiles.first }
 
     var body: some View {
@@ -98,7 +96,7 @@ struct HomeView: View {
                 healthContext: healthContext
             )
             todayWorkout = workout
-            workoutCost = cost
+            appState.dailyCost = cost
             saveExercisesToLibrary(workout.exercises)
         } catch {
             logger.error("Workout generation failed: \(error)")
@@ -130,7 +128,7 @@ struct HomeView: View {
                                 saveExercisesToLibrary(result.workout.exercises)
                                 errorMessage = nil
                             case .usage(let cost):
-                                workoutCost = workoutCost + cost
+                                appState.dailyCost = appState.dailyCost + cost
                             case .text:
                                 break
                             }
@@ -196,10 +194,18 @@ struct HomeView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()).uppercased())
-                .font(.system(size: 13, weight: .medium))
-                .tracking(0.8)
-                .foregroundStyle(Color.black.opacity(0.35))
+            HStack {
+                Text(Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()).uppercased())
+                    .font(.system(size: 13, weight: .medium))
+                    .tracking(0.8)
+                    .foregroundStyle(Color.black.opacity(0.35))
+                Spacer()
+                if appState.showTokenCost, appState.dailyCost.estimatedCost > 0 {
+                    Text("~$\(appState.dailyCost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.black.opacity(0.35))
+                }
+            }
             HStack(alignment: .center) {
                 Text(greeting)
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
@@ -345,14 +351,6 @@ struct HomeView: View {
 
             if let insight = workout.insight {
                 insightCallout(insight)
-            }
-
-            if showTokenCost, workoutCost.estimatedCost > 0 {
-                Text("~$\(workoutCost.estimatedCost, specifier: "%.4f")")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.black.opacity(0.25))
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
             }
 
             startButton(workout)

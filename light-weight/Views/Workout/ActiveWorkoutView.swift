@@ -157,6 +157,11 @@ struct ActiveWorkoutView: View {
                 Text("\(viewModel.completedExercises) of \(viewModel.totalExercises) exercises")
                     .font(.system(size: 13))
                     .foregroundStyle(Color.black.opacity(0.35))
+                if appState.showTokenCost, appState.dailyCost.estimatedCost > 0 {
+                    Text("~$\(appState.dailyCost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.black.opacity(0.35))
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -296,7 +301,9 @@ struct ActiveWorkoutView: View {
                             case .result(let result):
                                 viewModel.applyModifiedWorkout(result.workout)
                                 saveExercisesToLibrary(result.workout.exercises)
-                            case .text, .usage:
+                            case .usage(let cost):
+                                appState.dailyCost = appState.dailyCost + cost
+                            case .text:
                                 break
                             }
                             continuation.yield(event)
