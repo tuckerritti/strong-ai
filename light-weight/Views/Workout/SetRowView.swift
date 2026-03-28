@@ -64,9 +64,9 @@ struct SetRowView: View {
                 .fill(
                     LinearGradient(
                         stops: [
-                            .init(color: .clear, location: max(0, sweepPosition - 0.15)),
+                            .init(color: .clear, location: max(0, min(1, sweepPosition - 0.15))),
                             .init(color: Color.textQuaternary, location: max(0, min(1, sweepPosition))),
-                            .init(color: .clear, location: min(1, sweepPosition + 0.15)),
+                            .init(color: .clear, location: max(0, min(1, sweepPosition + 0.15))),
                         ],
                         startPoint: .leading,
                         endPoint: .trailing
