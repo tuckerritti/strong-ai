@@ -15,7 +15,7 @@ struct ClaudeAPIService: Sendable {
             messages,
             model: .custom("claude-sonnet-4-6"),
             system: [.text(systemPrompt, nil)],
-            maxTokens: 2048
+            maxTokens: 4096
         )
 
         for content in response.content {
@@ -35,7 +35,7 @@ struct ClaudeAPIService: Sendable {
             messages,
             model: .custom("claude-sonnet-4-6"),
             system: [.text(systemPrompt, nil)],
-            maxTokens: 2048
+            maxTokens: 4096
         )
 
         return AsyncThrowingStream { continuation in
