@@ -57,7 +57,7 @@ struct HomeView: View {
                     syncAPIKeyFromProfile()
                 }
                 .overlay {
-                    if !appState.isWorkoutActive && !apiKey.isEmpty {
+                    if !appState.isWorkoutActive {
                         ChatDrawerView(
                             selectedDetent: $state.chatDetent,
                             pendingMessage: $state.pendingMessage,
