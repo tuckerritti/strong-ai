@@ -460,6 +460,8 @@ final class ActiveWorkoutViewModel {
     }
 
     func logSet(exerciseIndex: Int, setIndex: Int, weight: Double, reps: Int, rpe: Int) {
+        let planned = plannedSet(exerciseIndex: exerciseIndex, setIndex: setIndex)
+
         entries[exerciseIndex].sets[setIndex].weight = weight
         entries[exerciseIndex].sets[setIndex].reps = reps
         entries[exerciseIndex].sets[setIndex].rpe = rpe
@@ -471,12 +473,15 @@ final class ActiveWorkoutViewModel {
             workoutExercises[exerciseIndex].sets[setIndex].reps = reps
         }
 
-        let planned = plannedSet(exerciseIndex: exerciseIndex, setIndex: setIndex)
         if let planned {
             timerService.start(seconds: planned.restSeconds)
         }
 
-        if !apiKey.isEmpty {
+        let missedTarget = planned.map { p in
+            weight != p.weight || reps != p.reps || (p.targetRpe != nil && rpe != p.targetRpe)
+        } ?? false
+
+        if !apiKey.isEmpty && missedTarget {
             requestRPEAdjustment()
         }
     }
