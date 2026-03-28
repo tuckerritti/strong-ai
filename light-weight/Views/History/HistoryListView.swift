@@ -31,7 +31,7 @@ struct HistoryListView: View {
                 Text("History")
                     .font(.custom("SpaceGrotesk-Bold", size: 36))
                     .tracking(-1.4)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
 
@@ -93,7 +93,7 @@ struct HistoryListView: View {
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
                 .tracking(0.5)
-                .foregroundStyle(Color.black.opacity(0.35))
+                .foregroundStyle(Color.textSecondary)
                 .padding(.horizontal, 20)
                 .padding(.top, 28)
                 .padding(.bottom, 8)
@@ -116,11 +116,11 @@ struct HistoryListView: View {
             VStack(spacing: 0) {
                 Text(log.startedAt.formatted(.dateTime.weekday(.abbreviated)).uppercased())
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.black.opacity(0.4))
+                    .foregroundStyle(Color.textSecondary)
                 Text(log.startedAt.formatted(.dateTime.day()))
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
                     .tracking(-0.5)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
             }
             .frame(width: 50)
 
@@ -128,15 +128,15 @@ struct HistoryListView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(log.workoutName)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
                 if log.isInProgress {
                     Text("In progress...")
                         .font(.system(size: 13))
-                        .foregroundStyle(Color.black.opacity(0.35))
+                        .foregroundStyle(Color.textSecondary)
                 } else {
                     Text("\(log.totalSets) sets · \(log.durationMinutes) min · \(Int(log.totalVolume).formatted()) lbs")
                         .font(.system(size: 13))
-                        .foregroundStyle(Color.black.opacity(0.35))
+                        .foregroundStyle(Color.textSecondary)
                 }
             }
 
@@ -144,7 +144,7 @@ struct HistoryListView: View {
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.black.opacity(0.2))
+                .foregroundStyle(Color.textTertiary)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)

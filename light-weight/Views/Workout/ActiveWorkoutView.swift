@@ -149,15 +149,15 @@ struct ActiveWorkoutView: View {
             Text(viewModel.workoutName)
                 .font(.custom("SpaceGrotesk-Bold", size: 28))
                 .tracking(-0.84)
-                .foregroundStyle(Color(hex: 0x0A0A0A))
+                .foregroundStyle(Color.textPrimary)
             HStack(spacing: 12) {
                 Text(viewModel.elapsedFormatted)
                     .font(.custom("SpaceGrotesk-Bold", size: 15))
-                    .foregroundStyle(Color(hex: 0x34C759))
+                    .foregroundStyle(Color.accent)
                     .contentTransition(.numericText())
                 Text("\(viewModel.completedExercises) of \(viewModel.totalExercises) exercises")
                     .font(.system(size: 13))
-                    .foregroundStyle(Color.black.opacity(0.35))
+                    .foregroundStyle(Color.textSecondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -187,12 +187,12 @@ struct ActiveWorkoutView: View {
                     Text(entry.exerciseName)
                         .font(.custom("SpaceGrotesk-Bold", size: 18))
                         .tracking(-0.18)
-                        .foregroundStyle(Color(hex: 0x0A0A0A))
+                        .foregroundStyle(Color.textPrimary)
                     Spacer()
                     Text(entry.muscleGroup.uppercased())
                         .font(.system(size: 12, weight: .medium))
                         .tracking(0.72)
-                        .foregroundStyle(Color.black.opacity(0.3))
+                        .foregroundStyle(Color.textTertiary)
                 }
             }
             .buttonStyle(.plain)
@@ -214,7 +214,7 @@ struct ActiveWorkoutView: View {
             }
             .font(.system(size: 11, weight: .semibold))
             .tracking(0.5)
-            .foregroundStyle(Color.black.opacity(0.3))
+            .foregroundStyle(Color.textTertiary)
             .padding(.horizontal, 20)
             .padding(.bottom, 8)
 

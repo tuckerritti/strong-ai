@@ -206,12 +206,12 @@ struct HomeView: View {
             Text(Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()).uppercased())
                 .font(.system(size: 13, weight: .medium))
                 .tracking(0.8)
-                .foregroundStyle(Color.black.opacity(0.35))
+                .foregroundStyle(Color.textSecondary)
             HStack(alignment: .center) {
                 Text(greeting)
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
                     .tracking(-1.0)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
                 Spacer()
                 HStack(spacing: 16) {
                     NavigationLink {
@@ -219,21 +219,21 @@ struct HomeView: View {
                     } label: {
                         Image(systemName: "book.fill")
                             .font(.system(size: 20))
-                            .foregroundStyle(Color(hex: 0x0A0A0A))
+                            .foregroundStyle(Color.textPrimary)
                     }
                     NavigationLink {
                         HistoryListView()
                     } label: {
                         Image(systemName: "clock.fill")
                             .font(.system(size: 20))
-                            .foregroundStyle(Color(hex: 0x0A0A0A))
+                            .foregroundStyle(Color.textPrimary)
                     }
                     NavigationLink {
                         SettingsView()
                     } label: {
                         Image(systemName: "gearshape.fill")
                             .font(.system(size: 20))
-                            .foregroundStyle(Color(hex: 0x0A0A0A))
+                            .foregroundStyle(Color.textPrimary)
                     }
                 }
             }
@@ -333,17 +333,17 @@ struct HomeView: View {
             Text("Today's Workout")
                 .font(.custom("SpaceGrotesk-Bold", size: 20))
                 .tracking(-0.4)
-                .foregroundStyle(Color(hex: 0x0A0A0A))
+                .foregroundStyle(Color.textPrimary)
                 .padding(.horizontal, 20)
                 .padding(.top, 28)
 
             HStack(spacing: 8) {
                 Text(workout.name)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.black.opacity(0.6))
+                    .foregroundStyle(Color.textSecondary)
                 Text("\(workout.totalSets) sets · ~\(workout.estimatedMinutes) min")
                     .font(.system(size: 13))
-                    .foregroundStyle(Color.black.opacity(0.3))
+                    .foregroundStyle(Color.textTertiary)
             }
             .padding(.horizontal, 20)
             .padding(.top, 4)
@@ -369,11 +369,11 @@ struct HomeView: View {
                 HStack {
                     Text(exercise.name)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0x0A0A0A))
+                        .foregroundStyle(Color.textPrimary)
                     Spacer()
                     Text("\(exercise.sets.count) sets · \(exercise.sets.first?.reps ?? 0) reps")
                         .font(.system(size: 13))
-                        .foregroundStyle(Color.black.opacity(0.35))
+                        .foregroundStyle(Color.textSecondary)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
@@ -387,14 +387,14 @@ struct HomeView: View {
                 } label: {
                     Text(exercisesExpanded ? "Show less" : "+\(remaining) more")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.black.opacity(0.3))
+                        .foregroundStyle(Color.textTertiary)
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())
                 }
             }
         }
-        .background(Color(hex: 0xF5F5F5))
+        .background(Color.appSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal, 20)
         .padding(.top, 14)
@@ -404,15 +404,15 @@ struct HomeView: View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "wand.and.stars")
                 .font(.system(size: 13))
-                .foregroundStyle(Color(red: 0.18, green: 0.39, blue: 0.78))
+                .foregroundStyle(Color.insightIcon)
                 .padding(.top, 1)
             Text(insight)
                 .font(.system(size: 13))
                 .lineSpacing(4)
-                .foregroundStyle(Color(red: 0.12, green: 0.24, blue: 0.47).opacity(0.6))
+                .foregroundStyle(Color.insightText)
         }
         .padding(12)
-        .background(Color(red: 0.18, green: 0.39, blue: 0.78).opacity(0.08))
+        .background(Color.insightBg)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal, 20)
         .padding(.top, 16)
@@ -425,10 +425,10 @@ struct HomeView: View {
             Text("Start Workout")
                 .font(.custom("SpaceGrotesk-Bold", size: 17))
                 .tracking(-0.2)
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.buttonPrimaryText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Color(hex: 0x0A0A0A))
+                .background(Color.buttonPrimary)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .padding(.horizontal, 20)
@@ -461,15 +461,3 @@ struct HomeView: View {
 
 }
 
-// MARK: - Color Helper
-
-extension Color {
-    init(hex: UInt, opacity: Double = 1.0) {
-        self.init(
-            red: Double((hex >> 16) & 0xFF) / 255,
-            green: Double((hex >> 8) & 0xFF) / 255,
-            blue: Double(hex & 0xFF) / 255,
-            opacity: opacity
-        )
-    }
-}

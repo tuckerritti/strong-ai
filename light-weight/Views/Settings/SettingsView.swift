@@ -18,7 +18,7 @@ struct SettingsView: View {
                 Text("Settings")
                     .font(.custom("SpaceGrotesk-Bold", size: 36))
                     .tracking(-1.4)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
 
@@ -58,7 +58,7 @@ struct SettingsView: View {
                             Text("REST TIMER SOUNDS")
                                 .font(.system(size: 13, weight: .semibold))
                                 .tracking(0.5)
-                                .foregroundStyle(Color.black.opacity(0.35))
+                                .foregroundStyle(Color.textSecondary)
 
                             VStack(spacing: 0) {
                                 ForEach(RestSound.allCases) { sound in
@@ -75,12 +75,12 @@ struct SettingsView: View {
                                     } label: {
                                         HStack {
                                             Text(sound.displayName)
-                                                .foregroundStyle(Color(hex: 0x0A0A0A))
+                                                .foregroundStyle(Color.textPrimary)
                                             Spacer()
                                             if selectedSounds.contains(sound) {
                                                 Image(systemName: "checkmark")
                                                     .font(.system(size: 14, weight: .semibold))
-                                                    .foregroundStyle(Color(hex: 0x34C759))
+                                                    .foregroundStyle(Color.accent)
                                             }
                                         }
                                         .padding(.vertical, 12)
@@ -94,7 +94,7 @@ struct SettingsView: View {
                                 }
                             }
                             .padding(.horizontal, 16)
-                            .background(Color(hex: 0xF5F5F5))
+                            .background(Color.appSurface)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
                     }
@@ -126,12 +126,12 @@ struct SettingsView: View {
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
                 .tracking(0.5)
-                .foregroundStyle(Color.black.opacity(0.35))
+                .foregroundStyle(Color.textSecondary)
 
             content()
                 .padding(.vertical, 14)
                 .padding(.horizontal, 16)
-                .background(Color(hex: 0xF5F5F5))
+                .background(Color.appSurface)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
         }
     }

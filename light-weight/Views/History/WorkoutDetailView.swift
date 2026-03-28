@@ -37,7 +37,7 @@ struct WorkoutDetailView: View {
             Text(entry.exerciseName)
                 .font(.custom("SpaceGrotesk-Bold", size: 17))
                 .tracking(-0.3)
-                .foregroundStyle(Color(hex: 0x0A0A0A))
+                .foregroundStyle(Color.textPrimary)
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
                 .padding(.bottom, 4)
@@ -45,7 +45,7 @@ struct WorkoutDetailView: View {
             Text(entry.muscleGroup.uppercased())
                 .font(.system(size: 11, weight: .semibold))
                 .tracking(0.5)
-                .foregroundStyle(Color.black.opacity(0.35))
+                .foregroundStyle(Color.textSecondary)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 10)
 
@@ -63,7 +63,7 @@ struct WorkoutDetailView: View {
             }
             .font(.system(size: 11, weight: .semibold))
             .tracking(0.5)
-            .foregroundStyle(Color.black.opacity(0.3))
+            .foregroundStyle(Color.textTertiary)
             .padding(.horizontal, 20)
             .padding(.bottom, 6)
 
@@ -72,7 +72,7 @@ struct WorkoutDetailView: View {
                     HStack(spacing: 0) {
                         Text("\(setIndex + 1)")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(set.completedAt != nil ? Color(hex: 0x34C759) : Color.black.opacity(0.3))
+                            .foregroundStyle(set.completedAt != nil ? Color.accent : .textTertiary)
                             .frame(width: 40, alignment: .leading)
 
                         Text("\(Int(set.weight))")
@@ -113,15 +113,15 @@ struct StatCard: View {
             Text(value)
                 .font(.custom("SpaceGrotesk-Bold", size: 28))
                 .tracking(-0.5)
-                .foregroundStyle(highlight ? Color(hex: 0x34C759) : Color(hex: 0x0A0A0A))
+                .foregroundStyle(highlight ? Color.accent : .textPrimary)
             Text(title)
                 .font(.system(size: 10, weight: .semibold))
                 .tracking(0.8)
-                .foregroundStyle(Color.black.opacity(0.3))
+                .foregroundStyle(Color.textTertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.vertical, 16)
-        .background(Color(hex: 0xF5F5F5))
+        .background(Color.appSurface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
