@@ -220,6 +220,11 @@ struct ChatDrawerView: View {
                     .foregroundStyle(Color(hex: 0x34C759))
                 }
 
+                if appState.showTokenCost, let cost = message.tokenCost, cost.estimatedCost > 0 {
+                    Text("~$\(cost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.black.opacity(0.25))
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -261,7 +266,7 @@ struct ChatDrawerView: View {
                     }
                     messages[assistantIndex].isApplied = true
                 case .usage(let cost):
-                    messages[assistantIndex].tokenCost = cost
+                    messages[assistantIndex].tokenCost = (messages[assistantIndex].tokenCost ?? .zero) + cost
                 }
             }
         } catch {

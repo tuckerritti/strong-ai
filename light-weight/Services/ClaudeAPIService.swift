@@ -77,19 +77,21 @@ struct ClaudeAPIService: Sendable {
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
+                    var finalCost = TokenCost.zero
                     for try await chunk in stream {
                         if let delta = chunk as? StreamingContentBlockDeltaResponse,
                            delta.delta.type == .text,
                            let text = delta.delta.text {
                             continuation.yield(.text(text))
+                        } else if let messageStart = chunk as? StreamingMessageStartResponse {
+                            finalCost.inputTokens = max(finalCost.inputTokens, messageStart.message.usage.inputTokens ?? 0)
+                            finalCost.outputTokens = max(finalCost.outputTokens, messageStart.message.usage.outputTokens ?? 0)
                         } else if let messageDelta = chunk as? StreamingMessageDeltaResponse {
-                            let cost = TokenCost(
-                                inputTokens: messageDelta.usage.inputTokens ?? 0,
-                                outputTokens: messageDelta.usage.outputTokens ?? 0
-                            )
-                            continuation.yield(.usage(cost))
+                            finalCost.inputTokens = max(finalCost.inputTokens, messageDelta.usage.inputTokens ?? 0)
+                            finalCost.outputTokens = max(finalCost.outputTokens, messageDelta.usage.outputTokens ?? 0)
                         }
                     }
+                    continuation.yield(.usage(finalCost))
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
