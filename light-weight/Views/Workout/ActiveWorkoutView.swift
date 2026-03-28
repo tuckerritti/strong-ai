@@ -130,6 +130,7 @@ struct ActiveWorkoutView: View {
         }
         .onAppear {
             appState.isWorkoutActive = true
+            appState.chatDetent = .height(90)
             syncAPIKeyFromProfile()
             viewModel.apiKey = apiKey
             viewModel.start()
