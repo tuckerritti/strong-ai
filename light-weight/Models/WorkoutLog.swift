@@ -38,6 +38,22 @@ struct LogEntry: Codable, Hashable, Sendable {
     }
 }
 
+extension Array where Element == LogEntry {
+    func formattedProgress() -> String {
+        map { entry in
+            let sets = entry.sets.enumerated().map { i, set in
+                if set.completedAt != nil {
+                    let rpeStr = " @RPE \(set.rpe)"
+                    return "  Set \(i + 1): COMPLETED - \(Int(set.weight))lbs x \(set.reps)\(rpeStr)"
+                } else {
+                    return "  Set \(i + 1): PLANNED - \(Int(set.weight))lbs x \(set.reps)"
+                }
+            }.joined(separator: "\n")
+            return "\(entry.exerciseName) (\(entry.muscleGroup)):\n\(sets)"
+        }.joined(separator: "\n")
+    }
+}
+
 @Model
 final class WorkoutLog {
     var workoutName: String

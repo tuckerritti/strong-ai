@@ -75,7 +75,7 @@ struct ChatAIService {
         }
 
         if let progress {
-            userMessage += "\n\nWorkout progress:\n" + formatProgress(progress)
+            userMessage += "\n\nWorkout progress:\n" + progress.formattedProgress()
         }
 
         // Build multi-turn message array from history
@@ -152,20 +152,6 @@ struct ChatAIService {
             logger.error("Chat workout decode failed: \(String(describing: error))")
             throw ChatParseError.decodingFailed(String(describing: error))
         }
-    }
-
-    private static func formatProgress(_ entries: [LogEntry]) -> String {
-        entries.map { entry in
-            let sets = entry.sets.enumerated().map { i, set in
-                if set.completedAt != nil {
-                    let rpeStr = " @RPE \(set.rpe)"
-                    return "  Set \(i + 1): COMPLETED - \(Int(set.weight))lbs x \(set.reps)\(rpeStr)"
-                } else {
-                    return "  Set \(i + 1): PLANNED - \(Int(set.weight))lbs x \(set.reps)"
-                }
-            }.joined(separator: "\n")
-            return "\(entry.exerciseName) (\(entry.muscleGroup)):\n\(sets)"
-        }.joined(separator: "\n")
     }
 
     enum ChatParseError: LocalizedError {
