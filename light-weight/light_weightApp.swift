@@ -6,8 +6,11 @@ struct light_weightApp: App {
     let container: ModelContainer
 
     init() {
-        let container = try! ModelContainer(for: Exercise.self, WorkoutLog.self, UserProfile.self)
-        self.container = container
+        do {
+            container = try ModelContainer(for: Exercise.self, WorkoutLog.self, UserProfile.self)
+        } catch {
+            fatalError("Failed to create ModelContainer: \(error.localizedDescription)")
+        }
 
         #if DEBUG
         SeedData.clearAll(container.mainContext)

@@ -24,8 +24,8 @@ enum RestSound: String, CaseIterable, Identifiable {
         }
     }
 
-    var url: URL {
-        Bundle.main.url(forResource: rawValue, withExtension: "wav")!
+    var url: URL? {
+        Bundle.main.url(forResource: rawValue, withExtension: "wav")
     }
 
     static var selected: Set<RestSound> {
@@ -77,9 +77,13 @@ final class RestSoundService: NSObject, AVAudioPlayerDelegate {
 
     func playCompletionSound() {
         let sound = RestSound.selected.randomElement() ?? .yeahBuddy
+        guard let url = sound.url else {
+            logger.error("Missing audio file: \(sound.rawValue).wav")
+            return
+        }
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: .duckOthers)
-            completionPlayer = try AVAudioPlayer(contentsOf: sound.url)
+            completionPlayer = try AVAudioPlayer(contentsOf: url)
             completionPlayer?.delegate = self
             completionPlayer?.volume = 1.0
             completionPlayer?.play()
@@ -97,10 +101,14 @@ final class RestSoundService: NSObject, AVAudioPlayerDelegate {
     }
 
     func previewSound(_ sound: RestSound) {
+        guard let url = sound.url else {
+            logger.error("Missing audio file: \(sound.rawValue).wav")
+            return
+        }
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: .duckOthers)
             try AVAudioSession.sharedInstance().setActive(true)
-            completionPlayer = try AVAudioPlayer(contentsOf: sound.url)
+            completionPlayer = try AVAudioPlayer(contentsOf: url)
             completionPlayer?.delegate = self
             completionPlayer?.volume = 1.0
             completionPlayer?.play()
