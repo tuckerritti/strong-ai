@@ -12,23 +12,38 @@ BUNDLE_ID="com.tuckerr.light-weight"
 
 mkdir -p "$CONTEXT_DIR"
 
-# Reuse existing simulator if it still exists
+DEVICE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro"
+LATEST_RUNTIME=$(xcrun simctl list runtimes available | grep 'iOS' | tail -1 | sed 's/.*- //')
+
+# Reuse existing simulator if it still exists and is on the latest runtime
 if [ -f "$UDID_FILE" ]; then
   EXISTING_UDID=$(cat "$UDID_FILE")
   if xcrun simctl list devices | grep -q "$EXISTING_UDID"; then
-    echo "Reusing existing simulator: $SIM_NAME ($EXISTING_UDID)"
-    xcrun simctl boot "$EXISTING_UDID" 2>/dev/null || true
-    UDID="$EXISTING_UDID"
+    # Check if the existing simulator's runtime matches the latest
+    CURRENT_RUNTIME=$(xcrun simctl list devices -j | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for runtime, devices in data['devices'].items():
+    for d in devices:
+        if d['udid'] == '$EXISTING_UDID':
+            print(runtime)
+")
+    if [ "$CURRENT_RUNTIME" = "$LATEST_RUNTIME" ]; then
+      echo "Reusing existing simulator: $SIM_NAME ($EXISTING_UDID) on $LATEST_RUNTIME"
+      xcrun simctl boot "$EXISTING_UDID" 2>/dev/null || true
+      UDID="$EXISTING_UDID"
+    else
+      echo "Runtime changed ($CURRENT_RUNTIME -> $LATEST_RUNTIME), recreating simulator..."
+      xcrun simctl shutdown "$EXISTING_UDID" 2>/dev/null || true
+      xcrun simctl delete "$EXISTING_UDID"
+    fi
   fi
 fi
 
 # Create a new simulator if we don't have one
 if [ -z "${UDID:-}" ]; then
-  DEVICE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro"
-  RUNTIME=$(xcrun simctl list runtimes available | grep 'iOS' | tail -1 | sed 's/.*- //')
-
-  echo "Creating iPhone 17 Pro simulator as '$SIM_NAME'..."
-  UDID=$(xcrun simctl create "$SIM_NAME" "$DEVICE_TYPE" "$RUNTIME")
+  echo "Creating iPhone 17 Pro simulator as '$SIM_NAME' on $LATEST_RUNTIME..."
+  UDID=$(xcrun simctl create "$SIM_NAME" "$DEVICE_TYPE" "$LATEST_RUNTIME")
   echo "$UDID" > "$UDID_FILE"
 
   echo "Booting simulator..."
