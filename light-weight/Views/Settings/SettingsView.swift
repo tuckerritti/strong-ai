@@ -75,7 +75,6 @@ struct SettingsView: View {
                                     } label: {
                                         HStack {
                                             Text(sound.displayName)
-                                                .font(.system(size: 15))
                                                 .foregroundStyle(Color(hex: 0x0A0A0A))
                                             Spacer()
                                             if selectedSounds.contains(sound) {
