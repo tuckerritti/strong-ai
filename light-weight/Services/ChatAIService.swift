@@ -8,6 +8,7 @@ private let logger = Logger(subsystem: "com.light-weight", category: "ChatAI")
 enum ChatStreamEvent: Sendable {
     case text(String)
     case result(ChatResult)
+    case usage(TokenCost)
 }
 
 struct ChatResult: Sendable, Codable {
@@ -75,7 +76,7 @@ struct ChatAIService {
         }
 
         if let progress {
-            userMessage += "\n\nWorkout progress:\n" + formatProgress(progress)
+            userMessage += "\n\nWorkout progress:\n" + progress.formattedProgress()
         }
 
         // Build multi-turn message array from history
@@ -92,24 +93,29 @@ struct ChatAIService {
                 var sentExplanationUpTo = 0
 
                 do {
-                    for try await token in tokenStream {
-                        accumulated += token
+                    for try await chunk in tokenStream {
+                        switch chunk {
+                        case .text(let token):
+                            accumulated += token
 
-                        // Stream explanation text (everything before ---JSON)
-                        if let separatorRange = accumulated.range(of: "---JSON") {
-                            let explanation = String(accumulated[accumulated.startIndex..<separatorRange.lowerBound])
-                            if explanation.count > sentExplanationUpTo {
-                                let new = String(explanation.dropFirst(sentExplanationUpTo))
-                                continuation.yield(.text(new))
-                                sentExplanationUpTo = explanation.count
+                            // Stream explanation text (everything before ---JSON)
+                            if let separatorRange = accumulated.range(of: "---JSON") {
+                                let explanation = String(accumulated[accumulated.startIndex..<separatorRange.lowerBound])
+                                if explanation.count > sentExplanationUpTo {
+                                    let new = String(explanation.dropFirst(sentExplanationUpTo))
+                                    continuation.yield(.text(new))
+                                    sentExplanationUpTo = explanation.count
+                                }
+                            } else {
+                                // Haven't hit separator yet — stream everything so far
+                                if accumulated.count > sentExplanationUpTo {
+                                    let new = String(accumulated.dropFirst(sentExplanationUpTo))
+                                    continuation.yield(.text(new))
+                                    sentExplanationUpTo = accumulated.count
+                                }
                             }
-                        } else {
-                            // Haven't hit separator yet — stream everything so far
-                            if accumulated.count > sentExplanationUpTo {
-                                let new = String(accumulated.dropFirst(sentExplanationUpTo))
-                                continuation.yield(.text(new))
-                                sentExplanationUpTo = accumulated.count
-                            }
+                        case .usage(let cost):
+                            continuation.yield(.usage(cost))
                         }
                     }
 
@@ -152,20 +158,6 @@ struct ChatAIService {
             logger.error("Chat workout decode failed: \(String(describing: error))")
             throw ChatParseError.decodingFailed(String(describing: error))
         }
-    }
-
-    private static func formatProgress(_ entries: [LogEntry]) -> String {
-        entries.map { entry in
-            let sets = entry.sets.enumerated().map { i, set in
-                if set.completedAt != nil {
-                    let rpeStr = " @RPE \(set.rpe)"
-                    return "  Set \(i + 1): COMPLETED - \(Int(set.weight))lbs x \(set.reps)\(rpeStr)"
-                } else {
-                    return "  Set \(i + 1): PLANNED - \(Int(set.weight))lbs x \(set.reps)"
-                }
-            }.joined(separator: "\n")
-            return "\(entry.exerciseName) (\(entry.muscleGroup)):\n\(sets)"
-        }.joined(separator: "\n")
     }
 
     enum ChatParseError: LocalizedError {

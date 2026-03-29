@@ -18,14 +18,14 @@ struct SetRowView: View {
     private var isCompleted: Bool { logSet.completedAt != nil }
     private var canLog: Bool {
         guard let rpe = Int(rpeText) else { return false }
-        return Double(weightText) != nil && Int(repsText) != nil && (0...10).contains(rpe)
+        return Double(weightText) != nil && Int(repsText) != nil && (1...10).contains(rpe)
     }
 
     var body: some View {
         HStack(spacing: 8) {
             Text("\(setNumber)")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(isCompleted ? Color(hex: 0x34C759) : Color.black.opacity(0.4))
+                .foregroundStyle(isCompleted ? Color.accent : .textSecondary)
                 .frame(width: 40, alignment: .leading)
 
             if isCompleted {
@@ -40,7 +40,7 @@ struct SetRowView: View {
         .padding(.vertical, 10)
         .overlay(
             isActive
-                ? RoundedRectangle(cornerRadius: 10).stroke(Color(hex: 0x0A0A0A), lineWidth: 1.5).padding(.horizontal, 8)
+                ? RoundedRectangle(cornerRadius: 10).stroke(Color.textPrimary, lineWidth: 1.5).padding(.horizontal, 8)
                 : nil
         )
         .onAppear {
@@ -56,7 +56,7 @@ struct SetRowView: View {
         }
         .onChange(of: logSet.rpe) {
             if isCompleted {
-                rpeText = String(logSet.rpe)
+                rpeText = logSet.rpe > 0 ? String(logSet.rpe) : ""
             }
         }
         .overlay {
@@ -64,9 +64,9 @@ struct SetRowView: View {
                 .fill(
                     LinearGradient(
                         stops: [
-                            .init(color: .clear, location: max(0, sweepPosition - 0.15)),
-                            .init(color: Color.black.opacity(0.22), location: max(0, min(1, sweepPosition))),
-                            .init(color: .clear, location: min(1, sweepPosition + 0.15)),
+                            .init(color: .clear, location: max(0, min(1, sweepPosition - 0.15))),
+                            .init(color: Color.textQuaternary, location: max(0, min(1, sweepPosition))),
+                            .init(color: .clear, location: max(0, min(1, sweepPosition + 0.15))),
                         ],
                         startPoint: .leading,
                         endPoint: .trailing
@@ -102,7 +102,7 @@ struct SetRowView: View {
             .frame(width: 48, alignment: .center)
         Image(systemName: "checkmark.circle.fill")
             .font(.system(size: 20))
-            .foregroundStyle(Color(hex: 0x34C759))
+            .foregroundStyle(Color.accent)
             .frame(width: 28)
     }
 
@@ -116,7 +116,7 @@ struct SetRowView: View {
             .font(.system(size: 14, weight: .medium))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
-            .background(Color(hex: 0xF5F5F5))
+            .background(Color.appSurface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
         TextField("0", text: $repsText)
@@ -125,7 +125,7 @@ struct SetRowView: View {
             .font(.system(size: 14, weight: .medium))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
-            .background(Color(hex: 0xF5F5F5))
+            .background(Color.appSurface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
         TextField(plannedSet?.targetRpe.map { "@\($0)" } ?? "—", text: $rpeText)
@@ -134,7 +134,7 @@ struct SetRowView: View {
             .font(.system(size: 14, weight: .medium))
             .frame(width: 48)
             .padding(.vertical, 8)
-            .background(Color(hex: 0xF5F5F5))
+            .background(Color.appSurface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
         Button {
@@ -142,7 +142,7 @@ struct SetRowView: View {
         } label: {
             Image(systemName: "checkmark.circle")
                 .font(.system(size: 20))
-                .foregroundStyle(canLog ? Color(hex: 0x0A0A0A) : Color.black.opacity(0.15))
+                .foregroundStyle(canLog ? Color.textPrimary : .textQuaternary)
         }
         .disabled(!canLog)
         .frame(width: 28)
@@ -154,18 +154,18 @@ struct SetRowView: View {
     private var futureRow: some View {
         Text(plannedSet.map { "\(Int($0.weight))" } ?? "—")
             .font(.system(size: 14))
-            .foregroundStyle(Color.black.opacity(0.2))
+            .foregroundStyle(Color.textTertiary)
             .frame(maxWidth: .infinity)
         Text(plannedSet.map { "\($0.reps)" } ?? "—")
             .font(.system(size: 14))
-            .foregroundStyle(Color.black.opacity(0.2))
+            .foregroundStyle(Color.textTertiary)
             .frame(maxWidth: .infinity)
         Text(plannedSet?.targetRpe.map { "@\($0)" } ?? "—")
             .font(.system(size: 14))
-            .foregroundStyle(Color.black.opacity(0.2))
+            .foregroundStyle(Color.textTertiary)
             .frame(width: 48, alignment: .center)
         Circle()
-            .strokeBorder(Color.black.opacity(0.1), lineWidth: 1.5)
+            .strokeBorder(Color.divider, lineWidth: 1.5)
             .frame(width: 20, height: 20)
             .frame(width: 28)
     }
@@ -173,7 +173,7 @@ struct SetRowView: View {
     private func syncDisplayedValues() {
         weightText = logSet.weight > 0 ? "\(Int(logSet.weight))" : ""
         repsText = "\(logSet.reps)"
-        rpeText = String(logSet.rpe)
+        rpeText = logSet.rpe > 0 ? String(logSet.rpe) : ""
     }
 
     private func syncPendingValues() {

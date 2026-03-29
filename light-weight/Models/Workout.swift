@@ -28,8 +28,12 @@ struct WorkoutExercise: Codable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        name = try container.decode(String.self, forKey: .name)
-        muscleGroup = try container.decode(String.self, forKey: .muscleGroup)
+        let rawName = try container.decode(String.self, forKey: .name)
+        let trimmedName = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        name = trimmedName.isEmpty ? "Unknown Exercise" : trimmedName
+        let rawGroup = try container.decode(String.self, forKey: .muscleGroup)
+        let trimmedGroup = rawGroup.trimmingCharacters(in: .whitespacesAndNewlines)
+        muscleGroup = trimmedGroup.isEmpty ? "Other" : trimmedGroup
         targetMuscles = try container.decodeIfPresent([TargetMuscle].self, forKey: .targetMuscles) ?? []
         sets = try container.decode([WorkoutSet].self, forKey: .sets)
     }
@@ -50,9 +54,9 @@ struct WorkoutSet: Codable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        reps = try container.decode(Int.self, forKey: .reps)
-        weight = try container.decode(Double.self, forKey: .weight)
-        restSeconds = try container.decodeIfPresent(Int.self, forKey: .restSeconds) ?? 90
-        targetRpe = try container.decodeIfPresent(Int.self, forKey: .targetRpe)
+        reps = max(1, min(100, try container.decode(Int.self, forKey: .reps)))
+        weight = max(0, min(2000, try container.decode(Double.self, forKey: .weight)))
+        restSeconds = max(10, min(600, try container.decodeIfPresent(Int.self, forKey: .restSeconds) ?? 90))
+        targetRpe = try container.decodeIfPresent(Int.self, forKey: .targetRpe).map { max(1, min(10, $0)) }
     }
 }

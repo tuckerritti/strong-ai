@@ -39,7 +39,7 @@ struct RestTimerView: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
-        .background(Color(hex: 0x0A0A0A))
+        .background(Color.restTimerBg)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }

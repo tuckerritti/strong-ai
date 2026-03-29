@@ -36,6 +36,7 @@ struct RPEAdjustmentService {
             {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
+              "targetMuscles": [{"muscle": "chest", "weight": 0.6}],
               "sets": [
                 { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
               ]
@@ -61,7 +62,7 @@ struct RPEAdjustmentService {
         \(workoutStr)
 
         Progress:
-        \(formatProgress(progress))
+        \(progress.formattedProgress())
         """
 
         do {
@@ -75,17 +76,4 @@ struct RPEAdjustmentService {
         }
     }
 
-    private static func formatProgress(_ entries: [LogEntry]) -> String {
-        entries.map { entry in
-            let sets = entry.sets.enumerated().map { i, set in
-                if set.completedAt != nil {
-                    let rpeStr = " @RPE \(set.rpe)"
-                    return "  Set \(i + 1): COMPLETED - \(Int(set.weight))lbs x \(set.reps)\(rpeStr)"
-                } else {
-                    return "  Set \(i + 1): PLANNED - \(Int(set.weight))lbs x \(set.reps)"
-                }
-            }.joined(separator: "\n")
-            return "\(entry.exerciseName) (\(entry.muscleGroup)):\n\(sets)"
-        }.joined(separator: "\n")
-    }
 }

@@ -38,6 +38,22 @@ struct LogEntry: Codable, Hashable, Sendable {
     }
 }
 
+extension Array where Element == LogEntry {
+    func formattedProgress() -> String {
+        map { entry in
+            let sets = entry.sets.enumerated().map { i, set in
+                if set.completedAt != nil {
+                    let rpeStr = " @RPE \(set.rpe)"
+                    return "  Set \(i + 1): COMPLETED - \(Int(set.weight))lbs x \(set.reps)\(rpeStr)"
+                } else {
+                    return "  Set \(i + 1): PLANNED - \(Int(set.weight))lbs x \(set.reps)"
+                }
+            }.joined(separator: "\n")
+            return "\(entry.exerciseName) (\(entry.muscleGroup)):\n\(sets)"
+        }.joined(separator: "\n")
+    }
+}
+
 @Model
 final class WorkoutLog {
     var workoutName: String
@@ -84,5 +100,26 @@ final class WorkoutLog {
             logger.error("Failed to encode initial workout entries: \(error)")
             self.entriesData = Data()
         }
+    }
+}
+
+extension Array where Element: WorkoutLog {
+    var streak: Int {
+        let calendar = Calendar.current
+        var currentDate = calendar.startOfDay(for: .now)
+        var count = 0
+        let logDates = Set(map { calendar.startOfDay(for: $0.startedAt) })
+
+        if !logDates.contains(currentDate),
+           let yesterday = calendar.date(byAdding: .day, value: -1, to: currentDate) {
+            currentDate = yesterday
+        }
+
+        while logDates.contains(currentDate) {
+            count += 1
+            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDate) else { break }
+            currentDate = previousDay
+        }
+        return count
     }
 }
