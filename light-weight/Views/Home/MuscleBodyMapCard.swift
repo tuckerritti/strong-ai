@@ -14,12 +14,12 @@ struct MuscleBodyMapCard: View {
             Text("VOLUME")
                 .font(.system(size: 10, weight: .semibold))
                 .tracking(0.8)
-                .foregroundStyle(Color.black.opacity(0.3))
+                .foregroundStyle(Color.textTertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.vertical, 10)
         .padding(.horizontal, 8)
-        .background(Color(hex: 0xF5F5F5))
+        .background(Color.appSurface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .onTapGesture { isExpanded = true }
     }
@@ -33,7 +33,7 @@ struct ExpandedMuscleMapView: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.3)
+            Color.scrim
                 .ignoresSafeArea()
                 .onTapGesture { isPresented = false }
 
@@ -42,12 +42,12 @@ struct ExpandedMuscleMapView: View {
                     Text("MUSCLE MAP")
                         .font(.system(size: 13, weight: .semibold))
                         .tracking(0.8)
-                        .foregroundStyle(Color.black.opacity(0.35))
+                        .foregroundStyle(Color.textSecondary)
                     Spacer()
                     Button { isPresented = false } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(Color.black.opacity(0.3))
+                            .foregroundStyle(Color.textTertiary)
                     }
                 }
 
@@ -60,7 +60,7 @@ struct ExpandedMuscleMapView: View {
                         Text("FRONT")
                             .font(.system(size: 10, weight: .semibold))
                             .tracking(0.8)
-                            .foregroundStyle(Color.black.opacity(0.3))
+                            .foregroundStyle(Color.textTertiary)
                     }
 
                     VStack(spacing: 8) {
@@ -71,14 +71,14 @@ struct ExpandedMuscleMapView: View {
                         Text("BACK")
                             .font(.system(size: 10, weight: .semibold))
                             .tracking(0.8)
-                            .foregroundStyle(Color.black.opacity(0.3))
+                            .foregroundStyle(Color.textTertiary)
                     }
                 }
             }
             .padding(24)
-            .background(Color(hex: 0xF5F5F5))
+            .background(Color.appSurface)
             .clipShape(RoundedRectangle(cornerRadius: 20))
-            .shadow(color: .black.opacity(0.15), radius: 20, y: 10)
+            .shadow(color: Color.cardShadow, radius: 20, y: 10)
             .padding(.horizontal, 24)
         }
     }

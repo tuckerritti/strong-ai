@@ -38,7 +38,7 @@ struct WorkoutDebriefView: View {
                         Text(debrief)
                             .font(.system(size: 16, weight: .regular))
                             .lineSpacing(4)
-                            .foregroundStyle(Color(hex: 0x0A0A0A).opacity(0.8))
+                            .foregroundStyle(Color.textPrimary.opacity(0.8))
                     }
                 }
                 .padding(.horizontal, 20)
@@ -51,10 +51,10 @@ struct WorkoutDebriefView: View {
                     Text("Done")
                         .font(.custom("SpaceGrotesk-Bold", size: 17))
                         .tracking(-0.2)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.buttonPrimaryText)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color(hex: 0x0A0A0A))
+                        .background(Color.buttonPrimary)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .padding(.horizontal, 20)

@@ -104,7 +104,7 @@ struct ExerciseLibraryView: View {
                 Text("Library")
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
                     .tracking(-0.56)
-                    .foregroundStyle(Color(hex: 0x1A1A1A))
+                    .foregroundStyle(Color.textHeading)
 
                 Spacer()
 
@@ -115,9 +115,9 @@ struct ExerciseLibraryView: View {
                     } label: {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Color(hex: 0x1A1A1A))
+                            .foregroundStyle(Color.textHeading)
                             .frame(width: 36, height: 36)
-                            .background(Color(hex: 0xF0F0F0))
+                            .background(Color.appSurfaceAlt)
                             .clipShape(Circle())
                     }
 
@@ -126,9 +126,9 @@ struct ExerciseLibraryView: View {
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Color(hex: 0x1A1A1A))
+                            .foregroundStyle(Color.textHeading)
                             .frame(width: 36, height: 36)
-                            .background(Color(hex: 0xF0F0F0))
+                            .background(Color.appSurfaceAlt)
                             .clipShape(Circle())
                     }
                 }
@@ -138,7 +138,7 @@ struct ExerciseLibraryView: View {
 
             Text("\(exercises.count) exercises across \(muscleGroupCount) muscle groups")
                 .font(.system(size: 14))
-                .foregroundStyle(Color(hex: 0x6B6B6B))
+                .foregroundStyle(Color.textMuted)
                 .padding(.top, 8)
                 .padding(.bottom, 16)
                 .padding(.horizontal, 20)
@@ -147,7 +147,7 @@ struct ExerciseLibraryView: View {
                 TextField("Search exercises...", text: $searchText)
                     .font(.system(size: 15))
                     .padding(10)
-                    .background(Color(hex: 0xF5F5F5))
+                    .background(Color.appSurface)
                     .cornerRadius(10)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 12)
@@ -159,7 +159,7 @@ struct ExerciseLibraryView: View {
         Text(title.uppercased())
             .font(.system(size: 11, weight: .semibold))
             .tracking(0.88)
-            .foregroundStyle(Color(hex: 0x6B6B6B))
+            .foregroundStyle(Color.textMuted)
             .padding(.bottom, 4)
             .textCase(nil)
             .listRowInsets(EdgeInsets(top: 16, leading: 20, bottom: 0, trailing: 20))
@@ -172,7 +172,7 @@ struct ExerciseLibraryView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(exercise.name)
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x1A1A1A))
+                        .foregroundStyle(Color.textHeading)
 
                     if let stats, stats.timesPerformed > 0 {
                         Text(
@@ -181,7 +181,7 @@ struct ExerciseLibraryView: View {
                                 : "\(stats.timesPerformed) times"
                         )
                         .font(.system(size: 12))
-                        .foregroundStyle(Color(hex: 0x999999))
+                        .foregroundStyle(Color.textMuted)
                     }
                 }
 
@@ -190,7 +190,7 @@ struct ExerciseLibraryView: View {
             .padding(.vertical, 12)
 
             Rectangle()
-                .fill(Color(hex: 0xF0F0F0))
+                .fill(Color.appSurfaceAlt)
                 .frame(height: 1)
         }
     }

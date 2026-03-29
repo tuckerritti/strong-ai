@@ -143,15 +143,20 @@ struct ActiveWorkoutView: View {
             Text(viewModel.workoutName)
                 .font(.custom("SpaceGrotesk-Bold", size: 28))
                 .tracking(-0.84)
-                .foregroundStyle(Color(hex: 0x0A0A0A))
+                .foregroundStyle(Color.textPrimary)
             HStack(spacing: 12) {
                 Text(viewModel.elapsedFormatted)
                     .font(.custom("SpaceGrotesk-Bold", size: 15))
-                    .foregroundStyle(Color(hex: 0x34C759))
+                    .foregroundStyle(Color.accent)
                     .contentTransition(.numericText())
                 Text("\(viewModel.completedExercises) of \(viewModel.totalExercises) exercises")
                     .font(.system(size: 13))
-                    .foregroundStyle(Color.black.opacity(0.35))
+                    .foregroundStyle(Color.textSecondary)
+                if appState.showTokenCost, appState.dailyCost.estimatedCost > 0 {
+                    Text("~$\(appState.dailyCost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.textSecondary)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -181,12 +186,12 @@ struct ActiveWorkoutView: View {
                     Text(entry.exerciseName)
                         .font(.custom("SpaceGrotesk-Bold", size: 18))
                         .tracking(-0.18)
-                        .foregroundStyle(Color(hex: 0x0A0A0A))
+                        .foregroundStyle(Color.textPrimary)
                     Spacer()
                     Text(entry.muscleGroup.uppercased())
                         .font(.system(size: 12, weight: .medium))
                         .tracking(0.72)
-                        .foregroundStyle(Color.black.opacity(0.3))
+                        .foregroundStyle(Color.textTertiary)
                 }
             }
             .buttonStyle(.plain)
@@ -208,7 +213,7 @@ struct ActiveWorkoutView: View {
             }
             .font(.system(size: 11, weight: .semibold))
             .tracking(0.5)
-            .foregroundStyle(Color.black.opacity(0.3))
+            .foregroundStyle(Color.textTertiary)
             .padding(.horizontal, 20)
             .padding(.bottom, 8)
 
@@ -300,7 +305,8 @@ struct ActiveWorkoutView: View {
                 let task = Task {
                     do {
                         for try await event in stream {
-                            if case .result(let result) = event {
+                            switch event {
+                            case .result(let result):
                                 if viewModel.shouldApplyAdjustment(generation: generation) {
                                     viewModel.applyModifiedWorkout(result.workout)
                                     saveExercisesToLibrary(result.workout.exercises)
@@ -308,6 +314,8 @@ struct ActiveWorkoutView: View {
                                     logger.info("Discarding stale chat workout update")
                                     continue
                                 }
+                            case .usage, .text:
+                                break
                             }
                             continuation.yield(event)
                         }
@@ -405,7 +413,7 @@ final class ActiveWorkoutViewModel {
                 muscleGroup: exercise.muscleGroup,
                 targetMuscles: exercise.targetMuscles,
                 sets: exercise.sets.map { plannedSet in
-                    LogSet(reps: plannedSet.reps, weight: plannedSet.weight, rpe: 0)
+                    LogSet(reps: plannedSet.reps, weight: plannedSet.weight, rpe: plannedSet.targetRpe ?? 0)
                 }
             )
         }
@@ -454,6 +462,8 @@ final class ActiveWorkoutViewModel {
     }
 
     func logSet(exerciseIndex: Int, setIndex: Int, weight: Double, reps: Int, rpe: Int) {
+        let planned = plannedSet(exerciseIndex: exerciseIndex, setIndex: setIndex)
+
         entries[exerciseIndex].sets[setIndex].weight = weight
         entries[exerciseIndex].sets[setIndex].reps = reps
         entries[exerciseIndex].sets[setIndex].rpe = rpe
@@ -465,12 +475,15 @@ final class ActiveWorkoutViewModel {
             workoutExercises[exerciseIndex].sets[setIndex].reps = reps
         }
 
-        let planned = plannedSet(exerciseIndex: exerciseIndex, setIndex: setIndex)
         if let planned {
             timerService.start(seconds: planned.restSeconds)
         }
 
-        if !apiKey.isEmpty {
+        let missedTarget = planned.map { p in
+            weight != p.weight || reps != p.reps || (p.targetRpe != nil && rpe != p.targetRpe)
+        } ?? false
+
+        if !apiKey.isEmpty && missedTarget {
             requestRPEAdjustment()
         }
     }
@@ -525,7 +538,7 @@ final class ActiveWorkoutViewModel {
                         let setIndex = completedSets.count + i
                         if setIndex < newExercise.sets.count {
                             let planned = newExercise.sets[setIndex]
-                            sets.append(LogSet(reps: planned.reps, weight: planned.weight, rpe: 0))
+                            sets.append(LogSet(reps: planned.reps, weight: planned.weight, rpe: planned.targetRpe ?? 0))
                         }
                     }
                     updatedEntries.append(LogEntry(
@@ -540,7 +553,7 @@ final class ActiveWorkoutViewModel {
                         exerciseName: newExercise.name,
                         muscleGroup: newExercise.muscleGroup,
                         targetMuscles: newExercise.targetMuscles,
-                        sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: 0) }
+                        sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: $0.targetRpe ?? 0) }
                     ))
                     updatedExercises.append(newExercise)
                 }
@@ -549,7 +562,7 @@ final class ActiveWorkoutViewModel {
                     exerciseName: newExercise.name,
                     muscleGroup: newExercise.muscleGroup,
                     targetMuscles: newExercise.targetMuscles,
-                    sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: 0) }
+                    sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: $0.targetRpe ?? 0) }
                 ))
                 updatedExercises.append(newExercise)
             }
@@ -565,6 +578,7 @@ final class ActiveWorkoutViewModel {
             let preservedEntry = LogEntry(
                 exerciseName: entry.exerciseName,
                 muscleGroup: entry.muscleGroup,
+                targetMuscles: entry.targetMuscles,
                 sets: completedSets
             )
 
@@ -645,6 +659,7 @@ final class ActiveWorkoutViewModel {
         return WorkoutExercise(
             name: newExercise.name,
             muscleGroup: newExercise.muscleGroup,
+            targetMuscles: newExercise.targetMuscles,
             sets: actualCompletedSets + remainingSets
         )
     }
@@ -663,6 +678,7 @@ final class ActiveWorkoutViewModel {
         return WorkoutExercise(
             name: exerciseName,
             muscleGroup: muscleGroup,
+            targetMuscles: plannedExercise?.targetMuscles ?? [],
             sets: actualCompletedSets
         )
     }
