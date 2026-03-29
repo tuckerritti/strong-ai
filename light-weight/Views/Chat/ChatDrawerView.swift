@@ -224,7 +224,8 @@ struct ChatDrawerView: View {
                 } else if message.isApplying {
                     HStack(spacing: 4) {
                         ProgressView()
-                            .controlSize(.small)
+                            .controlSize(.mini)
+                            .frame(width: 14, height: 14)
                         Text("Applying changes...")
                             .font(.system(size: 14, weight: .medium))
                     }
