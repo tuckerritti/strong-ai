@@ -272,6 +272,7 @@ struct ActiveWorkoutView: View {
         let log = viewModel.finish()
         modelContext.insert(log)
         finishedLog = log
+        ICloudBackupService.backupAll(modelContext: modelContext)
         showingDebrief = true
     }
 

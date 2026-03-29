@@ -124,6 +124,9 @@ struct SettingsView: View {
             .onChange(of: profiles.count) { _, _ in
                 syncProfileState()
             }
+            .onDisappear {
+                ICloudBackupService.backupAll(modelContext: modelContext)
+            }
         }
     }
 
