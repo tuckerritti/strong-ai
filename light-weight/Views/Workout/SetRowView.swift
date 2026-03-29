@@ -110,30 +110,21 @@ struct SetRowView: View {
 
     @ViewBuilder
     private var activeRow: some View {
-        TextField("0", text: $weightText)
-            .keyboardType(.decimalPad)
-            .multilineTextAlignment(.center)
-            .font(.system(size: 14, weight: .medium))
+        NumericTextField(text: $weightText, placeholder: "0", keyboardType: .decimalPad)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .frame(height: 33)
             .background(Color.appSurface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
-        TextField("0", text: $repsText)
-            .keyboardType(.numberPad)
-            .multilineTextAlignment(.center)
-            .font(.system(size: 14, weight: .medium))
+        NumericTextField(text: $repsText, placeholder: "0", keyboardType: .numberPad)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .frame(height: 33)
             .background(Color.appSurface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
-        TextField(plannedSet?.targetRpe.map { "@\($0)" } ?? "—", text: $rpeText)
-            .keyboardType(.numberPad)
-            .multilineTextAlignment(.center)
-            .font(.system(size: 14, weight: .medium))
+        NumericTextField(text: $rpeText, placeholder: plannedSet?.targetRpe.map { "@\($0)" } ?? "—", keyboardType: .numberPad)
             .frame(width: 48)
-            .padding(.vertical, 8)
+            .frame(height: 33)
             .background(Color.appSurface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 

@@ -77,12 +77,6 @@ struct ActiveWorkoutView: View {
                 }
                 .disabled(viewModel.completedSets == 0)
             }
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                }
-            }
         }
         .overlay {
             if !apiKey.isEmpty && showChat {
