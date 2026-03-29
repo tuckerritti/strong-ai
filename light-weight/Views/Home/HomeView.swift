@@ -48,13 +48,13 @@ struct HomeView: View {
                     .padding(.bottom, 100)
                 }
                 .onAppear {
-                    syncAPIKeyFromProfile()
+                    apiKey = UserProfileService.loadAPIKey()
                     Task {
                         await generateWorkoutIfNeeded()
                     }
                 }
                 .onChange(of: profiles.count) { _, _ in
-                    syncAPIKeyFromProfile()
+                    apiKey = UserProfileService.loadAPIKey()
                 }
                 .overlay {
                     if !appState.isWorkoutActive {
@@ -124,7 +124,7 @@ struct HomeView: View {
                 message: message,
                 currentWorkout: todayWorkout,
                 profile: profileSnapshot,
-                exercises: exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) },
+                exercises: exercises.map { ExerciseSnapshot(from: $0) },
                 history: history
             )
 
@@ -164,32 +164,15 @@ struct HomeView: View {
     // MARK: - Snapshots
 
     private var profileSnapshot: UserProfileSnapshot {
-        UserProfileSnapshot(
-            goals: profile?.goals ?? "",
-            schedule: profile?.schedule ?? "",
-            equipment: profile?.equipment ?? "",
-            injuries: profile?.injuries ?? ""
-        )
+        UserProfileSnapshot(from: profile)
     }
 
     private var logSnapshots: [WorkoutLogSnapshot] {
-        recentLogs.prefix(10).map { log in
-            WorkoutLogSnapshot(
-                workoutName: log.workoutName,
-                startedAt: log.startedAt,
-                durationMinutes: log.durationMinutes,
-                totalVolume: log.totalVolume,
-                entries: log.entries
-            )
-        }
+        recentLogs.prefix(10).map { WorkoutLogSnapshot(from: $0) }
     }
 
     private var exerciseSnapshots: [ExerciseSnapshot] {
-        exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) }
-    }
-
-    private func syncAPIKeyFromProfile() {
-        apiKey = UserProfileService.loadAPIKey()
+        exercises.map { ExerciseSnapshot(from: $0) }
     }
 
     // MARK: - Header

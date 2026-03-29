@@ -131,7 +131,7 @@ struct ActiveWorkoutView: View {
         .onAppear {
             appState.isWorkoutActive = true
             appState.chatDetent = .height(90)
-            syncAPIKeyFromProfile()
+            apiKey = UserProfileService.loadAPIKey()
             viewModel.apiKey = apiKey
             viewModel.start()
             viewModel.timerService.requestPermission()
@@ -244,17 +244,6 @@ struct ActiveWorkoutView: View {
 
     // MARK: - Actions
 
-    private func saveExercisesToLibrary(_ workoutExercises: [WorkoutExercise]) {
-        ExerciseLibraryService.persist(
-            workoutExercises: workoutExercises,
-            existingExercises: exercises,
-            modelContext: modelContext
-        )
-    }
-
-    private func syncAPIKeyFromProfile() {
-        apiKey = UserProfileService.loadAPIKey()
-    }
 
 
     private func dismissWorkout() {
@@ -267,32 +256,17 @@ struct ActiveWorkoutView: View {
 
     private func finishWorkout() {
         showChat = false
-        debriefRecentLogs = recentLogs.prefix(5).map(makeSnapshot)
-        saveExercisesToLibrary(viewModel.currentWorkout.exercises)
+        debriefRecentLogs = recentLogs.prefix(5).map { WorkoutLogSnapshot(from: $0) }
+        ExerciseLibraryService.persist(workoutExercises: viewModel.currentWorkout.exercises, existingExercises: exercises, modelContext: modelContext)
         let log = viewModel.finish()
         modelContext.insert(log)
         finishedLog = log
         showingDebrief = true
     }
 
-    private func makeSnapshot(from log: WorkoutLog) -> WorkoutLogSnapshot {
-        WorkoutLogSnapshot(
-            workoutName: log.workoutName,
-            startedAt: log.startedAt,
-            durationMinutes: log.durationMinutes,
-            totalVolume: log.totalVolume,
-            entries: log.entries
-        )
-    }
-
     private func streamMidWorkoutChat(_ message: String, history: [ChatMessage]) async -> AsyncThrowingStream<ChatStreamEvent, Error>? {
         let currentWorkout = viewModel.currentWorkout
-        let profileSnapshot = UserProfileSnapshot(
-            goals: profile?.goals ?? "",
-            schedule: profile?.schedule ?? "",
-            equipment: profile?.equipment ?? "",
-            injuries: profile?.injuries ?? ""
-        )
+        let profileSnapshot = UserProfileSnapshot(from: profile)
         let generation = viewModel.nextAdjustmentGeneration()
 
         do {
@@ -301,7 +275,7 @@ struct ActiveWorkoutView: View {
                 message: message,
                 currentWorkout: currentWorkout,
                 profile: profileSnapshot,
-                exercises: exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) },
+                exercises: exercises.map { ExerciseSnapshot(from: $0) },
                 history: history,
                 progress: viewModel.entries
             )
