@@ -96,7 +96,7 @@ struct ActiveWorkoutView: View {
                 await streamMidWorkoutChat(message, history: history)
             }
         )
-        .sheet(item: $selectedExercise) { exercise in
+        .sheet(item: $selectedExercise, onDismiss: { showChat = true }) { exercise in
             NavigationStack {
                 ExerciseDetailView(exercise: exercise)
                     .toolbar {
@@ -178,6 +178,7 @@ struct ActiveWorkoutView: View {
     private func exerciseSection(exerciseIndex: Int, entry: LogEntry) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
+                showChat = false
                 selectedExercise = exercises.first { $0.name == entry.exerciseName }
             } label: {
                 HStack {
@@ -251,6 +252,7 @@ struct ActiveWorkoutView: View {
 
 
     private func dismissWorkout() {
+        selectedExercise = nil
         showChat = false
         viewModel.stop()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
