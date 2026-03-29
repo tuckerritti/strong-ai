@@ -77,13 +77,7 @@ struct WorkoutDebriefView: View {
         }
 
         do {
-            let logSnapshot = WorkoutLogSnapshot(
-                workoutName: log.workoutName,
-                startedAt: log.startedAt,
-                durationMinutes: log.durationMinutes,
-                totalVolume: log.totalVolume,
-                entries: log.entries
-            )
+            let logSnapshot = WorkoutLogSnapshot(from: log)
             debrief = try await WorkoutAIService.generateDebrief(
                 apiKey: apiKey,
                 log: logSnapshot,
