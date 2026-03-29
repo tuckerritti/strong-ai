@@ -33,6 +33,9 @@ struct NumericTextField: UIViewRepresentable {
         if field.text != text {
             field.text = text
         }
+        if field.placeholder != placeholder {
+            field.placeholder = placeholder
+        }
     }
 
     final class Coordinator: NSObject, UITextFieldDelegate {
