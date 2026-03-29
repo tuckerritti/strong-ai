@@ -135,7 +135,6 @@ struct ActiveWorkoutView: View {
             viewModel.apiKey = apiKey
             viewModel.start()
             viewModel.timerService.requestPermission()
-            saveExercisesToLibrary(viewModel.currentWorkout.exercises)
         }
         .onDisappear {
             appState.isWorkoutActive = false
@@ -264,6 +263,7 @@ struct ActiveWorkoutView: View {
     private func finishWorkout() {
         showChat = false
         debriefRecentLogs = recentLogs.prefix(5).map(makeSnapshot)
+        saveExercisesToLibrary(viewModel.currentWorkout.exercises)
         let log = viewModel.finish()
         modelContext.insert(log)
         finishedLog = log
@@ -309,7 +309,6 @@ struct ActiveWorkoutView: View {
                             if case .result(let result) = event {
                                 if viewModel.shouldApplyAdjustment(generation: generation) {
                                     viewModel.applyModifiedWorkout(result.workout)
-                                    saveExercisesToLibrary(result.workout.exercises)
                                 } else {
                                     logger.info("Discarding stale chat workout update")
                                     continue

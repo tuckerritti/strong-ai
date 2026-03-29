@@ -107,7 +107,6 @@ struct HomeView: View {
             )
             todayWorkout = workout
             WorkoutCacheService.save(workout)
-            saveExercisesToLibrary(workout.exercises)
         } catch {
             logger.error("Workout generation failed: \(error)")
             errorMessage = error.localizedDescription
@@ -138,7 +137,6 @@ struct HomeView: View {
                                 if Calendar.current.isDateInToday(workoutDate) {
                                     WorkoutCacheService.save(result.workout)
                                 }
-                                saveExercisesToLibrary(result.workout.exercises)
                                 errorMessage = nil
                             }
                             continuation.yield(event)
@@ -185,14 +183,6 @@ struct HomeView: View {
 
     private var exerciseSnapshots: [ExerciseSnapshot] {
         exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) }
-    }
-
-    private func saveExercisesToLibrary(_ workoutExercises: [WorkoutExercise]) {
-        ExerciseLibraryService.persist(
-            workoutExercises: workoutExercises,
-            existingExercises: exercises,
-            modelContext: modelContext
-        )
     }
 
     private func syncAPIKeyFromProfile() {
