@@ -55,7 +55,7 @@ struct HistoryListView: View {
         HStack(spacing: 10) {
             StatCard(title: "WORKOUTS", value: "\(completedLogs.count)")
             StatCard(title: "THIS MONTH", value: "\(logsThisMonth)")
-            StatCard(title: "STREAK", value: "\(streak)", highlight: streak > 0)
+            StatCard(title: "STREAK", value: "\(completedLogs.streak)", highlight: completedLogs.streak > 0)
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
@@ -64,25 +64,6 @@ struct HistoryListView: View {
     private var logsThisMonth: Int {
         let start = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
         return completedLogs.filter { $0.startedAt >= start }.count
-    }
-
-    private var streak: Int {
-        let calendar = Calendar.current
-        var currentDate = calendar.startOfDay(for: .now)
-        var count = 0
-        let logDates = Set(completedLogs.map { calendar.startOfDay(for: $0.startedAt) })
-
-        if !logDates.contains(currentDate),
-           let yesterday = calendar.date(byAdding: .day, value: -1, to: currentDate) {
-            currentDate = yesterday
-        }
-
-        while logDates.contains(currentDate) {
-            count += 1
-            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDate) else { break }
-            currentDate = previousDay
-        }
-        return count
     }
 
     // MARK: - Log Section

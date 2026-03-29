@@ -254,7 +254,7 @@ struct HomeView: View {
     private var statCards: some View {
         HStack(spacing: 10) {
             StatCard(title: "THIS WEEK", value: "\(workoutsThisWeek)")
-            StatCard(title: "STREAK", value: "\(streak)", highlight: streak > 0)
+            StatCard(title: "STREAK", value: "\(recentLogs.streak)", highlight: recentLogs.streak > 0)
             MuscleBodyMapCard(logs: recentLogs, isExpanded: $muscleMapExpanded)
         }
         .fixedSize(horizontal: false, vertical: true)
@@ -265,25 +265,6 @@ struct HomeView: View {
     private var workoutsThisWeek: Int {
         let startOfWeek = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
         return recentLogs.filter { $0.startedAt >= startOfWeek }.count
-    }
-
-    private var streak: Int {
-        let calendar = Calendar.current
-        var currentDate = calendar.startOfDay(for: .now)
-        var count = 0
-        let logDates = Set(recentLogs.map { calendar.startOfDay(for: $0.startedAt) })
-
-        if !logDates.contains(currentDate),
-           let yesterday = calendar.date(byAdding: .day, value: -1, to: currentDate) {
-            currentDate = yesterday
-        }
-
-        while logDates.contains(currentDate) {
-            count += 1
-            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDate) else { break }
-            currentDate = previousDay
-        }
-        return count
     }
 
     // MARK: - Loading / Error States
