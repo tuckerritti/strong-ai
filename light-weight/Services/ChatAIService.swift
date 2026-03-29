@@ -92,6 +92,7 @@ struct ChatAIService {
                 var sentExplanationUpTo = 0
 
                 do {
+                    var hitSeparator = false
                     for try await token in tokenStream {
                         accumulated += token
 
@@ -102,6 +103,10 @@ struct ChatAIService {
                                 let new = String(explanation.dropFirst(sentExplanationUpTo))
                                 continuation.yield(.text(new))
                                 sentExplanationUpTo = explanation.count
+                            }
+                            if !hitSeparator {
+                                hitSeparator = true
+                                continuation.yield(.text("\n\nApplying changes..."))
                             }
                         } else {
                             // Haven't hit separator yet — stream everything so far
