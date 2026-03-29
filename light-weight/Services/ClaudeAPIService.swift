@@ -1,6 +1,37 @@
 import Foundation
 import AnthropicSwiftSDK
 
+// MARK: - Token Cost
+
+struct TokenCost: Sendable {
+    var inputTokens: Int
+    var outputTokens: Int
+
+    var estimatedCost: Double {
+        let inputCost = Double(inputTokens) * 3.0 / 1_000_000
+        let outputCost = Double(outputTokens) * 15.0 / 1_000_000
+        return inputCost + outputCost
+    }
+
+    static let zero = TokenCost(inputTokens: 0, outputTokens: 0)
+
+    static func + (lhs: TokenCost, rhs: TokenCost) -> TokenCost {
+        TokenCost(
+            inputTokens: lhs.inputTokens + rhs.inputTokens,
+            outputTokens: lhs.outputTokens + rhs.outputTokens
+        )
+    }
+}
+
+// MARK: - Stream Chunk
+
+enum StreamChunk: Sendable {
+    case text(String)
+    case usage(TokenCost)
+}
+
+// MARK: - API Service
+
 struct ClaudeAPIService: Sendable {
     var apiKey: String
 
@@ -18,6 +49,12 @@ struct ClaudeAPIService: Sendable {
             maxTokens: 4096
         )
 
+        let cost = TokenCost(
+            inputTokens: response.usage.inputTokens ?? 0,
+            outputTokens: response.usage.outputTokens ?? 0
+        )
+        AppState.shared?.recordCost(cost)
+
         for content in response.content {
             if case .text(let text, _) = content {
                 return text
@@ -26,11 +63,11 @@ struct ClaudeAPIService: Sendable {
         throw APIError.invalidResponse
     }
 
-    func stream(systemPrompt: String, userMessage: String) async throws -> AsyncThrowingStream<String, Error> {
+    func stream(systemPrompt: String, userMessage: String) async throws -> AsyncThrowingStream<StreamChunk, Error> {
         try await stream(systemPrompt: systemPrompt, messages: [Message(role: .user, content: [.text(userMessage)])])
     }
 
-    func stream(systemPrompt: String, messages: [Message]) async throws -> AsyncThrowingStream<String, Error> {
+    func stream(systemPrompt: String, messages: [Message]) async throws -> AsyncThrowingStream<StreamChunk, Error> {
         let stream = try await client.messages.streamMessage(
             messages,
             model: .custom("claude-sonnet-4-6"),
@@ -41,13 +78,22 @@ struct ClaudeAPIService: Sendable {
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
+                    var finalCost = TokenCost.zero
                     for try await chunk in stream {
                         if let delta = chunk as? StreamingContentBlockDeltaResponse,
                            delta.delta.type == .text,
                            let text = delta.delta.text {
-                            continuation.yield(text)
+                            continuation.yield(.text(text))
+                        } else if let messageStart = chunk as? StreamingMessageStartResponse {
+                            finalCost.inputTokens = max(finalCost.inputTokens, messageStart.message.usage.inputTokens ?? 0)
+                            finalCost.outputTokens = max(finalCost.outputTokens, messageStart.message.usage.outputTokens ?? 0)
+                        } else if let messageDelta = chunk as? StreamingMessageDeltaResponse {
+                            finalCost.inputTokens = max(finalCost.inputTokens, messageDelta.usage.inputTokens ?? 0)
+                            finalCost.outputTokens = max(finalCost.outputTokens, messageDelta.usage.outputTokens ?? 0)
                         }
                     }
+                    AppState.shared?.recordCost(finalCost)
+                    continuation.yield(.usage(finalCost))
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)

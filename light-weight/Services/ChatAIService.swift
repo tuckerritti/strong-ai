@@ -8,6 +8,7 @@ private let logger = Logger(subsystem: "com.light-weight", category: "ChatAI")
 enum ChatStreamEvent: Sendable {
     case text(String)
     case result(ChatResult)
+    case usage(TokenCost)
 }
 
 struct ChatResult: Sendable, Codable {
@@ -93,28 +94,33 @@ struct ChatAIService {
 
                 do {
                     var hitSeparator = false
-                    for try await token in tokenStream {
-                        accumulated += token
+                    for try await chunk in tokenStream {
+                        switch chunk {
+                        case .text(let token):
+                            accumulated += token
 
-                        // Stream explanation text (everything before ---JSON)
-                        if let separatorRange = accumulated.range(of: "---JSON") {
-                            let explanation = String(accumulated[accumulated.startIndex..<separatorRange.lowerBound])
-                            if explanation.count > sentExplanationUpTo {
-                                let new = String(explanation.dropFirst(sentExplanationUpTo))
-                                continuation.yield(.text(new))
-                                sentExplanationUpTo = explanation.count
+                            // Stream explanation text (everything before ---JSON)
+                            if let separatorRange = accumulated.range(of: "---JSON") {
+                                let explanation = String(accumulated[accumulated.startIndex..<separatorRange.lowerBound])
+                                if explanation.count > sentExplanationUpTo {
+                                    let new = String(explanation.dropFirst(sentExplanationUpTo))
+                                    continuation.yield(.text(new))
+                                    sentExplanationUpTo = explanation.count
+                                }
+                                if !hitSeparator {
+                                    hitSeparator = true
+                                    continuation.yield(.text("\n\nApplying changes..."))
+                                }
+                            } else {
+                                // Haven't hit separator yet — stream everything so far
+                                if accumulated.count > sentExplanationUpTo {
+                                    let new = String(accumulated.dropFirst(sentExplanationUpTo))
+                                    continuation.yield(.text(new))
+                                    sentExplanationUpTo = accumulated.count
+                                }
                             }
-                            if !hitSeparator {
-                                hitSeparator = true
-                                continuation.yield(.text("\n\nApplying changes..."))
-                            }
-                        } else {
-                            // Haven't hit separator yet — stream everything so far
-                            if accumulated.count > sentExplanationUpTo {
-                                let new = String(accumulated.dropFirst(sentExplanationUpTo))
-                                continuation.yield(.text(new))
-                                sentExplanationUpTo = accumulated.count
-                            }
+                        case .usage(let cost):
+                            continuation.yield(.usage(cost))
                         }
                     }
 

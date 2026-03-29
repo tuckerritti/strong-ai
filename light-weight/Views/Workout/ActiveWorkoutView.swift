@@ -158,6 +158,11 @@ struct ActiveWorkoutView: View {
                 Text("\(viewModel.completedExercises) of \(viewModel.totalExercises) exercises")
                     .font(.system(size: 13))
                     .foregroundStyle(Color.textSecondary)
+                if appState.showTokenCost, appState.dailyCost.estimatedCost > 0 {
+                    Text("~$\(appState.dailyCost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.textSecondary)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -306,7 +311,8 @@ struct ActiveWorkoutView: View {
                 let task = Task {
                     do {
                         for try await event in stream {
-                            if case .result(let result) = event {
+                            switch event {
+                            case .result(let result):
                                 if viewModel.shouldApplyAdjustment(generation: generation) {
                                     viewModel.applyModifiedWorkout(result.workout)
                                     saveExercisesToLibrary(result.workout.exercises)
@@ -314,6 +320,8 @@ struct ActiveWorkoutView: View {
                                     logger.info("Discarding stale chat workout update")
                                     continue
                                 }
+                            case .usage, .text:
+                                break
                             }
                             continuation.yield(event)
                         }

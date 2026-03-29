@@ -6,6 +6,7 @@ struct ChatMessage: Identifiable {
     let role: Role
     var text: String
     var isApplied: Bool = false
+    var tokenCost: TokenCost?
     var isError: Bool = false
 
     enum Role {
@@ -25,6 +26,7 @@ struct ChatDrawerView: View {
     @State private var messages: [ChatMessage] = []
     @State private var inputText = ""
     @State private var isSending = false
+    @Environment(AppState.self) private var appState
     @State private var tappedInputBar = false
     @State private var isSheetPresented = true
     private var isExpanded: Bool { selectedDetent != smallDetent }
@@ -67,6 +69,11 @@ struct ChatDrawerView: View {
                     .font(.custom("SpaceGrotesk-Bold", size: 20))
                     .tracking(-0.4)
                     .foregroundStyle(Color.textPrimary)
+                if appState.showTokenCost, appState.dailyCost.estimatedCost > 0 {
+                    Text("~$\(appState.dailyCost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.textSecondary)
+                }
                 Spacer()
                 Button {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -214,6 +221,12 @@ struct ChatDrawerView: View {
                     }
                     .foregroundStyle(Color.accent)
                 }
+
+                if appState.showTokenCost, let cost = message.tokenCost, cost.estimatedCost > 0 {
+                    Text("~$\(cost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.textSecondary)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -254,6 +267,8 @@ struct ChatDrawerView: View {
                         messages[assistantIndex].text = result.explanation
                     }
                     messages[assistantIndex].isApplied = true
+                case .usage(let cost):
+                    messages[assistantIndex].tokenCost = (messages[assistantIndex].tokenCost ?? .zero) + cost
                 }
             }
         } catch {

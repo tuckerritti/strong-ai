@@ -133,13 +133,16 @@ struct HomeView: View {
                 let task = Task {
                     do {
                         for try await event in stream {
-                            if case .result(let result) = event {
+                            switch event {
+                            case .result(let result):
                                 todayWorkout = result.workout
                                 if Calendar.current.isDateInToday(workoutDate) {
                                     WorkoutCacheService.save(result.workout)
                                 }
                                 saveExercisesToLibrary(result.workout.exercises)
                                 errorMessage = nil
+                            case .usage, .text:
+                                break
                             }
                             continuation.yield(event)
                         }
@@ -203,10 +206,18 @@ struct HomeView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()).uppercased())
-                .font(.system(size: 13, weight: .medium))
-                .tracking(0.8)
-                .foregroundStyle(Color.textSecondary)
+            HStack {
+                Text(Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()).uppercased())
+                    .font(.system(size: 13, weight: .medium))
+                    .tracking(0.8)
+                    .foregroundStyle(Color.textSecondary)
+                Spacer()
+                if appState.showTokenCost, appState.dailyCost.estimatedCost > 0 {
+                    Text("~$\(appState.dailyCost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
             HStack(alignment: .center) {
                 Text(greeting)
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
@@ -437,4 +448,3 @@ struct HomeView: View {
     }
 
 }
-

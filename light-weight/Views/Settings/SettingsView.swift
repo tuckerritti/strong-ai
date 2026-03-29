@@ -7,12 +7,14 @@ struct SettingsView: View {
     @State private var apiKey = ""
     @State private var apiKeyError: String?
     @State private var selectedSounds: Set<RestSound> = RestSound.selected
+    @Environment(AppState.self) private var appState
 
     @State private var soundPreview = RestSoundService()
 
     private var profile: UserProfile? { profiles.first }
 
     var body: some View {
+        @Bindable var state = appState
         NavigationStack {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Settings")
@@ -96,6 +98,10 @@ struct SettingsView: View {
                             .padding(.horizontal, 16)
                             .background(Color.appSurface)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
+                        settingsSection("TOKEN COST") {
+                            Toggle("Show daily API cost", isOn: $state.showTokenCost)
+                                .tint(Color(hex: 0x34C759))
                         }
                     }
                     .padding(.horizontal, 20)

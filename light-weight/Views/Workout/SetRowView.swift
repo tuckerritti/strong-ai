@@ -18,7 +18,7 @@ struct SetRowView: View {
     private var isCompleted: Bool { logSet.completedAt != nil }
     private var canLog: Bool {
         guard let rpe = Int(rpeText) else { return false }
-        return Double(weightText) != nil && Int(repsText) != nil && (0...10).contains(rpe)
+        return Double(weightText) != nil && Int(repsText) != nil && (1...10).contains(rpe)
     }
 
     var body: some View {
@@ -56,7 +56,7 @@ struct SetRowView: View {
         }
         .onChange(of: logSet.rpe) {
             if isCompleted {
-                rpeText = String(logSet.rpe)
+                rpeText = logSet.rpe > 0 ? String(logSet.rpe) : ""
             }
         }
         .overlay {
@@ -173,7 +173,7 @@ struct SetRowView: View {
     private func syncDisplayedValues() {
         weightText = logSet.weight > 0 ? "\(Int(logSet.weight))" : ""
         repsText = "\(logSet.reps)"
-        rpeText = String(logSet.rpe)
+        rpeText = logSet.rpe > 0 ? String(logSet.rpe) : ""
     }
 
     private func syncPendingValues() {
