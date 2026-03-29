@@ -18,7 +18,7 @@ Requires Xcode 16.3+ and iOS 18.0+ deployment target. Single SPM dependency: Ant
 
 Each worktree gets its own simulator so agents can QA test in parallel.
 
-**Setup:** Run `./scripts/setup-simulator.sh` from the worktree root. This clones an iPhone 17 Pro simulator, builds the app, and installs it. The simulator UDID is saved to `.context/simulator-udid.txt`.
+**Setup:** Run `python3 ./scripts/setup-simulator.py` from the worktree root. This clones an iPhone 17 Pro simulator, builds the app, and installs it. The simulator UDID is saved to `.context/simulator-udid.txt`.
 
 **Using MCP tools:** Read the UDID from `.context/simulator-udid.txt` and pass it as the `udid` parameter to all iOS simulator MCP tools (`ui_tap`, `ui_view`, `screenshot`, `ui_describe_all`, etc.).
 
