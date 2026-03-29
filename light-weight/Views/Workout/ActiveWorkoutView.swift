@@ -257,8 +257,8 @@ struct ActiveWorkoutView: View {
     private func finishWorkout() {
         showChat = false
         debriefRecentLogs = recentLogs.prefix(5).map { WorkoutLogSnapshot(from: $0) }
-        ExerciseLibraryService.persist(workoutExercises: viewModel.currentWorkout.exercises, existingExercises: exercises, modelContext: modelContext)
         let log = viewModel.finish()
+        ExerciseLibraryService.persist(logEntries: log.entries, existingExercises: exercises, modelContext: modelContext)
         modelContext.insert(log)
         finishedLog = log
         showingDebrief = true
