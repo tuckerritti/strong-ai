@@ -129,7 +129,6 @@ struct ActiveWorkoutView: View {
             viewModel.apiKey = apiKey
             viewModel.start()
             viewModel.timerService.requestPermission()
-            ExerciseLibraryService.persist(workoutExercises: viewModel.currentWorkout.exercises, existingExercises: exercises, modelContext: modelContext)
         }
         .onDisappear {
             appState.isWorkoutActive = false
@@ -253,6 +252,7 @@ struct ActiveWorkoutView: View {
         showChat = false
         debriefRecentLogs = recentLogs.prefix(5).map { WorkoutLogSnapshot(from: $0) }
         let log = viewModel.finish()
+        ExerciseLibraryService.persist(logEntries: log.entries, existingExercises: exercises, modelContext: modelContext)
         modelContext.insert(log)
         finishedLog = log
         showingDebrief = true
@@ -283,15 +283,13 @@ struct ActiveWorkoutView: View {
                             case .result(let result):
                                 if viewModel.shouldApplyAdjustment(generation: generation) {
                                     viewModel.applyModifiedWorkout(result.workout)
-                                    ExerciseLibraryService.persist(workoutExercises: result.workout.exercises, existingExercises: exercises, modelContext: modelContext)
+                                    continuation.yield(event)
                                 } else {
                                     logger.info("Discarding stale chat workout update")
-                                    continue
                                 }
-                            case .usage, .text:
-                                break
+                            case .usage, .text, .applying:
+                                continuation.yield(event)
                             }
-                            continuation.yield(event)
                         }
                         continuation.finish()
                     } catch {

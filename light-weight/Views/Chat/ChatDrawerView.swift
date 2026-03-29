@@ -5,6 +5,7 @@ struct ChatMessage: Identifiable {
     let id = UUID()
     let role: Role
     var text: String
+    var isApplying: Bool = false
     var isApplied: Bool = false
     var tokenCost: TokenCost?
     var isError: Bool = false
@@ -220,6 +221,14 @@ struct ChatDrawerView: View {
                             .font(.system(size: 14, weight: .medium))
                     }
                     .foregroundStyle(Color.accent)
+                } else if message.isApplying {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Applying changes...")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundStyle(Color.textSecondary)
                 }
 
                 if appState.showTokenCost, let cost = message.tokenCost, cost.estimatedCost > 0 {
@@ -262,10 +271,13 @@ struct ChatDrawerView: View {
                 switch event {
                 case .text(let delta):
                     messages[assistantIndex].text += delta
+                case .applying:
+                    messages[assistantIndex].isApplying = true
                 case .result(let result):
                     if !result.explanation.isEmpty {
                         messages[assistantIndex].text = result.explanation
                     }
+                    messages[assistantIndex].isApplying = false
                     messages[assistantIndex].isApplied = true
                 case .usage(let cost):
                     messages[assistantIndex].tokenCost = (messages[assistantIndex].tokenCost ?? .zero) + cost
@@ -278,6 +290,7 @@ struct ChatDrawerView: View {
                 messages[assistantIndex].text += "\n\nError: \(error.localizedDescription)"
             }
             messages[assistantIndex].isError = true
+            messages[assistantIndex].isApplying = false
         }
 
         isSending = false
