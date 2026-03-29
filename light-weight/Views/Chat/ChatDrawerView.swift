@@ -47,7 +47,7 @@ struct ChatDrawerView: View {
                     .presentationCornerRadius(44)
                     .presentationBackground(Color.chatDrawerBg)
                     .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-                    .presentationContentInteraction(.scrolls)
+                    .presentationContentInteraction(isExpanded ? .scrolls : .resizes)
                     .interactiveDismissDisabled()
             }
             .onAppear { isSheetPresented = true }
