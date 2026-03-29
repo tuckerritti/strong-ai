@@ -141,7 +141,7 @@ struct HomeView: View {
                                 }
                                 saveExercisesToLibrary(result.workout.exercises)
                                 errorMessage = nil
-                            case .usage, .text:
+                            case .usage, .text, .applying:
                                 break
                             }
                             continuation.yield(event)

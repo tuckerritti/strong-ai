@@ -7,6 +7,7 @@ private let logger = Logger(subsystem: "com.light-weight", category: "ChatAI")
 
 enum ChatStreamEvent: Sendable {
     case text(String)
+    case applying
     case result(ChatResult)
     case usage(TokenCost)
 }
@@ -109,7 +110,7 @@ struct ChatAIService {
                                 }
                                 if !hitSeparator {
                                     hitSeparator = true
-                                    continuation.yield(.text("\n\nApplying changes..."))
+                                    continuation.yield(.applying)
                                 }
                             } else {
                                 // Haven't hit separator yet — stream everything so far
