@@ -290,6 +290,7 @@ struct ChatDrawerView: View {
                 messages[assistantIndex].text += "\n\nError: \(error.localizedDescription)"
             }
             messages[assistantIndex].isError = true
+            messages[assistantIndex].isApplying = false
         }
 
         isSending = false

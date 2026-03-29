@@ -318,7 +318,6 @@ struct ActiveWorkoutView: View {
                                     saveExercisesToLibrary(result.workout.exercises)
                                 } else {
                                     logger.info("Discarding stale chat workout update")
-                                    continue
                                 }
                             case .usage, .text, .applying:
                                 break
