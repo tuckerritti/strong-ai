@@ -54,6 +54,9 @@ struct ActiveWorkoutView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
         .scrollDismissesKeyboard(.interactively)
+        .simultaneousGesture(TapGesture().onEnded {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        })
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
