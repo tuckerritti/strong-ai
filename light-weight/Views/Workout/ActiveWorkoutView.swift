@@ -234,6 +234,9 @@ struct ActiveWorkoutView: View {
                         isUpdating: viewModel.updatedSetKeys.contains("\(exerciseIndex)-\(setIndex)"),
                         onLog: { weight, reps, rpe in
                             viewModel.logSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight, reps: reps, rpe: rpe)
+                        },
+                        onEdit: { weight, reps, rpe in
+                            viewModel.editSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight, reps: reps, rpe: rpe)
                         }
                     )
                     if setIndex < entry.sets.count - 1 {
@@ -466,6 +469,18 @@ final class ActiveWorkoutViewModel {
 
         if !apiKey.isEmpty && missedTarget {
             requestRPEAdjustment()
+        }
+    }
+
+    func editSet(exerciseIndex: Int, setIndex: Int, weight: Double, reps: Int, rpe: Int) {
+        entries[exerciseIndex].sets[setIndex].weight = weight
+        entries[exerciseIndex].sets[setIndex].reps = reps
+        entries[exerciseIndex].sets[setIndex].rpe = rpe
+
+        if exerciseIndex < workoutExercises.count,
+           setIndex < workoutExercises[exerciseIndex].sets.count {
+            workoutExercises[exerciseIndex].sets[setIndex].weight = weight
+            workoutExercises[exerciseIndex].sets[setIndex].reps = reps
         }
     }
 
