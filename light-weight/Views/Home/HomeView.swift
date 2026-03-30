@@ -23,12 +23,18 @@ struct HomeView: View {
     @State private var exercisesExpanded = false
     @State private var muscleMapExpanded = false
     @State private var apiKey = ""
+    @State private var navigationPath = NavigationPath()
+
+    private enum Destination: Hashable {
+        case library, history, settings, activeWorkout(Workout)
+    }
+
     private var profile: UserProfile? { profiles.first }
 
     var body: some View {
         @Bindable var state = appState
         ZStack {
-            NavigationStack {
+            NavigationStack(path: $navigationPath) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         headerSection
@@ -46,24 +52,34 @@ struct HomeView: View {
                     }
                     .padding(.bottom, 100)
                 }
-                .overlay {
-                    ChatDrawerView(
-                        selectedDetent: $state.chatDetent,
-                        pendingMessage: $state.pendingMessage,
-                        placeholder: "I only have 30 min today...",
-                        onSend: { message in
-                            await streamChat(message)
-                        }
-                    )
-                }
                 .onAppear {
-                    syncAPIKeyFromProfile()
+                    apiKey = UserProfileService.loadAPIKey()
                     Task {
                         await generateWorkoutIfNeeded()
                     }
                 }
                 .onChange(of: profiles.count) { _, _ in
-                    syncAPIKeyFromProfile()
+                    apiKey = UserProfileService.loadAPIKey()
+                }
+                .overlay {
+                    if !appState.isWorkoutActive && navigationPath.isEmpty {
+                        ChatDrawerView(
+                            selectedDetent: $state.chatDetent,
+                            pendingMessage: $state.pendingMessage,
+                            placeholder: "I only have 30 min today...",
+                            onSend: { message, history in
+                                await streamChat(message, history: history)
+                            }
+                        )
+                    }
+                }
+                .navigationDestination(for: Destination.self) { destination in
+                    switch destination {
+                    case .library: ExerciseLibraryView()
+                    case .history: HistoryListView()
+                    case .settings: SettingsView()
+                    case .activeWorkout(let workout): ActiveWorkoutView(workout: workout)
+                    }
                 }
             }
 
@@ -76,7 +92,14 @@ struct HomeView: View {
     // MARK: - AI Generation
 
     private func generateWorkoutIfNeeded() async {
-        guard todayWorkout == nil, !apiKey.isEmpty else { return }
+        guard todayWorkout == nil else { return }
+
+        if let cached = WorkoutCacheService.loadToday() {
+            todayWorkout = cached
+            return
+        }
+
+        guard !apiKey.isEmpty else { return }
 
         isLoading = true
         errorMessage = nil
@@ -96,7 +119,8 @@ struct HomeView: View {
                 healthContext: healthContext
             )
             todayWorkout = workout
-            saveExercisesToLibrary(workout.exercises)
+            WorkoutCacheService.save(workout)
+            ExerciseLibraryService.persist(workoutExercises: workout.exercises, existingExercises: exercises, modelContext: modelContext)
         } catch {
             logger.error("Workout generation failed: \(error)")
             errorMessage = error.localizedDescription
@@ -105,7 +129,7 @@ struct HomeView: View {
         isLoading = false
     }
 
-    private func streamChat(_ message: String) async -> AsyncThrowingStream<ChatStreamEvent, Error>? {
+    private func streamChat(_ message: String, history: [ChatMessage]) async -> AsyncThrowingStream<ChatStreamEvent, Error>? {
         guard !apiKey.isEmpty else { return nil }
 
         do {
@@ -114,17 +138,22 @@ struct HomeView: View {
                 message: message,
                 currentWorkout: todayWorkout,
                 profile: profileSnapshot,
-                exercises: exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) }
+                exercises: exercises.map { ExerciseSnapshot(from: $0) },
+                history: history
             )
 
             return AsyncThrowingStream { continuation in
                 let task = Task {
                     do {
                         for try await event in stream {
-                            if case .result(let result) = event {
+                            switch event {
+                            case .result(let result):
                                 todayWorkout = result.workout
-                                saveExercisesToLibrary(result.workout.exercises)
+                                WorkoutCacheService.save(result.workout)
+                                ExerciseLibraryService.persist(workoutExercises: result.workout.exercises, existingExercises: exercises, modelContext: modelContext)
                                 errorMessage = nil
+                            case .usage, .text:
+                                break
                             }
                             continuation.yield(event)
                         }
@@ -148,78 +177,64 @@ struct HomeView: View {
     // MARK: - Snapshots
 
     private var profileSnapshot: UserProfileSnapshot {
-        UserProfileSnapshot(
-            goals: profile?.goals ?? "",
-            schedule: profile?.schedule ?? "",
-            equipment: profile?.equipment ?? "",
-            injuries: profile?.injuries ?? ""
-        )
+        UserProfileSnapshot(from: profile)
     }
 
     private var logSnapshots: [WorkoutLogSnapshot] {
-        recentLogs.prefix(10).map { log in
-            WorkoutLogSnapshot(
-                workoutName: log.workoutName,
-                startedAt: log.startedAt,
-                durationMinutes: log.durationMinutes,
-                totalVolume: log.totalVolume,
-                entries: log.entries
-            )
-        }
+        recentLogs.prefix(10).map { WorkoutLogSnapshot(from: $0) }
     }
 
     private var exerciseSnapshots: [ExerciseSnapshot] {
-        exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) }
-    }
-
-    private func saveExercisesToLibrary(_ workoutExercises: [WorkoutExercise]) {
-        ExerciseLibraryService.persist(
-            workoutExercises: workoutExercises,
-            existingExercises: exercises,
-            modelContext: modelContext
-        )
-    }
-
-    private func syncAPIKeyFromProfile() {
-        apiKey = UserProfileService.loadAPIKey()
+        exercises.map { ExerciseSnapshot(from: $0) }
     }
 
     // MARK: - Header
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()).uppercased())
-                .font(.system(size: 13, weight: .medium))
-                .tracking(0.8)
-                .foregroundStyle(Color.black.opacity(0.35))
+            HStack {
+                Text(Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()).uppercased())
+                    .font(.system(size: 13, weight: .medium))
+                    .tracking(0.8)
+                    .foregroundStyle(Color.textSecondary)
+                Spacer()
+                if appState.showTokenCost, appState.dailyCost.estimatedCost > 0 {
+                    Text("~$\(appState.dailyCost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.textSecondary)
+                }
+            }
             HStack(alignment: .center) {
                 Text(greeting)
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
                     .tracking(-1.0)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
                 Spacer()
-                HStack(spacing: 16) {
-                    NavigationLink {
-                        ExerciseLibraryView()
-                    } label: {
+                HStack(spacing: 8) {
+                    NavigationLink(value: Destination.library) {
                         Image(systemName: "book.fill")
                             .font(.system(size: 20))
-                            .foregroundStyle(Color(hex: 0x0A0A0A))
+                            .foregroundStyle(Color.textPrimary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
-                    NavigationLink {
-                        HistoryListView()
-                    } label: {
+                    .accessibilityLabel("Exercise Library")
+                    NavigationLink(value: Destination.history) {
                         Image(systemName: "clock.fill")
                             .font(.system(size: 20))
-                            .foregroundStyle(Color(hex: 0x0A0A0A))
+                            .foregroundStyle(Color.textPrimary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
-                    NavigationLink {
-                        SettingsView()
-                    } label: {
+                    .accessibilityLabel("Workout History")
+                    NavigationLink(value: Destination.settings) {
                         Image(systemName: "gearshape.fill")
                             .font(.system(size: 20))
-                            .foregroundStyle(Color(hex: 0x0A0A0A))
+                            .foregroundStyle(Color.textPrimary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Settings")
                 }
             }
         }
@@ -239,7 +254,7 @@ struct HomeView: View {
     private var statCards: some View {
         HStack(spacing: 10) {
             StatCard(title: "THIS WEEK", value: "\(workoutsThisWeek)")
-            StatCard(title: "STREAK", value: "\(streak)", highlight: streak > 0)
+            StatCard(title: "STREAK", value: "\(recentLogs.streak)", highlight: recentLogs.streak > 0)
             MuscleBodyMapCard(logs: recentLogs, isExpanded: $muscleMapExpanded)
         }
         .fixedSize(horizontal: false, vertical: true)
@@ -250,25 +265,6 @@ struct HomeView: View {
     private var workoutsThisWeek: Int {
         let startOfWeek = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
         return recentLogs.filter { $0.startedAt >= startOfWeek }.count
-    }
-
-    private var streak: Int {
-        let calendar = Calendar.current
-        var currentDate = calendar.startOfDay(for: .now)
-        var count = 0
-        let logDates = Set(recentLogs.map { calendar.startOfDay(for: $0.startedAt) })
-
-        if !logDates.contains(currentDate),
-           let yesterday = calendar.date(byAdding: .day, value: -1, to: currentDate) {
-            currentDate = yesterday
-        }
-
-        while logDates.contains(currentDate) {
-            count += 1
-            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDate) else { break }
-            currentDate = previousDay
-        }
-        return count
     }
 
     // MARK: - Loading / Error States
@@ -318,17 +314,17 @@ struct HomeView: View {
             Text("Today's Workout")
                 .font(.custom("SpaceGrotesk-Bold", size: 20))
                 .tracking(-0.4)
-                .foregroundStyle(Color(hex: 0x0A0A0A))
+                .foregroundStyle(Color.textPrimary)
                 .padding(.horizontal, 20)
                 .padding(.top, 28)
 
             HStack(spacing: 8) {
                 Text(workout.name)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.black.opacity(0.6))
+                    .foregroundStyle(Color.textSecondary)
                 Text("\(workout.totalSets) sets · ~\(workout.estimatedMinutes) min")
                     .font(.system(size: 13))
-                    .foregroundStyle(Color.black.opacity(0.3))
+                    .foregroundStyle(Color.textTertiary)
             }
             .padding(.horizontal, 20)
             .padding(.top, 4)
@@ -354,11 +350,11 @@ struct HomeView: View {
                 HStack {
                     Text(exercise.name)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0x0A0A0A))
+                        .foregroundStyle(Color.textPrimary)
                     Spacer()
-                    Text("\(exercise.sets.count) sets · \(exercise.sets.first?.reps ?? 0) reps")
+                    Text("\(exercise.sets.count) sets · \(exercise.sets.reduce(0) { $0 + $1.reps }) reps")
                         .font(.system(size: 13))
-                        .foregroundStyle(Color.black.opacity(0.35))
+                        .foregroundStyle(Color.textSecondary)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
@@ -372,14 +368,14 @@ struct HomeView: View {
                 } label: {
                     Text(exercisesExpanded ? "Show less" : "+\(remaining) more")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.black.opacity(0.3))
+                        .foregroundStyle(Color.textTertiary)
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())
                 }
             }
         }
-        .background(Color(hex: 0xF5F5F5))
+        .background(Color.appSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal, 20)
         .padding(.top, 14)
@@ -389,31 +385,29 @@ struct HomeView: View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "wand.and.stars")
                 .font(.system(size: 13))
-                .foregroundStyle(Color(red: 0.18, green: 0.39, blue: 0.78))
+                .foregroundStyle(Color.insightIcon)
                 .padding(.top, 1)
             Text(insight)
                 .font(.system(size: 13))
                 .lineSpacing(4)
-                .foregroundStyle(Color(red: 0.12, green: 0.24, blue: 0.47).opacity(0.6))
+                .foregroundStyle(Color.insightText)
         }
         .padding(12)
-        .background(Color(red: 0.18, green: 0.39, blue: 0.78).opacity(0.08))
+        .background(Color.insightBg)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal, 20)
         .padding(.top, 16)
     }
 
     private func startButton(_ workout: Workout) -> some View {
-        NavigationLink {
-            ActiveWorkoutView(workout: workout)
-        } label: {
+        NavigationLink(value: Destination.activeWorkout(workout)) {
             Text("Start Workout")
                 .font(.custom("SpaceGrotesk-Bold", size: 17))
                 .tracking(-0.2)
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.buttonPrimaryText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(Color(hex: 0x0A0A0A))
+                .background(Color.buttonPrimary)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .padding(.horizontal, 20)
@@ -423,13 +417,9 @@ struct HomeView: View {
     private var emptyWorkoutSection: some View {
         VStack(spacing: 12) {
             if apiKey.isEmpty {
-                Text("Add your API key in Settings")
+                Text("Add your API key in Settings to get started.")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(.secondary)
-                Text("Or use the chat below to describe a workout.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
             } else {
                 Text("No workout planned")
                     .font(.system(size: 15, weight: .medium))
@@ -444,17 +434,4 @@ struct HomeView: View {
         .padding(40)
     }
 
-}
-
-// MARK: - Color Helper
-
-extension Color {
-    init(hex: UInt, opacity: Double = 1.0) {
-        self.init(
-            red: Double((hex >> 16) & 0xFF) / 255,
-            green: Double((hex >> 8) & 0xFF) / 255,
-            blue: Double(hex & 0xFF) / 255,
-            opacity: opacity
-        )
-    }
 }

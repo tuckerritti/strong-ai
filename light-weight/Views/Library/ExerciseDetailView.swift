@@ -42,11 +42,11 @@ struct ExerciseDetailView: View {
             Text(exercise.name)
                 .font(.custom("SpaceGrotesk-Bold", size: 28))
                 .tracking(-0.56)
-                .foregroundStyle(Color(hex: 0x1A1A1A))
+                .foregroundStyle(Color.textHeading)
             Text(exercise.muscleGroup.uppercased())
                 .font(.system(size: 13, weight: .medium))
                 .tracking(0.52)
-                .foregroundStyle(Color(hex: 0x3CB371))
+                .foregroundStyle(Color.accentAlt)
         }
         .padding(.top, 16)
         .padding(.horizontal, 20)
@@ -56,12 +56,12 @@ struct ExerciseDetailView: View {
 
     private var exerciseImage: some View {
         RoundedRectangle(cornerRadius: 16)
-            .fill(Color(hex: 0xF7F8F7))
+            .fill(Color.appSurfaceSubtle)
             .frame(height: 200)
             .overlay {
                 Image(systemName: "figure.strengthtraining.traditional")
                     .font(.system(size: 60))
-                    .foregroundStyle(Color(hex: 0x999999).opacity(0.5))
+                    .foregroundStyle(Color.textMuted.opacity(0.5))
             }
             .padding(.top, 20)
             .padding(.horizontal, 20)
@@ -75,7 +75,7 @@ struct ExerciseDetailView: View {
             Text(description)
                 .font(.system(size: 14, weight: .regular))
                 .lineSpacing(7)
-                .foregroundStyle(Color(hex: 0x444444))
+                .foregroundStyle(Color.textBody)
                 .padding(.top, 20)
                 .padding(.horizontal, 20)
         }
@@ -91,21 +91,21 @@ struct ExerciseDetailView: View {
                 Text("How to Perform")
                     .font(.custom("SpaceGrotesk-Bold", size: 18))
                     .tracking(-0.18)
-                    .foregroundStyle(Color(hex: 0x1A1A1A))
+                    .foregroundStyle(Color.textHeading)
 
                 ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                     HStack(alignment: .top, spacing: 12) {
                         Text("\(index + 1)")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.buttonPrimaryText)
                             .frame(width: 24, height: 24)
-                            .background(Color(hex: 0x1A1A1A))
+                            .background(Color.textHeading)
                             .clipShape(Circle())
 
                         Text(step)
                             .font(.system(size: 14, weight: .regular))
                             .lineSpacing(6)
-                            .foregroundStyle(Color(hex: 0x444444))
+                            .foregroundStyle(Color.textBody)
                     }
                 }
             }
@@ -142,7 +142,7 @@ struct ExerciseDetailView: View {
                 Text("Your Stats")
                     .font(.custom("SpaceGrotesk-Bold", size: 18))
                     .tracking(-0.18)
-                    .foregroundStyle(Color(hex: 0x1A1A1A))
+                    .foregroundStyle(Color.textHeading)
 
                 HStack(spacing: 0) {
                     exerciseStat(value: "\(Int(bestWeight))", label: "Best (lbs)")
@@ -152,7 +152,7 @@ struct ExerciseDetailView: View {
                     exerciseStat(
                         value: "\(change >= 0 ? "+" : "")\(Int(change))",
                         label: "lbs / 3 mo",
-                        color: Color(hex: 0x3CB371)
+                        color: Color.accentAlt
                     )
                 }
             }
@@ -161,7 +161,7 @@ struct ExerciseDetailView: View {
         }
     }
 
-    private func exerciseStat(value: String, label: String, color: Color = Color(hex: 0x1A1A1A)) -> some View {
+    private func exerciseStat(value: String, label: String, color: Color = Color.textHeading) -> some View {
         VStack(spacing: 2) {
             Text(value)
                 .font(.custom("SpaceGrotesk-Bold", size: 26))
@@ -170,7 +170,7 @@ struct ExerciseDetailView: View {
             Text(label.uppercased())
                 .font(.system(size: 11, weight: .medium))
                 .tracking(0.66)
-                .foregroundStyle(Color(hex: 0x999999))
+                .foregroundStyle(Color.textMuted)
         }
         .frame(maxWidth: .infinity)
     }
@@ -197,11 +197,11 @@ struct ExerciseDetailView: View {
                     Text("Weight Progression")
                         .font(.custom("SpaceGrotesk-Bold", size: 18))
                         .tracking(-0.18)
-                        .foregroundStyle(Color(hex: 0x1A1A1A))
+                        .foregroundStyle(Color.textHeading)
                     Spacer()
                     Text("3 months")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x999999))
+                        .foregroundStyle(Color.textMuted)
                 }
 
                 Chart {
@@ -212,7 +212,7 @@ struct ExerciseDetailView: View {
                         )
                         .foregroundStyle(
                             LinearGradient(
-                                colors: [Color(hex: 0x3CB371).opacity(0.15), Color(hex: 0x3CB371).opacity(0.02)],
+                                colors: [Color.accentAlt.opacity(0.15), Color.accentAlt.opacity(0.02)],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
@@ -222,14 +222,14 @@ struct ExerciseDetailView: View {
                             x: .value("Date", point.date),
                             y: .value("Weight", point.weight)
                         )
-                        .foregroundStyle(Color(hex: 0x3CB371))
+                        .foregroundStyle(Color.accentAlt)
                         .lineStyle(StrokeStyle(lineWidth: 2))
 
                         PointMark(
                             x: .value("Date", point.date),
                             y: .value("Weight", point.weight)
                         )
-                        .foregroundStyle(Color(hex: 0x3CB371))
+                        .foregroundStyle(Color.accentAlt)
                         .symbolSize(30)
                     }
                 }
@@ -237,21 +237,21 @@ struct ExerciseDetailView: View {
                     AxisMarks(position: .leading) { value in
                         AxisValueLabel()
                             .font(.system(size: 11))
-                            .foregroundStyle(Color(hex: 0x999999))
+                            .foregroundStyle(Color.textMuted)
                         AxisGridLine()
-                            .foregroundStyle(Color(hex: 0xF0F0F0))
+                            .foregroundStyle(Color.appSurfaceAlt)
                     }
                 }
                 .chartXAxis {
                     AxisMarks { value in
                         AxisValueLabel(format: .dateTime.month(.abbreviated))
                             .font(.system(size: 11))
-                            .foregroundStyle(Color(hex: 0x999999))
+                            .foregroundStyle(Color.textMuted)
                     }
                 }
                 .frame(height: 148)
                 .padding(16)
-                .background(Color(hex: 0xFAFAFA))
+                .background(Color.appSurfaceSubtle)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .padding(.top, 24)
@@ -270,7 +270,7 @@ struct ExerciseDetailView: View {
                 Text("Recent History")
                     .font(.custom("SpaceGrotesk-Bold", size: 18))
                     .tracking(-0.18)
-                    .foregroundStyle(Color(hex: 0x1A1A1A))
+                    .foregroundStyle(Color.textHeading)
                     .padding(.bottom, 12)
 
                 ForEach(Array(recentEntries.enumerated()), id: \.offset) { index, log in
@@ -283,7 +283,7 @@ struct ExerciseDetailView: View {
 
                     if index < recentEntries.count - 1 {
                         Divider()
-                            .background(Color(hex: 0xF0F0F0))
+                            .background(Color.appSurfaceAlt)
                     }
                 }
             }
@@ -295,27 +295,27 @@ struct ExerciseDetailView: View {
     private func historyRow(date: Date, entry: LogEntry, isPR: Bool) -> some View {
         let completedSets = entry.sets.filter { $0.completedAt != nil }
         let maxWeight = completedSets.map(\.weight).max() ?? 0
-        let totalReps = completedSets.first?.reps ?? 0
+        let totalReps = completedSets.reduce(0) { $0 + $1.reps }
 
         return HStack {
             HStack(spacing: 12) {
                 VStack(spacing: 0) {
                     Text(date.formatted(.dateTime.month(.abbreviated)).uppercased())
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x999999))
+                        .foregroundStyle(Color.textMuted)
                     Text(date.formatted(.dateTime.day()))
                         .font(.custom("SpaceGrotesk-Bold", size: 20))
-                        .foregroundStyle(Color(hex: 0x1A1A1A))
+                        .foregroundStyle(Color.textHeading)
                 }
                 .frame(width: 36)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(completedSets.count) sets · \(totalReps) reps")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x1A1A1A))
+                        .foregroundStyle(Color.textHeading)
                     Text("\(Int(maxWeight)) lbs · \(entry.muscleGroup)")
                         .font(.system(size: 12, weight: .regular))
-                        .foregroundStyle(Color(hex: 0x999999))
+                        .foregroundStyle(Color.textMuted)
                 }
             }
 
@@ -324,10 +324,10 @@ struct ExerciseDetailView: View {
             if isPR {
                 Text("PR")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color(hex: 0x3CB371))
+                    .foregroundStyle(Color.accentAlt)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Color(hex: 0xE8F5E9))
+                    .background(Color.accentSurface)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
         }

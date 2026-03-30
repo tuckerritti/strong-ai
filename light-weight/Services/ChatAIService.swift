@@ -1,4 +1,5 @@
 import Foundation
+import AnthropicSwiftSDK
 import MuscleMap
 import os
 
@@ -7,6 +8,7 @@ private let logger = Logger(subsystem: "com.light-weight", category: "ChatAI")
 enum ChatStreamEvent: Sendable {
     case text(String)
     case result(ChatResult)
+    case usage(TokenCost)
 }
 
 struct ChatResult: Sendable, Codable {
@@ -21,11 +23,14 @@ struct ChatAIService {
         message: String,
         currentWorkout: Workout?,
         profile: UserProfileSnapshot,
-        exercises: [ExerciseSnapshot]
+        exercises: [ExerciseSnapshot],
+        history: [ChatMessage] = [],
+        progress: [LogEntry]? = nil
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
         let api = ClaudeAPIService(apiKey: apiKey)
 
         let mode = currentWorkout != nil ? "modify" : "create"
+        let isActiveWorkout = progress != nil
 
         let systemPrompt = """
         You are an expert strength coach. The user is asking you to \(mode) a workout via natural language.
@@ -43,15 +48,17 @@ struct ChatAIService {
               "muscleGroup": "Muscle Group",
               "targetMuscles": [{"muscle": "chest", "weight": 0.6}, {"muscle": "front-deltoid", "weight": 0.2}, {"muscle": "triceps", "weight": 0.2}],
               "sets": [
-                { "reps": 8, "weight": 135, "restSeconds": 90 }
+                { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
               ]
             }
           ]
         }
 
+        You MUST set targetRpe (1-10) for every set.
         targetMuscles: for each exercise, list muscles worked with a weight (0-1) representing that muscle's share of the work. Weights should sum to ~1.0. Valid muscle values: \(Muscle.validPromptValues)
 
         \(currentWorkout != nil ? "The user has an existing workout. Modify it based on their request — keep exercises they didn't mention, adjust what they asked about." : "Create a new workout from scratch based on the user's request.")
+        \(isActiveWorkout ? "\nIMPORTANT: This workout is in progress. Sets marked COMPLETED in the progress below cannot be changed. You MUST include them exactly as-is in your response. Only modify PLANNED sets and exercises." : "")
 
         User context:
         Goals: \(profile.goals.isEmpty ? "Not specified" : profile.goals)
@@ -61,13 +68,24 @@ struct ChatAIService {
         """
 
         var userMessage = message
+
         if let workout = currentWorkout,
            let json = try? JSONEncoder().encode(workout),
            let str = String(data: json, encoding: .utf8) {
             userMessage += "\n\nCurrent workout:\n\(str)"
         }
 
-        let tokenStream = try await api.stream(systemPrompt: systemPrompt, userMessage: userMessage)
+        if let progress {
+            userMessage += "\n\nWorkout progress:\n" + progress.formattedProgress()
+        }
+
+        // Build multi-turn message array from history
+        var messages: [Message] = history.map { chatMsg in
+            Message(role: chatMsg.role == .user ? .user : .assistant, content: [.text(chatMsg.text)])
+        }
+        messages.append(Message(role: .user, content: [.text(userMessage)]))
+
+        let tokenStream = try await api.stream(systemPrompt: systemPrompt, messages: messages)
 
         return AsyncThrowingStream { continuation in
             let task = Task {
@@ -75,24 +93,29 @@ struct ChatAIService {
                 var sentExplanationUpTo = 0
 
                 do {
-                    for try await token in tokenStream {
-                        accumulated += token
+                    for try await chunk in tokenStream {
+                        switch chunk {
+                        case .text(let token):
+                            accumulated += token
 
-                        // Stream explanation text (everything before ---JSON)
-                        if let separatorRange = accumulated.range(of: "---JSON") {
-                            let explanation = String(accumulated[accumulated.startIndex..<separatorRange.lowerBound])
-                            if explanation.count > sentExplanationUpTo {
-                                let new = String(explanation.dropFirst(sentExplanationUpTo))
-                                continuation.yield(.text(new))
-                                sentExplanationUpTo = explanation.count
+                            // Stream explanation text (everything before ---JSON)
+                            if let separatorRange = accumulated.range(of: "---JSON") {
+                                let explanation = String(accumulated[accumulated.startIndex..<separatorRange.lowerBound])
+                                if explanation.count > sentExplanationUpTo {
+                                    let new = String(explanation.dropFirst(sentExplanationUpTo))
+                                    continuation.yield(.text(new))
+                                    sentExplanationUpTo = explanation.count
+                                }
+                            } else {
+                                // Haven't hit separator yet — stream everything so far
+                                if accumulated.count > sentExplanationUpTo {
+                                    let new = String(accumulated.dropFirst(sentExplanationUpTo))
+                                    continuation.yield(.text(new))
+                                    sentExplanationUpTo = accumulated.count
+                                }
                             }
-                        } else {
-                            // Haven't hit separator yet — stream everything so far
-                            if accumulated.count > sentExplanationUpTo {
-                                let new = String(accumulated.dropFirst(sentExplanationUpTo))
-                                continuation.yield(.text(new))
-                                sentExplanationUpTo = accumulated.count
-                            }
+                        case .usage(let cost):
+                            continuation.yield(.usage(cost))
                         }
                     }
 

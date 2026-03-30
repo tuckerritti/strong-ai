@@ -25,20 +25,36 @@ struct HistoryListView: View {
         return completedLogs.filter { $0.startedAt < lastWeekStart }
     }
 
+    private var olderLogsByMonth: [(String, [WorkoutLog])] {
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+
+        let grouped = Dictionary(grouping: olderLogs) { log -> Date in
+            calendar.dateInterval(of: .month, for: log.startedAt)?.start ?? log.startedAt
+        }
+
+        return grouped
+            .sorted { $0.key > $1.key }
+            .map { (formatter.string(from: $0.key).uppercased(), $0.value) }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 Text("History")
                     .font(.custom("SpaceGrotesk-Bold", size: 36))
                     .tracking(-1.4)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
 
                 statsRow
                 logSection("THIS WEEK", logs: thisWeekLogs)
                 logSection("LAST WEEK", logs: lastWeekLogs)
-                logSection("EARLIER", logs: olderLogs)
+                ForEach(olderLogsByMonth, id: \.0) { title, logs in
+                    logSection(title, logs: logs)
+                }
             }
             .padding(.bottom, 100)
         }
@@ -55,7 +71,7 @@ struct HistoryListView: View {
         HStack(spacing: 10) {
             StatCard(title: "WORKOUTS", value: "\(completedLogs.count)")
             StatCard(title: "THIS MONTH", value: "\(logsThisMonth)")
-            StatCard(title: "STREAK", value: "\(streak)", highlight: streak > 0)
+            StatCard(title: "STREAK", value: "\(completedLogs.streak)", highlight: completedLogs.streak > 0)
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
@@ -66,25 +82,6 @@ struct HistoryListView: View {
         return completedLogs.filter { $0.startedAt >= start }.count
     }
 
-    private var streak: Int {
-        let calendar = Calendar.current
-        var currentDate = calendar.startOfDay(for: .now)
-        var count = 0
-        let logDates = Set(completedLogs.map { calendar.startOfDay(for: $0.startedAt) })
-
-        if !logDates.contains(currentDate),
-           let yesterday = calendar.date(byAdding: .day, value: -1, to: currentDate) {
-            currentDate = yesterday
-        }
-
-        while logDates.contains(currentDate) {
-            count += 1
-            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDate) else { break }
-            currentDate = previousDay
-        }
-        return count
-    }
-
     // MARK: - Log Section
 
     @ViewBuilder
@@ -93,7 +90,7 @@ struct HistoryListView: View {
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
                 .tracking(0.5)
-                .foregroundStyle(Color.black.opacity(0.35))
+                .foregroundStyle(Color.textSecondary)
                 .padding(.horizontal, 20)
                 .padding(.top, 28)
                 .padding(.bottom, 8)
@@ -116,11 +113,11 @@ struct HistoryListView: View {
             VStack(spacing: 0) {
                 Text(log.startedAt.formatted(.dateTime.weekday(.abbreviated)).uppercased())
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.black.opacity(0.4))
+                    .foregroundStyle(Color.textSecondary)
                 Text(log.startedAt.formatted(.dateTime.day()))
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
                     .tracking(-0.5)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
             }
             .frame(width: 50)
 
@@ -128,15 +125,15 @@ struct HistoryListView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(log.workoutName)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
                 if log.isInProgress {
                     Text("In progress...")
                         .font(.system(size: 13))
-                        .foregroundStyle(Color.black.opacity(0.35))
+                        .foregroundStyle(Color.textSecondary)
                 } else {
                     Text("\(log.totalSets) sets · \(log.durationMinutes) min · \(Int(log.totalVolume).formatted()) lbs")
                         .font(.system(size: 13))
-                        .foregroundStyle(Color.black.opacity(0.35))
+                        .foregroundStyle(Color.textSecondary)
                 }
             }
 
@@ -144,7 +141,7 @@ struct HistoryListView: View {
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.black.opacity(0.2))
+                .foregroundStyle(Color.textTertiary)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)

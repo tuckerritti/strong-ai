@@ -6,110 +6,136 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var apiKey = ""
     @State private var apiKeyError: String?
+    @State private var apiKeyVisible = false
     @State private var selectedSounds: Set<RestSound> = RestSound.selected
+    @State private var apiKeySaveTask: Task<Void, Never>?
+    @Environment(AppState.self) private var appState
 
     @State private var soundPreview = RestSoundService()
 
     private var profile: UserProfile? { profiles.first }
 
     var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Settings")
-                    .font(.custom("SpaceGrotesk-Bold", size: 36))
-                    .tracking(-1.4)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
+        @Bindable var state = appState
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Settings")
+                .font(.custom("SpaceGrotesk-Bold", size: 36))
+                .tracking(-1.4)
+                .foregroundStyle(Color.textPrimary)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
 
-                ScrollView {
-                    VStack(spacing: 24) {
-                        settingsSection("API KEY") {
-                            VStack(alignment: .leading, spacing: 8) {
-                                SecureField("sk-ant-...", text: apiKeyBinding)
-                                    .textInputAutocapitalization(.never)
-                                    .autocorrectionDisabled()
-                                    .privacySensitive()
-
-                                if let apiKeyError {
-                                    Text(apiKeyError)
-                                        .font(.system(size: 12))
-                                        .foregroundStyle(.red)
-                                }
-                            }
-                        }
-                        settingsSection("GOALS") {
-                            TextField("e.g. Build muscle, lose fat", text: binding(\.goals), axis: .vertical)
-                                .lineLimit(3...6)
-                        }
-                        settingsSection("SCHEDULE") {
-                            TextField("e.g. 4 days/week, Mon/Tue/Thu/Fri", text: binding(\.schedule), axis: .vertical)
-                                .lineLimit(2...4)
-                        }
-                        settingsSection("EQUIPMENT") {
-                            TextField("e.g. Full gym, home dumbbells only", text: binding(\.equipment), axis: .vertical)
-                                .lineLimit(2...4)
-                        }
-                        settingsSection("INJURIES / LIMITATIONS") {
-                            TextField("e.g. Bad left shoulder, avoid overhead", text: binding(\.injuries), axis: .vertical)
-                                .lineLimit(2...4)
-                        }
+            ScrollView {
+                VStack(spacing: 24) {
+                    settingsSection("API KEY") {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("REST TIMER SOUNDS")
-                                .font(.system(size: 13, weight: .semibold))
-                                .tracking(0.5)
-                                .foregroundStyle(Color.black.opacity(0.35))
-
-                            VStack(spacing: 0) {
-                                ForEach(RestSound.allCases) { sound in
-                                    Button {
-                                        if selectedSounds.contains(sound) {
-                                            if selectedSounds.count > 1 {
-                                                selectedSounds.remove(sound)
-                                            }
-                                        } else {
-                                            selectedSounds.insert(sound)
-                                            soundPreview.previewSound(sound)
-                                        }
-                                        RestSound.selected = selectedSounds
-                                    } label: {
-                                        HStack {
-                                            Text(sound.displayName)
-                                                .font(.system(size: 15))
-                                                .foregroundStyle(Color(hex: 0x0A0A0A))
-                                            Spacer()
-                                            if selectedSounds.contains(sound) {
-                                                Image(systemName: "checkmark")
-                                                    .font(.system(size: 14, weight: .semibold))
-                                                    .foregroundStyle(Color(hex: 0x34C759))
-                                            }
-                                        }
-                                        .padding(.vertical, 12)
-                                        .contentShape(Rectangle())
-                                    }
-                                    .buttonStyle(.plain)
-
-                                    if sound != RestSound.allCases.last {
-                                        Divider()
-                                    }
+                            HStack {
+                                if apiKeyVisible {
+                                    TextField("sk-ant-...", text: apiKeyBinding)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                } else {
+                                    SecureField("sk-ant-...", text: apiKeyBinding)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
                                 }
+                                Button {
+                                    apiKeyVisible.toggle()
+                                } label: {
+                                    Image(systemName: apiKeyVisible ? "eye.slash" : "eye")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(Color.textSecondary)
+                                        .frame(width: 32, height: 32)
+                                        .contentShape(Rectangle())
+                                }
+                                .accessibilityLabel(apiKeyVisible ? "Hide API key" : "Show API key")
                             }
-                            .padding(.horizontal, 16)
-                            .background(Color(hex: 0xF5F5F5))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                            if let apiKeyError {
+                                Text(apiKeyError)
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.red)
+                            }
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .padding(.bottom, 100)
+                    settingsSection("GOALS") {
+                        TextField("e.g. Build muscle, lose fat", text: binding(\.goals), axis: .vertical)
+                            .lineLimit(3...6)
+                    }
+                    settingsSection("SCHEDULE") {
+                        TextField("e.g. 4 days/week, Mon/Tue/Thu/Fri", text: binding(\.schedule), axis: .vertical)
+                            .lineLimit(2...4)
+                    }
+                    settingsSection("EQUIPMENT") {
+                        TextField("e.g. Full gym, home dumbbells only", text: binding(\.equipment), axis: .vertical)
+                            .lineLimit(2...4)
+                    }
+                    settingsSection("INJURIES / LIMITATIONS") {
+                        TextField("e.g. Bad left shoulder, avoid overhead", text: binding(\.injuries), axis: .vertical)
+                            .lineLimit(2...4)
+                    }
+                    settingsSection("REST TIMER SOUNDS") {
+                        VStack(spacing: 0) {
+                            ForEach(RestSound.allCases) { sound in
+                                Button {
+                                    if selectedSounds.contains(sound) {
+                                        if selectedSounds.count > 1 {
+                                            selectedSounds.remove(sound)
+                                        }
+                                    } else {
+                                        selectedSounds.insert(sound)
+                                        soundPreview.previewSound(sound)
+                                    }
+                                    RestSound.selected = selectedSounds
+                                } label: {
+                                    HStack {
+                                        Text(sound.displayName)
+                                            .foregroundStyle(Color.textPrimary)
+                                        Spacer()
+                                        if selectedSounds.contains(sound) {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundStyle(Color.accent)
+                                        }
+                                    }
+                                    .padding(.vertical, 12)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+
+                                if sound != RestSound.allCases.last {
+                                    Divider()
+                                }
+                            }
+                        }
+                    }
+                    settingsSection("TOKEN COST") {
+                        Toggle("Show daily API cost", isOn: $state.showTokenCost)
+                            .tint(Color(hex: 0x34C759))
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 100)
+            }
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
             }
-            .onAppear {
-                syncProfileState()
-            }
-            .onChange(of: profiles.count) { _, _ in
-                syncProfileState()
-            }
+        }
+        .onAppear {
+            syncProfileState()
+        }
+        .onChange(of: profiles.count) { _, _ in
+            syncProfileState()
+        }
+        .onDisappear {
+            apiKeySaveTask?.cancel()
         }
     }
 
@@ -118,12 +144,12 @@ struct SettingsView: View {
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
                 .tracking(0.5)
-                .foregroundStyle(Color.black.opacity(0.35))
+                .foregroundStyle(Color.textSecondary)
 
             content()
                 .padding(.vertical, 14)
                 .padding(.horizontal, 16)
-                .background(Color(hex: 0xF5F5F5))
+                .background(Color.appSurface)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
         }
     }
@@ -140,7 +166,12 @@ struct SettingsView: View {
             get: { apiKey },
             set: { newValue in
                 apiKey = newValue
-                persistAPIKey(newValue)
+                apiKeySaveTask?.cancel()
+                apiKeySaveTask = Task {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    guard !Task.isCancelled else { return }
+                    persistAPIKey(newValue)
+                }
             }
         )
     }

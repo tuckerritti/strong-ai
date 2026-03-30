@@ -7,7 +7,7 @@ struct WorkoutDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 statsHeader
-                ForEach(Array(log.entries.enumerated()), id: \.offset) { _, entry in
+                ForEach(Array(log.entries.enumerated()), id: \.element.id) { _, entry in
                     exerciseSection(entry)
                 }
             }
@@ -20,14 +20,21 @@ struct WorkoutDetailView: View {
     // MARK: - Stats Header
 
     private var statsHeader: some View {
-        HStack(spacing: 10) {
-            StatCard(title: "DURATION", value: "\(log.durationMinutes)m")
-            StatCard(title: "SETS", value: "\(log.totalSets)")
-            StatCard(title: "VOLUME", value: "\(Int(log.totalVolume).formatted())")
+        VStack(alignment: .leading, spacing: 10) {
+            Text(log.startedAt.formatted(.dateTime.weekday(.wide).month(.wide).day().year()))
+                .font(.system(size: 14))
+                .foregroundStyle(Color.textSecondary)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+
+            HStack(spacing: 10) {
+                StatCard(title: "DURATION", value: "\(log.durationMinutes)m")
+                StatCard(title: "SETS", value: "\(log.totalSets)")
+                StatCard(title: "VOLUME", value: "\(Int(log.totalVolume).formatted())")
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 8)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
     }
 
     // MARK: - Exercise Section
@@ -37,7 +44,7 @@ struct WorkoutDetailView: View {
             Text(entry.exerciseName)
                 .font(.custom("SpaceGrotesk-Bold", size: 17))
                 .tracking(-0.3)
-                .foregroundStyle(Color(hex: 0x0A0A0A))
+                .foregroundStyle(Color.textPrimary)
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
                 .padding(.bottom, 4)
@@ -45,7 +52,7 @@ struct WorkoutDetailView: View {
             Text(entry.muscleGroup.uppercased())
                 .font(.system(size: 11, weight: .semibold))
                 .tracking(0.5)
-                .foregroundStyle(Color.black.opacity(0.35))
+                .foregroundStyle(Color.textSecondary)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 10)
 
@@ -63,19 +70,19 @@ struct WorkoutDetailView: View {
             }
             .font(.system(size: 11, weight: .semibold))
             .tracking(0.5)
-            .foregroundStyle(Color.black.opacity(0.3))
+            .foregroundStyle(Color.textTertiary)
             .padding(.horizontal, 20)
             .padding(.bottom, 6)
 
             VStack(spacing: 0) {
-                ForEach(Array(entry.sets.enumerated()), id: \.offset) { setIndex, set in
+                ForEach(Array(entry.sets.enumerated()), id: \.element.id) { setIndex, set in
                     HStack(spacing: 0) {
                         Text("\(setIndex + 1)")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(set.completedAt != nil ? Color(hex: 0x34C759) : Color.black.opacity(0.3))
+                            .foregroundStyle(set.completedAt != nil ? Color.accent : .textTertiary)
                             .frame(width: 40, alignment: .leading)
 
-                        Text("\(Int(set.weight))")
+                        Text(set.weight > 0 ? "\(Int(set.weight))" : "BW")
                             .font(.system(size: 14, weight: .medium))
                             .frame(width: 72, alignment: .leading)
 
@@ -83,9 +90,8 @@ struct WorkoutDetailView: View {
                             .font(.system(size: 14, weight: .medium))
                             .frame(width: 64, alignment: .leading)
 
-                        Text(set.rpe.map { "\($0)" } ?? "—")
+                        Text("\(set.rpe)")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(set.rpe != nil ? Color(hex: 0x0A0A0A) : Color.black.opacity(0.3))
                             .frame(width: 48, alignment: .leading)
 
                         Spacer()
@@ -114,15 +120,15 @@ struct StatCard: View {
             Text(value)
                 .font(.custom("SpaceGrotesk-Bold", size: 28))
                 .tracking(-0.5)
-                .foregroundStyle(highlight ? Color(hex: 0x34C759) : Color(hex: 0x0A0A0A))
+                .foregroundStyle(highlight ? Color.accent : .textPrimary)
             Text(title)
                 .font(.system(size: 10, weight: .semibold))
                 .tracking(0.8)
-                .foregroundStyle(Color.black.opacity(0.3))
+                .foregroundStyle(Color.textTertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.vertical, 16)
-        .background(Color(hex: 0xF5F5F5))
+        .background(Color.appSurface)
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }

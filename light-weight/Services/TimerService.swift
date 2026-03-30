@@ -47,6 +47,26 @@ final class TimerService {
         }
     }
 
+    func resync(newTotalSeconds: Int) {
+        guard isRunning else { return }
+        let elapsed = totalSeconds - remainingSeconds
+        let newRemaining = max(0, newTotalSeconds - elapsed)
+
+        if newRemaining <= 0 {
+            stop()
+            return
+        }
+
+        totalSeconds = newTotalSeconds
+        remainingSeconds = newRemaining
+        fireDate = Date().addingTimeInterval(TimeInterval(newRemaining))
+
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest-timer"])
+        scheduleNotification(seconds: newRemaining)
+
+        logger.info("Timer resynced: \(newTotalSeconds)s total, \(newRemaining)s remaining")
+    }
+
     /// User tapped skip — stop everything immediately.
     func stop() {
         timer?.invalidate()

@@ -6,6 +6,8 @@ struct ChatMessage: Identifiable {
     let role: Role
     var text: String
     var isApplied: Bool = false
+    var tokenCost: TokenCost?
+    var isError: Bool = false
 
     enum Role {
         case user, assistant
@@ -19,11 +21,14 @@ struct ChatDrawerView: View {
     var workoutName: String?
     var elapsedTime: String?
     var exerciseProgress: String?
-    var onSend: (String) async -> AsyncThrowingStream<ChatStreamEvent, Error>?
+    var onSend: (String, [ChatMessage]) async -> AsyncThrowingStream<ChatStreamEvent, Error>?
 
     @State private var messages: [ChatMessage] = []
     @State private var inputText = ""
     @State private var isSending = false
+    @Environment(AppState.self) private var appState
+    @State private var tappedInputBar = false
+    @State private var isSheetPresented = true
     private var isExpanded: Bool { selectedDetent != smallDetent }
     @FocusState private var isInputFocused: Bool
 
@@ -31,7 +36,8 @@ struct ChatDrawerView: View {
 
     var body: some View {
         Color.clear
-            .sheet(isPresented: .constant(true)) {
+            .allowsHitTesting(false)
+            .sheet(isPresented: $isSheetPresented) {
                 sheetContent
                     .presentationDetents(
                         [smallDetent, .medium, .large],
@@ -39,11 +45,12 @@ struct ChatDrawerView: View {
                     )
                     .presentationDragIndicator(.hidden)
                     .presentationCornerRadius(44)
-                    .presentationBackground(.white)
+                    .presentationBackground(Color.chatDrawerBg)
                     .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-                    .presentationContentInteraction(.scrolls)
+                    .presentationContentInteraction(isExpanded ? .scrolls : .resizes)
                     .interactiveDismissDisabled()
             }
+            .onAppear { isSheetPresented = true }
     }
 
     // MARK: - Sheet Content
@@ -52,7 +59,7 @@ struct ChatDrawerView: View {
         VStack(spacing: 0) {
             // Grab handle
             RoundedRectangle(cornerRadius: 2)
-                .fill(Color.black.opacity(0.15))
+                .fill(Color.textQuaternary)
                 .frame(width: 36, height: 4)
                 .padding(.top, 12)
                 .padding(.bottom, 4)
@@ -62,7 +69,12 @@ struct ChatDrawerView: View {
                 Text("Chat")
                     .font(.custom("SpaceGrotesk-Bold", size: 20))
                     .tracking(-0.4)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
+                if appState.showTokenCost, appState.dailyCost.estimatedCost > 0 {
+                    Text("~$\(appState.dailyCost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.textSecondary)
+                }
                 Spacer()
                 Button {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -70,9 +82,9 @@ struct ChatDrawerView: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Color.black.opacity(0.4))
+                        .foregroundStyle(Color.textSecondary)
                         .frame(width: 28, height: 28)
-                        .background(Color(hex: 0xF5F5F5))
+                        .background(Color.appSurface)
                         .clipShape(Circle())
                 }
             }
@@ -81,6 +93,7 @@ struct ChatDrawerView: View {
             .padding(.bottom, 8)
             .frame(height: isExpanded ? nil : 0, alignment: .top)
             .clipped()
+            .allowsHitTesting(isExpanded)
 
             Divider()
                 .opacity(isExpanded ? 1 : 0)
@@ -141,7 +154,7 @@ struct ChatDrawerView: View {
                     .focused($isInputFocused)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 11)
-                    .background(Color(hex: 0xF5F5F5))
+                    .background(Color.appSurface)
                     .clipShape(RoundedRectangle(cornerRadius: 21))
                     .onSubmit { Task { await send() } }
 
@@ -152,19 +165,21 @@ struct ChatDrawerView: View {
                         .font(.system(size: 34))
                         .foregroundStyle(
                             inputText.trimmingCharacters(in: .whitespaces).isEmpty || isSending
-                            ? Color.black.opacity(0.15)
-                            : Color(hex: 0x0A0A0A)
+                            ? Color.textQuaternary
+                            : Color.textPrimary
                         )
                 }
                 .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isSending)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
+            .simultaneousGesture(TapGesture().onEnded { tappedInputBar = true })
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-            if !isExpanded {
+            if tappedInputBar && !isExpanded {
                 selectedDetent = .large
             }
+            tappedInputBar = false
         }
         .onChange(of: pendingMessage) { _, newValue in
             guard let message = newValue else { return }
@@ -188,7 +203,7 @@ struct ChatDrawerView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(Color(hex: 0x2C2C2E))
+                    .background(Color.chatBubbleUser)
                     .clipShape(RoundedRectangle(cornerRadius: 18))
             }
         case .assistant:
@@ -196,7 +211,7 @@ struct ChatDrawerView: View {
                 Text(message.text)
                     .font(.system(size: 15))
                     .lineSpacing(3)
-                    .foregroundStyle(Color(hex: 0x0A0A0A).opacity(0.85))
+                    .foregroundStyle(Color.textPrimary.opacity(0.85))
 
                 if message.isApplied {
                     HStack(spacing: 4) {
@@ -205,7 +220,13 @@ struct ChatDrawerView: View {
                         Text("Changes applied to your workout")
                             .font(.system(size: 14, weight: .medium))
                     }
-                    .foregroundStyle(Color(hex: 0x34C759))
+                    .foregroundStyle(Color.accent)
+                }
+
+                if appState.showTokenCost, let cost = message.tokenCost, cost.estimatedCost > 0 {
+                    Text("~$\(cost.estimatedCost, specifier: "%.4f")")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.textSecondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -227,7 +248,9 @@ struct ChatDrawerView: View {
     private func streamResponse(for text: String) async {
         isSending = true
 
-        guard let stream = await onSend(text) else {
+        // Pass prior messages as history (exclude the just-appended user message)
+        let history = messages.dropLast().filter { !$0.isError }
+        guard let stream = await onSend(text, history) else {
             isSending = false
             return
         }
@@ -245,6 +268,8 @@ struct ChatDrawerView: View {
                         messages[assistantIndex].text = result.explanation
                     }
                     messages[assistantIndex].isApplied = true
+                case .usage(let cost):
+                    messages[assistantIndex].tokenCost = (messages[assistantIndex].tokenCost ?? .zero) + cost
                 }
             }
         } catch {
@@ -253,6 +278,7 @@ struct ChatDrawerView: View {
             } else {
                 messages[assistantIndex].text += "\n\nError: \(error.localizedDescription)"
             }
+            messages[assistantIndex].isError = true
         }
 
         isSending = false

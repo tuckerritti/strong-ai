@@ -5,20 +5,27 @@ struct SetRowView: View {
     let logSet: LogSet
     let plannedSet: WorkoutSet?
     let isActive: Bool
-    let onLog: (Double, Int, Int?) -> Void
+    let isUpdating: Bool
+    let onLog: (Double, Int, Int) -> Void
 
     @State private var weightText: String = ""
     @State private var repsText: String = ""
     @State private var rpeText: String = ""
     @State private var didInit = false
+    @State private var sweepPosition: CGFloat = 1.3
+    @State private var contentOpacity: Double = 1.0
 
     private var isCompleted: Bool { logSet.completedAt != nil }
+    private var canLog: Bool {
+        guard let rpe = Int(rpeText) else { return false }
+        return Double(weightText) != nil && Int(repsText) != nil && (1...10).contains(rpe)
+    }
 
     var body: some View {
         HStack(spacing: 8) {
             Text("\(setNumber)")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(isCompleted ? Color(hex: 0x34C759) : Color.black.opacity(0.4))
+                .foregroundStyle(isCompleted ? Color.accent : .textSecondary)
                 .frame(width: 40, alignment: .leading)
 
             if isCompleted {
@@ -33,15 +40,49 @@ struct SetRowView: View {
         .padding(.vertical, 10)
         .overlay(
             isActive
-                ? RoundedRectangle(cornerRadius: 10).stroke(Color(hex: 0x0A0A0A), lineWidth: 1.5).padding(.horizontal, 8)
+                ? RoundedRectangle(cornerRadius: 10).stroke(Color.textPrimary, lineWidth: 1.5).padding(.horizontal, 8)
                 : nil
         )
         .onAppear {
             guard !didInit else { return }
             didInit = true
-            if let ps = plannedSet {
-                weightText = ps.weight > 0 ? "\(Int(ps.weight))" : ""
-                repsText = "\(ps.reps)"
+            syncDisplayedValues()
+        }
+        .onChange(of: logSet.weight) {
+            syncPendingValues()
+        }
+        .onChange(of: logSet.reps) {
+            syncPendingValues()
+        }
+        .onChange(of: logSet.rpe) {
+            if isCompleted {
+                rpeText = logSet.rpe > 0 ? String(logSet.rpe) : ""
+            }
+        }
+        .overlay {
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: max(0, min(1, sweepPosition - 0.15))),
+                            .init(color: Color.textQuaternary, location: max(0, min(1, sweepPosition))),
+                            .init(color: .clear, location: max(0, min(1, sweepPosition + 0.15))),
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .opacity(sweepPosition < 1.3 ? 1 : 0)
+                .allowsHitTesting(false)
+        }
+        .opacity(contentOpacity)
+        .onChange(of: isUpdating) {
+            guard isUpdating else { return }
+            sweepPosition = -0.3
+            contentOpacity = 0.3
+            withAnimation(.easeOut(duration: 0.8)) {
+                sweepPosition = 1.3
+                contentOpacity = 1.0
             }
         }
     }
@@ -61,7 +102,7 @@ struct SetRowView: View {
             .frame(width: 48, alignment: .center)
         Image(systemName: "checkmark.circle.fill")
             .font(.system(size: 20))
-            .foregroundStyle(Color(hex: 0x34C759))
+            .foregroundStyle(Color.accent)
             .frame(width: 28)
     }
 
@@ -69,44 +110,37 @@ struct SetRowView: View {
 
     @ViewBuilder
     private var activeRow: some View {
-        TextField("0", text: $weightText)
-            .keyboardType(.decimalPad)
-            .multilineTextAlignment(.center)
-            .font(.system(size: 14, weight: .medium))
+        NumericTextField(text: $weightText, placeholder: "0", keyboardType: .decimalPad)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(Color(hex: 0xF5F5F5))
+            .frame(height: 33)
+            .background(Color.appSurface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
-        TextField("0", text: $repsText)
-            .keyboardType(.numberPad)
-            .multilineTextAlignment(.center)
-            .font(.system(size: 14, weight: .medium))
+        NumericTextField(text: $repsText, placeholder: "0", keyboardType: .numberPad)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(Color(hex: 0xF5F5F5))
+            .frame(height: 33)
+            .background(Color.appSurface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
-        TextField("—", text: $rpeText)
-            .keyboardType(.numberPad)
-            .multilineTextAlignment(.center)
-            .font(.system(size: 14, weight: .medium))
+        NumericTextField(text: $rpeText, placeholder: plannedSet?.targetRpe.map { "@\($0)" } ?? "—", keyboardType: .numberPad)
             .frame(width: 48)
-            .padding(.vertical, 8)
-            .background(Color(hex: 0xF5F5F5))
+            .frame(height: 33)
+            .background(Color.appSurface)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
         Button {
-            let weight = Double(weightText) ?? 0
-            let reps = Int(repsText) ?? 0
-            let rpe = Int(rpeText)
+            guard let weight = Double(weightText),
+                  let reps = Int(repsText),
+                  let rpe = Int(rpeText) else { return }
             onLog(weight, reps, rpe)
         } label: {
             Image(systemName: "checkmark.circle")
                 .font(.system(size: 20))
-                .foregroundStyle(Color.black.opacity(0.3))
+                .foregroundStyle(canLog ? Color.textPrimary : .textQuaternary)
         }
+        .disabled(!canLog)
         .frame(width: 28)
+        .accessibilityLabel(canLog ? "Log set" : "Enter weight, reps, and RPE (1–10) to log")
     }
 
     // MARK: - Future
@@ -115,19 +149,32 @@ struct SetRowView: View {
     private var futureRow: some View {
         Text(plannedSet.map { "\(Int($0.weight))" } ?? "—")
             .font(.system(size: 14))
-            .foregroundStyle(Color.black.opacity(0.2))
+            .foregroundStyle(Color.textTertiary)
             .frame(maxWidth: .infinity)
         Text(plannedSet.map { "\($0.reps)" } ?? "—")
             .font(.system(size: 14))
-            .foregroundStyle(Color.black.opacity(0.2))
+            .foregroundStyle(Color.textTertiary)
             .frame(maxWidth: .infinity)
-        Text("—")
+        Text(plannedSet?.targetRpe.map { "@\($0)" } ?? "—")
             .font(.system(size: 14))
-            .foregroundStyle(Color.black.opacity(0.2))
+            .foregroundStyle(Color.textTertiary)
             .frame(width: 48, alignment: .center)
         Circle()
-            .strokeBorder(Color.black.opacity(0.1), lineWidth: 1.5)
+            .strokeBorder(Color.divider, lineWidth: 1.5)
             .frame(width: 20, height: 20)
             .frame(width: 28)
     }
+
+    private func syncDisplayedValues() {
+        weightText = logSet.weight > 0 ? "\(Int(logSet.weight))" : ""
+        repsText = "\(logSet.reps)"
+        rpeText = logSet.rpe > 0 ? String(logSet.rpe) : ""
+    }
+
+    private func syncPendingValues() {
+        guard !isCompleted else { return }
+        weightText = logSet.weight > 0 ? "\(Int(logSet.weight))" : ""
+        repsText = "\(logSet.reps)"
+    }
 }
+
