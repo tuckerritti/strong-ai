@@ -50,16 +50,16 @@ extension Color {
     static let textPrimary = adaptive(light: 0x0A0A0A, dark: 0xF5F5F5)
     static let textHeading = adaptive(light: 0x1A1A1A, dark: 0xF5F5F5)
     static let textSecondary = adaptive(
-        light: UIColor(white: 0, alpha: 0.35),
+        light: UIColor(white: 0, alpha: 0.55),
         dark: UIColor(white: 1, alpha: 0.70)
     )
     static let textTertiary = adaptive(
-        light: UIColor(white: 0, alpha: 0.20),
-        dark: UIColor(white: 1, alpha: 0.35)
+        light: UIColor(white: 0, alpha: 0.40),
+        dark: UIColor(white: 1, alpha: 0.50)
     )
     static let textQuaternary = adaptive(
-        light: UIColor(white: 0, alpha: 0.15),
-        dark: UIColor(white: 1, alpha: 0.20)
+        light: UIColor(white: 0, alpha: 0.25),
+        dark: UIColor(white: 1, alpha: 0.30)
     )
     static let textMuted = adaptive(
         light: UIColor(red: 0x99/255, green: 0x99/255, blue: 0x99/255, alpha: 1),

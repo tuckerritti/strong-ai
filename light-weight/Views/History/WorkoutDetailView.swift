@@ -7,7 +7,7 @@ struct WorkoutDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 statsHeader
-                ForEach(Array(log.entries.enumerated()), id: \.offset) { _, entry in
+                ForEach(Array(log.entries.enumerated()), id: \.element.id) { _, entry in
                     exerciseSection(entry)
                 }
             }
@@ -20,14 +20,21 @@ struct WorkoutDetailView: View {
     // MARK: - Stats Header
 
     private var statsHeader: some View {
-        HStack(spacing: 10) {
-            StatCard(title: "DURATION", value: "\(log.durationMinutes)m")
-            StatCard(title: "SETS", value: "\(log.totalSets)")
-            StatCard(title: "VOLUME", value: "\(Int(log.totalVolume).formatted())")
+        VStack(alignment: .leading, spacing: 10) {
+            Text(log.startedAt.formatted(.dateTime.weekday(.wide).month(.wide).day().year()))
+                .font(.system(size: 14))
+                .foregroundStyle(Color.textSecondary)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+
+            HStack(spacing: 10) {
+                StatCard(title: "DURATION", value: "\(log.durationMinutes)m")
+                StatCard(title: "SETS", value: "\(log.totalSets)")
+                StatCard(title: "VOLUME", value: "\(Int(log.totalVolume).formatted())")
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 8)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
     }
 
     // MARK: - Exercise Section
@@ -68,14 +75,14 @@ struct WorkoutDetailView: View {
             .padding(.bottom, 6)
 
             VStack(spacing: 0) {
-                ForEach(Array(entry.sets.enumerated()), id: \.offset) { setIndex, set in
+                ForEach(Array(entry.sets.enumerated()), id: \.element.id) { setIndex, set in
                     HStack(spacing: 0) {
                         Text("\(setIndex + 1)")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(set.completedAt != nil ? Color.accent : .textTertiary)
                             .frame(width: 40, alignment: .leading)
 
-                        Text("\(Int(set.weight))")
+                        Text(set.weight > 0 ? "\(Int(set.weight))" : "BW")
                             .font(.system(size: 14, weight: .medium))
                             .frame(width: 72, alignment: .leading)
 

@@ -129,7 +129,10 @@ struct SetRowView: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
         Button {
-            onLog(Double(weightText)!, Int(repsText)!, Int(rpeText)!)
+            guard let weight = Double(weightText),
+                  let reps = Int(repsText),
+                  let rpe = Int(rpeText) else { return }
+            onLog(weight, reps, rpe)
         } label: {
             Image(systemName: "checkmark.circle")
                 .font(.system(size: 20))
@@ -137,6 +140,7 @@ struct SetRowView: View {
         }
         .disabled(!canLog)
         .frame(width: 28)
+        .accessibilityLabel(canLog ? "Log set" : "Enter weight, reps, and RPE (1–10) to log")
     }
 
     // MARK: - Future

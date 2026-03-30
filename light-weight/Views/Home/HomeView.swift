@@ -20,16 +20,21 @@ struct HomeView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var healthContext: HealthContext?
-    @State private var workoutDate = Date.now
     @State private var exercisesExpanded = false
     @State private var muscleMapExpanded = false
     @State private var apiKey = ""
+    @State private var navigationPath = NavigationPath()
+
+    private enum Destination: Hashable {
+        case library, history, settings, activeWorkout(Workout)
+    }
+
     private var profile: UserProfile? { profiles.first }
 
     var body: some View {
         @Bindable var state = appState
         ZStack {
-            NavigationStack {
+            NavigationStack(path: $navigationPath) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         headerSection
@@ -57,7 +62,7 @@ struct HomeView: View {
                     apiKey = UserProfileService.loadAPIKey()
                 }
                 .overlay {
-                    if !appState.isWorkoutActive {
+                    if !appState.isWorkoutActive && navigationPath.isEmpty {
                         ChatDrawerView(
                             selectedDetent: $state.chatDetent,
                             pendingMessage: $state.pendingMessage,
@@ -66,6 +71,14 @@ struct HomeView: View {
                                 await streamChat(message, history: history)
                             }
                         )
+                    }
+                }
+                .navigationDestination(for: Destination.self) { destination in
+                    switch destination {
+                    case .library: ExerciseLibraryView()
+                    case .history: HistoryListView()
+                    case .settings: SettingsView()
+                    case .activeWorkout(let workout): ActiveWorkoutView(workout: workout)
                     }
                 }
             }
@@ -136,9 +149,7 @@ struct HomeView: View {
                             switch event {
                             case .result(let result):
                                 todayWorkout = result.workout
-                                if Calendar.current.isDateInToday(workoutDate) {
-                                    WorkoutCacheService.save(result.workout)
-                                }
+                                WorkoutCacheService.save(result.workout)
                                 ExerciseLibraryService.persist(workoutExercises: result.workout.exercises, existingExercises: exercises, modelContext: modelContext)
                                 errorMessage = nil
                             case .usage, .text:
@@ -199,28 +210,31 @@ struct HomeView: View {
                     .tracking(-1.0)
                     .foregroundStyle(Color.textPrimary)
                 Spacer()
-                HStack(spacing: 16) {
-                    NavigationLink {
-                        ExerciseLibraryView()
-                    } label: {
+                HStack(spacing: 8) {
+                    NavigationLink(value: Destination.library) {
                         Image(systemName: "book.fill")
                             .font(.system(size: 20))
                             .foregroundStyle(Color.textPrimary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
-                    NavigationLink {
-                        HistoryListView()
-                    } label: {
+                    .accessibilityLabel("Exercise Library")
+                    NavigationLink(value: Destination.history) {
                         Image(systemName: "clock.fill")
                             .font(.system(size: 20))
                             .foregroundStyle(Color.textPrimary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
-                    NavigationLink {
-                        SettingsView()
-                    } label: {
+                    .accessibilityLabel("Workout History")
+                    NavigationLink(value: Destination.settings) {
                         Image(systemName: "gearshape.fill")
                             .font(.system(size: 20))
                             .foregroundStyle(Color.textPrimary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Settings")
                 }
             }
         }
@@ -338,7 +352,7 @@ struct HomeView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.textPrimary)
                     Spacer()
-                    Text("\(exercise.sets.count) sets · \(exercise.sets.first?.reps ?? 0) reps")
+                    Text("\(exercise.sets.count) sets · \(exercise.sets.reduce(0) { $0 + $1.reps }) reps")
                         .font(.system(size: 13))
                         .foregroundStyle(Color.textSecondary)
                 }
@@ -386,9 +400,7 @@ struct HomeView: View {
     }
 
     private func startButton(_ workout: Workout) -> some View {
-        NavigationLink {
-            ActiveWorkoutView(workout: workout)
-        } label: {
+        NavigationLink(value: Destination.activeWorkout(workout)) {
             Text("Start Workout")
                 .font(.custom("SpaceGrotesk-Bold", size: 17))
                 .tracking(-0.2)

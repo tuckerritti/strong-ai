@@ -27,7 +27,7 @@ struct ActiveWorkoutView: View {
     @State private var debriefRecentLogs: [WorkoutLogSnapshot] = []
     @State private var chatDetent: PresentationDetent = .height(90)
     @State private var chatPendingMessage: String?
-    @State private var showChat = true
+    @State private var showChat = false
 
     private var profile: UserProfile? { profiles.first }
 
@@ -37,16 +37,19 @@ struct ActiveWorkoutView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                headerSection
-                timerSection
+        VStack(spacing: 0) {
+            timerSection
 
-                ForEach(Array(viewModel.entries.enumerated()), id: \.offset) { exerciseIndex, entry in
-                    exerciseSection(exerciseIndex: exerciseIndex, entry: entry)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    headerSection
+
+                    ForEach(Array(viewModel.entries.enumerated()), id: \.element.id) { exerciseIndex, entry in
+                        exerciseSection(exerciseIndex: exerciseIndex, entry: entry)
+                    }
                 }
+                .padding(.bottom, 120)
             }
-            .padding(.bottom, 120)
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
@@ -130,6 +133,10 @@ struct ActiveWorkoutView: View {
             viewModel.start()
             viewModel.timerService.requestPermission()
             ExerciseLibraryService.persist(workoutExercises: viewModel.currentWorkout.exercises, existingExercises: exercises, modelContext: modelContext)
+            Task {
+                try? await Task.sleep(for: .milliseconds(600))
+                showChat = true
+            }
         }
         .onDisappear {
             appState.isWorkoutActive = false
@@ -218,7 +225,7 @@ struct ActiveWorkoutView: View {
             .padding(.bottom, 8)
 
             VStack(spacing: 0) {
-                ForEach(Array(entry.sets.enumerated()), id: \.offset) { setIndex, set in
+                ForEach(Array(entry.sets.enumerated()), id: \.element.id) { setIndex, set in
                     SetRowView(
                         setNumber: setIndex + 1,
                         logSet: set,

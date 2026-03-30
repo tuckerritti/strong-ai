@@ -25,6 +25,20 @@ struct HistoryListView: View {
         return completedLogs.filter { $0.startedAt < lastWeekStart }
     }
 
+    private var olderLogsByMonth: [(String, [WorkoutLog])] {
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+
+        let grouped = Dictionary(grouping: olderLogs) { log -> Date in
+            calendar.dateInterval(of: .month, for: log.startedAt)?.start ?? log.startedAt
+        }
+
+        return grouped
+            .sorted { $0.key > $1.key }
+            .map { (formatter.string(from: $0.key).uppercased(), $0.value) }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -38,7 +52,9 @@ struct HistoryListView: View {
                 statsRow
                 logSection("THIS WEEK", logs: thisWeekLogs)
                 logSection("LAST WEEK", logs: lastWeekLogs)
-                logSection("EARLIER", logs: olderLogs)
+                ForEach(olderLogsByMonth, id: \.0) { title, logs in
+                    logSection(title, logs: logs)
+                }
             }
             .padding(.bottom, 100)
         }
