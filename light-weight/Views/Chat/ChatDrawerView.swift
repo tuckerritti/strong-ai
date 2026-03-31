@@ -222,14 +222,9 @@ struct ChatDrawerView: View {
                     }
                     .foregroundStyle(Color.accent)
                 } else if message.isApplying {
-                    HStack(spacing: 4) {
-                        ProgressView()
-                            .controlSize(.mini)
-                            .frame(width: 14, height: 14)
-                        Text("Applying changes...")
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundStyle(Color.textSecondary)
+                    Text("Applying changes...")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.textSecondary)
                 }
 
                 if appState.showTokenCost, let cost = message.tokenCost, cost.estimatedCost > 0 {
