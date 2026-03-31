@@ -23,7 +23,6 @@ struct ActiveWorkoutView: View {
     @State private var showingDebrief = false
     @State private var finishedLog: WorkoutLog?
     @State private var apiKey = ""
-    @State private var selectedExercise: Exercise?
     @State private var debriefRecentLogs: [WorkoutLogSnapshot] = []
     @State private var chatDetent: PresentationDetent = .height(90)
     @State private var chatPendingMessage: String?
@@ -99,15 +98,8 @@ struct ActiveWorkoutView: View {
                 )
             }
         }
-        .sheet(item: $selectedExercise) { exercise in
-            NavigationStack {
-                ExerciseDetailView(exercise: exercise)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Done") { selectedExercise = nil }
-                        }
-                    }
-            }
+        .navigationDestination(for: Exercise.self) { exercise in
+            ExerciseDetailView(exercise: exercise)
         }
         .sheet(isPresented: $showingDebrief, onDismiss: {
             finishedLog = nil
@@ -187,26 +179,34 @@ struct ActiveWorkoutView: View {
         }
     }
 
+    private func exerciseHeader(entry: LogEntry) -> some View {
+        HStack {
+            Text(entry.exerciseName)
+                .font(.custom("SpaceGrotesk-Bold", size: 18))
+                .tracking(-0.18)
+                .foregroundStyle(Color.textPrimary)
+            Spacer()
+            Text(entry.muscleGroup.uppercased())
+                .font(.system(size: 12, weight: .medium))
+                .tracking(0.72)
+                .foregroundStyle(Color.textTertiary)
+        }
+    }
+
     // MARK: - Exercise Section
 
     private func exerciseSection(exerciseIndex: Int, entry: LogEntry) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Button {
-                selectedExercise = exercises.first { $0.name == entry.exerciseName }
-            } label: {
-                HStack {
-                    Text(entry.exerciseName)
-                        .font(.custom("SpaceGrotesk-Bold", size: 18))
-                        .tracking(-0.18)
-                        .foregroundStyle(Color.textPrimary)
-                    Spacer()
-                    Text(entry.muscleGroup.uppercased())
-                        .font(.system(size: 12, weight: .medium))
-                        .tracking(0.72)
-                        .foregroundStyle(Color.textTertiary)
+            Group {
+                if let exercise = exercises.first(where: { $0.name == entry.exerciseName }) {
+                    NavigationLink(value: exercise) {
+                        exerciseHeader(entry: entry)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    exerciseHeader(entry: entry)
                 }
             }
-            .buttonStyle(.plain)
             .padding(.horizontal, 20)
             .padding(.top, 20)
             .padding(.bottom, 10)

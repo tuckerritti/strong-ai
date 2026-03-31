@@ -284,3 +284,4 @@ struct ChatDrawerView: View {
         isSending = false
     }
 }
+
