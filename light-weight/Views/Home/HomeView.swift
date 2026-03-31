@@ -393,6 +393,7 @@ struct HomeView: View {
                 .foregroundStyle(Color.insightText)
         }
         .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.insightBg)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal, 20)
