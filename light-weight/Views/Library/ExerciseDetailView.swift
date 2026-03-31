@@ -295,7 +295,7 @@ struct ExerciseDetailView: View {
     private func historyRow(date: Date, entry: LogEntry, isPR: Bool) -> some View {
         let completedSets = entry.sets.filter { $0.completedAt != nil }
         let maxWeight = completedSets.map(\.weight).max() ?? 0
-        let totalReps = completedSets.first?.reps ?? 0
+        let totalReps = completedSets.reduce(0) { $0 + $1.reps }
 
         return HStack {
             HStack(spacing: 12) {

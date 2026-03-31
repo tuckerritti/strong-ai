@@ -27,7 +27,7 @@ struct ActiveWorkoutView: View {
     @State private var debriefRecentLogs: [WorkoutLogSnapshot] = []
     @State private var chatDetent: PresentationDetent = .height(90)
     @State private var chatPendingMessage: String?
-    @State private var showChat = true
+    @State private var showChat = false
 
     private var profile: UserProfile? { profiles.first }
 
@@ -37,20 +37,26 @@ struct ActiveWorkoutView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                headerSection
-                timerSection
+        VStack(spacing: 0) {
+            timerSection
 
-                ForEach(Array(viewModel.entries.enumerated()), id: \.offset) { exerciseIndex, entry in
-                    exerciseSection(exerciseIndex: exerciseIndex, entry: entry)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    headerSection
+
+                    ForEach(Array(viewModel.entries.enumerated()), id: \.element.id) { exerciseIndex, entry in
+                        exerciseSection(exerciseIndex: exerciseIndex, entry: entry)
+                    }
                 }
+                .padding(.bottom, 120)
             }
-            .padding(.bottom, 120)
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
         .scrollDismissesKeyboard(.interactively)
+        .simultaneousGesture(TapGesture().onEnded {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        })
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
@@ -128,8 +134,14 @@ struct ActiveWorkoutView: View {
             apiKey = UserProfileService.loadAPIKey()
             viewModel.apiKey = apiKey
             viewModel.start()
-            viewModel.timerService.requestPermission()
+            if appState.showRestTimer {
+                viewModel.timerService.requestPermission()
+            }
             ExerciseLibraryService.persist(workoutExercises: viewModel.currentWorkout.exercises, existingExercises: exercises, modelContext: modelContext)
+            Task {
+                try? await Task.sleep(for: .milliseconds(600))
+                showChat = true
+            }
         }
         .onDisappear {
             appState.isWorkoutActive = false
@@ -169,7 +181,7 @@ struct ActiveWorkoutView: View {
 
     @ViewBuilder
     private var timerSection: some View {
-        if viewModel.timerService.isRunning {
+        if appState.showRestTimer && viewModel.timerService.isRunning {
             RestTimerView(timerService: viewModel.timerService)
                 .padding(.horizontal, 20)
         }
@@ -218,7 +230,7 @@ struct ActiveWorkoutView: View {
             .padding(.bottom, 8)
 
             VStack(spacing: 0) {
-                ForEach(Array(entry.sets.enumerated()), id: \.offset) { setIndex, set in
+                ForEach(Array(entry.sets.enumerated()), id: \.element.id) { setIndex, set in
                     SetRowView(
                         setNumber: setIndex + 1,
                         logSet: set,
@@ -227,6 +239,9 @@ struct ActiveWorkoutView: View {
                         isUpdating: viewModel.updatedSetKeys.contains("\(exerciseIndex)-\(setIndex)"),
                         onLog: { weight, reps, rpe in
                             viewModel.logSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight, reps: reps, rpe: rpe)
+                        },
+                        onEdit: { weight, reps, rpe in
+                            viewModel.editSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight, reps: reps, rpe: rpe)
                         }
                     )
                     if setIndex < entry.sets.count - 1 {
@@ -448,7 +463,7 @@ final class ActiveWorkoutViewModel {
             workoutExercises[exerciseIndex].sets[setIndex].reps = reps
         }
 
-        if let planned {
+        if let planned, AppState.shared?.showRestTimer == true {
             timerService.start(seconds: planned.restSeconds)
         }
 
@@ -458,6 +473,18 @@ final class ActiveWorkoutViewModel {
 
         if !apiKey.isEmpty && missedTarget {
             requestRPEAdjustment()
+        }
+    }
+
+    func editSet(exerciseIndex: Int, setIndex: Int, weight: Double, reps: Int, rpe: Int) {
+        entries[exerciseIndex].sets[setIndex].weight = weight
+        entries[exerciseIndex].sets[setIndex].reps = reps
+        entries[exerciseIndex].sets[setIndex].rpe = rpe
+
+        if exerciseIndex < workoutExercises.count,
+           setIndex < workoutExercises[exerciseIndex].sets.count {
+            workoutExercises[exerciseIndex].sets[setIndex].weight = weight
+            workoutExercises[exerciseIndex].sets[setIndex].reps = reps
         }
     }
 
@@ -593,7 +620,7 @@ final class ActiveWorkoutViewModel {
     }
 
     private func resyncTimerIfNeeded() {
-        guard timerService.isRunning else { return }
+        guard timerService.isRunning, AppState.shared?.showRestTimer == true else { return }
 
         // Find the last completed set and its new planned rest
         for (ei, entry) in entries.enumerated().reversed() {

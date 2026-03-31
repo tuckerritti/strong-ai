@@ -15,6 +15,9 @@ struct light_weightApp: App {
         #if DEBUG
         SeedData.clearAll(container.mainContext)
         SeedData.populate(container.mainContext)
+        if !Secrets.anthropicAPIKey.isEmpty {
+            try? UserProfile.saveAPIKey(Secrets.anthropicAPIKey)
+        }
         #endif
     }
 

@@ -1,6 +1,6 @@
 import Foundation
 
-struct Workout: Codable, Sendable {
+struct Workout: Codable, Sendable, Hashable {
     var name: String
     var exercises: [WorkoutExercise]
     var insight: String?
@@ -13,7 +13,7 @@ struct Workout: Codable, Sendable {
     }
 }
 
-struct WorkoutExercise: Codable, Sendable {
+struct WorkoutExercise: Codable, Sendable, Hashable {
     var name: String
     var muscleGroup: String
     var targetMuscles: [TargetMuscle]
@@ -39,7 +39,7 @@ struct WorkoutExercise: Codable, Sendable {
     }
 }
 
-struct WorkoutSet: Codable, Sendable {
+struct WorkoutSet: Codable, Sendable, Hashable {
     var reps: Int
     var weight: Double
     var restSeconds: Int

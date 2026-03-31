@@ -7,6 +7,7 @@ struct SetRowView: View {
     let isActive: Bool
     let isUpdating: Bool
     let onLog: (Double, Int, Int) -> Void
+    var onEdit: ((Double, Int, Int) -> Void)? = nil
 
     @State private var weightText: String = ""
     @State private var repsText: String = ""
@@ -14,6 +15,7 @@ struct SetRowView: View {
     @State private var didInit = false
     @State private var sweepPosition: CGFloat = 1.3
     @State private var contentOpacity: Double = 1.0
+    @State private var isEditing = false
 
     private var isCompleted: Bool { logSet.completedAt != nil }
     private var canLog: Bool {
@@ -28,7 +30,9 @@ struct SetRowView: View {
                 .foregroundStyle(isCompleted ? Color.accent : .textSecondary)
                 .frame(width: 40, alignment: .leading)
 
-            if isCompleted {
+            if isCompleted && isEditing {
+                editingRow
+            } else if isCompleted {
                 completedRow
             } else if isActive {
                 activeRow
@@ -100,10 +104,53 @@ struct SetRowView: View {
         Text(rpeText.isEmpty ? "—" : rpeText)
             .font(.system(size: 14, weight: .medium))
             .frame(width: 48, alignment: .center)
-        Image(systemName: "checkmark.circle.fill")
-            .font(.system(size: 20))
-            .foregroundStyle(Color.accent)
-            .frame(width: 28)
+        Button {
+            isEditing = true
+        } label: {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(Color.accent)
+                .frame(width: 28)
+        }
+        .accessibilityLabel("Edit set")
+    }
+
+    // MARK: - Editing
+
+    @ViewBuilder
+    private var editingRow: some View {
+        NumericTextField(text: $weightText, placeholder: "0", keyboardType: .decimalPad)
+            .frame(maxWidth: .infinity)
+            .frame(height: 33)
+            .background(Color.appSurface)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+        NumericTextField(text: $repsText, placeholder: "0", keyboardType: .numberPad)
+            .frame(maxWidth: .infinity)
+            .frame(height: 33)
+            .background(Color.appSurface)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+        NumericTextField(text: $rpeText, placeholder: "—", keyboardType: .numberPad)
+            .frame(width: 48)
+            .frame(height: 33)
+            .background(Color.appSurface)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+
+        Button {
+            guard let weight = Double(weightText),
+                  let reps = Int(repsText),
+                  let rpe = Int(rpeText) else { return }
+            onEdit?(weight, reps, rpe)
+            isEditing = false
+        } label: {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 20))
+                .foregroundStyle(canLog ? Color.accent : .textQuaternary)
+        }
+        .disabled(!canLog)
+        .frame(width: 28)
+        .accessibilityLabel("Save edit")
     }
 
     // MARK: - Active
@@ -129,7 +176,10 @@ struct SetRowView: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
 
         Button {
-            onLog(Double(weightText)!, Int(repsText)!, Int(rpeText)!)
+            guard let weight = Double(weightText),
+                  let reps = Int(repsText),
+                  let rpe = Int(rpeText) else { return }
+            onLog(weight, reps, rpe)
         } label: {
             Image(systemName: "checkmark.circle")
                 .font(.system(size: 20))
@@ -137,6 +187,7 @@ struct SetRowView: View {
         }
         .disabled(!canLog)
         .frame(width: 28)
+        .accessibilityLabel(canLog ? "Log set" : "Enter weight, reps, and RPE (1–10) to log")
     }
 
     // MARK: - Future

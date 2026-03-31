@@ -97,7 +97,11 @@ enum SeedData {
             goals: "Build muscle, improve strength",
             schedule: "4 days per week, 60 minute sessions",
             equipment: "Full gym — barbell, dumbbells, cables, pull-up bar",
-            injuries: ""
+            injuries: "",
+            gender: "Male",
+            experienceLevel: "Intermediate",
+            trainingDays: "[0,1,3,5]",
+            onboardingCompleted: true
         )
         context.insert(profile)
 

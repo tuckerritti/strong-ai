@@ -37,6 +37,7 @@ struct ChatDrawerView: View {
 
     var body: some View {
         Color.clear
+            .allowsHitTesting(false)
             .sheet(isPresented: $isSheetPresented) {
                 sheetContent
                     .presentationDetents(

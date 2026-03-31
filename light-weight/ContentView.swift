@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 @Observable
 final class AppState {
@@ -9,6 +10,12 @@ final class AppState {
     var isWorkoutActive = false
     var showTokenCost = UserDefaults.standard.bool(forKey: "showTokenCost") {
         didSet { UserDefaults.standard.set(showTokenCost, forKey: "showTokenCost") }
+    }
+    var showRestTimer: Bool = {
+        if UserDefaults.standard.object(forKey: "showRestTimer") == nil { return true }
+        return UserDefaults.standard.bool(forKey: "showRestTimer")
+    }() {
+        didSet { UserDefaults.standard.set(showRestTimer, forKey: "showRestTimer") }
     }
 
     var dailyCost: TokenCost {
@@ -55,10 +62,21 @@ final class AppState {
 
 struct ContentView: View {
     @State private var appState = AppState()
+    @Query private var profiles: [UserProfile]
+
+    private var needsOnboarding: Bool {
+        guard let profile = profiles.first else { return true }
+        return !profile.onboardingCompleted
+    }
 
     var body: some View {
-        HomeView()
-            .environment(appState)
-            .onAppear { AppState.shared = appState }
+if needsOnboarding {
+                OnboardingView()
+                    .environment(appState)
+            } else {
+                HomeView()
+                    .environment(appState)
+                    .onAppear { AppState.shared = appState }
+            }
     }
 }
