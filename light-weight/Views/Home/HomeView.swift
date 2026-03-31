@@ -20,16 +20,21 @@ struct HomeView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var healthContext: HealthContext?
-    @State private var workoutDate = Date.now
     @State private var exercisesExpanded = false
     @State private var muscleMapExpanded = false
     @State private var apiKey = ""
+    @State private var navigationPath = NavigationPath()
+
+    private enum Destination: Hashable {
+        case library, history, settings, activeWorkout(Workout)
+    }
+
     private var profile: UserProfile? { profiles.first }
 
     var body: some View {
         @Bindable var state = appState
         ZStack {
-            NavigationStack {
+            NavigationStack(path: $navigationPath) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         headerSection
@@ -48,23 +53,34 @@ struct HomeView: View {
                     .padding(.bottom, 100)
                 }
                 .onAppear {
-                    syncAPIKeyFromProfile()
+                    apiKey = UserProfileService.loadAPIKey()
                     Task {
                         await generateWorkoutIfNeeded()
                     }
                 }
                 .onChange(of: profiles.count) { _, _ in
-                    syncAPIKeyFromProfile()
+                    apiKey = UserProfileService.loadAPIKey()
                 }
-                .chatDrawer(
-                    isPresented: !appState.isWorkoutActive,
-                    selectedDetent: $state.chatDetent,
-                    pendingMessage: $state.pendingMessage,
-                    placeholder: "I only have 30 min today...",
-                    onSend: { message, history in
-                        await streamChat(message, history: history)
+                .overlay {
+                    if !appState.isWorkoutActive && navigationPath.isEmpty {
+                        ChatDrawerView(
+                            selectedDetent: $state.chatDetent,
+                            pendingMessage: $state.pendingMessage,
+                            placeholder: "I only have 30 min today...",
+                            onSend: { message, history in
+                                await streamChat(message, history: history)
+                            }
+                        )
                     }
-                )
+                }
+                .navigationDestination(for: Destination.self) { destination in
+                    switch destination {
+                    case .library: ExerciseLibraryView()
+                    case .history: HistoryListView()
+                    case .settings: SettingsView()
+                    case .activeWorkout(let workout): ActiveWorkoutView(workout: workout)
+                    }
+                }
             }
 
             if muscleMapExpanded {
@@ -104,7 +120,7 @@ struct HomeView: View {
             )
             todayWorkout = workout
             WorkoutCacheService.save(workout)
-            saveExercisesToLibrary(workout.exercises)
+            ExerciseLibraryService.persist(workoutExercises: workout.exercises, existingExercises: exercises, modelContext: modelContext)
         } catch {
             logger.error("Workout generation failed: \(error)")
             errorMessage = error.localizedDescription
@@ -122,7 +138,7 @@ struct HomeView: View {
                 message: message,
                 currentWorkout: todayWorkout,
                 profile: profileSnapshot,
-                exercises: exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) },
+                exercises: exercises.map { ExerciseSnapshot(from: $0) },
                 history: history
             )
 
@@ -133,10 +149,8 @@ struct HomeView: View {
                             switch event {
                             case .result(let result):
                                 todayWorkout = result.workout
-                                if Calendar.current.isDateInToday(workoutDate) {
-                                    WorkoutCacheService.save(result.workout)
-                                }
-                                saveExercisesToLibrary(result.workout.exercises)
+                                WorkoutCacheService.save(result.workout)
+                                ExerciseLibraryService.persist(workoutExercises: result.workout.exercises, existingExercises: exercises, modelContext: modelContext)
                                 errorMessage = nil
                             case .usage, .text:
                                 break
@@ -163,40 +177,15 @@ struct HomeView: View {
     // MARK: - Snapshots
 
     private var profileSnapshot: UserProfileSnapshot {
-        UserProfileSnapshot(
-            goals: profile?.goals ?? "",
-            schedule: profile?.schedule ?? "",
-            equipment: profile?.equipment ?? "",
-            injuries: profile?.injuries ?? ""
-        )
+        UserProfileSnapshot(from: profile)
     }
 
     private var logSnapshots: [WorkoutLogSnapshot] {
-        recentLogs.prefix(10).map { log in
-            WorkoutLogSnapshot(
-                workoutName: log.workoutName,
-                startedAt: log.startedAt,
-                durationMinutes: log.durationMinutes,
-                totalVolume: log.totalVolume,
-                entries: log.entries
-            )
-        }
+        recentLogs.prefix(10).map { WorkoutLogSnapshot(from: $0) }
     }
 
     private var exerciseSnapshots: [ExerciseSnapshot] {
-        exercises.map { ExerciseSnapshot(name: $0.name, muscleGroup: $0.muscleGroup, targetMuscles: $0.targetMuscles) }
-    }
-
-    private func saveExercisesToLibrary(_ workoutExercises: [WorkoutExercise]) {
-        ExerciseLibraryService.persist(
-            workoutExercises: workoutExercises,
-            existingExercises: exercises,
-            modelContext: modelContext
-        )
-    }
-
-    private func syncAPIKeyFromProfile() {
-        apiKey = UserProfileService.loadAPIKey()
+        exercises.map { ExerciseSnapshot(from: $0) }
     }
 
     // MARK: - Header
@@ -221,28 +210,31 @@ struct HomeView: View {
                     .tracking(-1.0)
                     .foregroundStyle(Color.textPrimary)
                 Spacer()
-                HStack(spacing: 16) {
-                    NavigationLink {
-                        ExerciseLibraryView()
-                    } label: {
+                HStack(spacing: 8) {
+                    NavigationLink(value: Destination.library) {
                         Image(systemName: "book.fill")
                             .font(.system(size: 20))
                             .foregroundStyle(Color.textPrimary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
-                    NavigationLink {
-                        HistoryListView()
-                    } label: {
+                    .accessibilityLabel("Exercise Library")
+                    NavigationLink(value: Destination.history) {
                         Image(systemName: "clock.fill")
                             .font(.system(size: 20))
                             .foregroundStyle(Color.textPrimary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
-                    NavigationLink {
-                        SettingsView()
-                    } label: {
+                    .accessibilityLabel("Workout History")
+                    NavigationLink(value: Destination.settings) {
                         Image(systemName: "gearshape.fill")
                             .font(.system(size: 20))
                             .foregroundStyle(Color.textPrimary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Settings")
                 }
             }
         }
@@ -360,7 +352,7 @@ struct HomeView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.textPrimary)
                     Spacer()
-                    Text("\(exercise.sets.count) sets · \(exercise.sets.first?.reps ?? 0) reps")
+                    Text("\(exercise.sets.count) sets · \(exercise.sets.reduce(0) { $0 + $1.reps }) reps")
                         .font(.system(size: 13))
                         .foregroundStyle(Color.textSecondary)
                 }
@@ -401,6 +393,7 @@ struct HomeView: View {
                 .foregroundStyle(Color.insightText)
         }
         .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.insightBg)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal, 20)
@@ -408,9 +401,7 @@ struct HomeView: View {
     }
 
     private func startButton(_ workout: Workout) -> some View {
-        NavigationLink {
-            ActiveWorkoutView(workout: workout)
-        } label: {
+        NavigationLink(value: Destination.activeWorkout(workout)) {
             Text("Start Workout")
                 .font(.custom("SpaceGrotesk-Bold", size: 17))
                 .tracking(-0.2)

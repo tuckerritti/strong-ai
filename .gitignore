@@ -20,3 +20,4 @@ Packages/
 # Secrets
 .env
 *.key
+Secrets.generated.swift

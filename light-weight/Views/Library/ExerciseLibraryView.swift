@@ -85,6 +85,8 @@ struct ExerciseLibraryView: View {
                         systemImage: "dumbbell.fill",
                         description: Text("Add exercises to build your library.")
                     )
+                } else if !searchText.isEmpty && filteredExercises.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
                 }
             }
         }

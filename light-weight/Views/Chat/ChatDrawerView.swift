@@ -14,8 +14,7 @@ struct ChatMessage: Identifiable {
     }
 }
 
-struct ChatDrawer: ViewModifier {
-    var isPresented: Bool
+struct ChatDrawerView: View {
     @Binding var selectedDetent: PresentationDetent
     @Binding var pendingMessage: String?
     var placeholder: String
@@ -29,14 +28,16 @@ struct ChatDrawer: ViewModifier {
     @State private var isSending = false
     @Environment(AppState.self) private var appState
     @State private var tappedInputBar = false
+    @State private var isSheetPresented = true
     private var isExpanded: Bool { selectedDetent != smallDetent }
     @FocusState private var isInputFocused: Bool
 
     private let smallDetent: PresentationDetent = .height(90)
 
-    func body(content: Content) -> some View {
-        content
-            .sheet(isPresented: .constant(isPresented)) {
+    var body: some View {
+        Color.clear
+            .allowsHitTesting(false)
+            .sheet(isPresented: $isSheetPresented) {
                 sheetContent
                     .presentationDetents(
                         [smallDetent, .medium, .large],
@@ -49,6 +50,7 @@ struct ChatDrawer: ViewModifier {
                     .presentationContentInteraction(isExpanded ? .scrolls : .resizes)
                     .interactiveDismissDisabled()
             }
+            .onAppear { isSheetPresented = true }
     }
 
     // MARK: - Sheet Content
@@ -283,26 +285,3 @@ struct ChatDrawer: ViewModifier {
     }
 }
 
-extension View {
-    func chatDrawer(
-        isPresented: Bool,
-        selectedDetent: Binding<PresentationDetent>,
-        pendingMessage: Binding<String?>,
-        placeholder: String,
-        workoutName: String? = nil,
-        elapsedTime: String? = nil,
-        exerciseProgress: String? = nil,
-        onSend: @escaping (String, [ChatMessage]) async -> AsyncThrowingStream<ChatStreamEvent, Error>?
-    ) -> some View {
-        modifier(ChatDrawer(
-            isPresented: isPresented,
-            selectedDetent: selectedDetent,
-            pendingMessage: pendingMessage,
-            placeholder: placeholder,
-            workoutName: workoutName,
-            elapsedTime: elapsedTime,
-            exerciseProgress: exerciseProgress,
-            onSend: onSend
-        ))
-    }
-}

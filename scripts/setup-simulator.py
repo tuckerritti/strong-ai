@@ -116,11 +116,15 @@ if not app_paths:
 
 app_path = app_paths[0]
 
+# Read actual bundle ID from built app (may differ from base, e.g. .debug suffix)
+plist_result = run(["plutil", "-extract", "CFBundleIdentifier", "raw", str(app_path / "Info.plist")])
+actual_bundle_id = plist_result.stdout.strip()
+
 print("Installing app...")
 run(["xcrun", "simctl", "install", udid, str(app_path)])
 
-print("Launching app...")
-run(["xcrun", "simctl", "launch", udid, BUNDLE_ID])
+print(f"Launching app ({actual_bundle_id})...")
+run(["xcrun", "simctl", "launch", udid, actual_bundle_id])
 
 print()
 print(f"Done! Simulator '{sim_name}' is running with UDID: {udid}")

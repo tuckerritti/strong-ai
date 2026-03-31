@@ -93,17 +93,29 @@ final class UserProfile {
     var schedule: String
     var equipment: String
     var injuries: String
+    var gender: String
+    var experienceLevel: String
+    var trainingDays: String
+    var onboardingCompleted: Bool
 
     init(
         goals: String = "",
         schedule: String = "",
         equipment: String = "",
-        injuries: String = ""
+        injuries: String = "",
+        gender: String = "",
+        experienceLevel: String = "",
+        trainingDays: String = "",
+        onboardingCompleted: Bool = false
     ) {
         self.goals = goals
         self.schedule = schedule
         self.equipment = equipment
         self.injuries = injuries
+        self.gender = gender
+        self.experienceLevel = experienceLevel
+        self.trainingDays = trainingDays
+        self.onboardingCompleted = onboardingCompleted
     }
 
     static func loadSavedAPIKey() -> String {

@@ -211,6 +211,35 @@ struct ExerciseSnapshot: Sendable {
     var targetMuscles: [TargetMuscle]
 }
 
+extension UserProfileSnapshot {
+    init(from profile: UserProfile?) {
+        self.init(
+            goals: profile?.goals ?? "",
+            schedule: profile?.schedule ?? "",
+            equipment: profile?.equipment ?? "",
+            injuries: profile?.injuries ?? ""
+        )
+    }
+}
+
+extension WorkoutLogSnapshot {
+    init(from log: WorkoutLog) {
+        self.init(
+            workoutName: log.workoutName,
+            startedAt: log.startedAt,
+            durationMinutes: log.durationMinutes,
+            totalVolume: log.totalVolume,
+            entries: log.entries
+        )
+    }
+}
+
+extension ExerciseSnapshot {
+    init(from exercise: Exercise) {
+        self.init(name: exercise.name, muscleGroup: exercise.muscleGroup, targetMuscles: exercise.targetMuscles)
+    }
+}
+
 // MARK: - Valid muscle values for AI prompts
 
 extension Muscle {

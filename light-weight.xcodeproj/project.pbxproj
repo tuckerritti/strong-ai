@@ -52,6 +52,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = FECA7CBC2F64E0A7003BDB5D /* Build configuration list for PBXNativeTarget "light-weight" */;
 			buildPhases = (
+				AA00000500000000003BDB5D /* Generate Secrets */,
 				FECA7CAD2F64E0A6003BDB5D /* Sources */,
 				FECA7CAE2F64E0A6003BDB5D /* Frameworks */,
 				FECA7CAF2F64E0A6003BDB5D /* Resources */,
@@ -120,6 +121,25 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		AA00000500000000003BDB5D /* Generate Secrets */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/.env",
+			);
+			name = "Generate Secrets";
+			outputPaths = (
+				"$(SRCROOT)/light-weight/Secrets.generated.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "ENV_FILE=\"${SRCROOT}/.env\"\nOUTPUT=\"${SRCROOT}/light-weight/Secrets.generated.swift\"\n\nif [ -f \"$ENV_FILE\" ]; then\n    API_KEY=$(grep '^ANTHROPIC_API_KEY=' \"$ENV_FILE\" | cut -d'=' -f2- | tr -d '[:space:]')\nelse\n    API_KEY=\"\"\nfi\n\ncat > \"$OUTPUT\" << SWIFT\n// Auto-generated from .env — do not edit or commit\nenum Secrets {\n    static let anthropicAPIKey = \"$API_KEY\"\n}\nSWIFT\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		FECA7CAD2F64E0A6003BDB5D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -169,7 +189,7 @@
 				DEVELOPMENT_TEAM = 4YWNLRMN7J;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -233,7 +253,7 @@
 				DEVELOPMENT_TEAM = 4YWNLRMN7J;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -276,7 +296,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.tuckerr.light-weight";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.tuckerr.light-weight.debug";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
