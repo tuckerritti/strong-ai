@@ -301,6 +301,7 @@ struct ActiveWorkoutView: View {
                                     ExerciseLibraryService.persist(workoutExercises: result.workout.exercises, existingExercises: exercises, modelContext: modelContext)
                                 } else {
                                     logger.info("Discarding stale chat workout update")
+                                    continue
                                 }
                             case .usage, .text, .applying:
                                 break
