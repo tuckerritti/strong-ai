@@ -7,7 +7,8 @@ struct light_weightApp: App {
 
     init() {
         do {
-            container = try ModelContainer(for: Exercise.self, WorkoutLog.self, UserProfile.self)
+            let config = ModelConfiguration(cloudKitDatabase: .none)
+            container = try ModelContainer(for: Exercise.self, WorkoutLog.self, UserProfile.self, configurations: config)
         } catch {
             fatalError("Failed to create ModelContainer: \(error.localizedDescription)")
         }
