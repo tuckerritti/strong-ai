@@ -3,11 +3,12 @@ import MuscleMap
 
 struct MuscleBodyMapCard: View {
     let logs: [WorkoutLog]
+    let bodyGender: BodyGender
     @Binding var isExpanded: Bool
 
     var body: some View {
         VStack(spacing: 4) {
-            BodyView(gender: .male, side: .front, style: .minimal)
+            BodyView(gender: bodyGender, side: .front, style: .minimal)
                 .heatmap(muscleIntensities(from: logs), colorScale: volumeColorScale)
                 .frame(height: 80)
                 .allowsHitTesting(false)
@@ -29,6 +30,7 @@ struct MuscleBodyMapCard: View {
 
 struct ExpandedMuscleMapView: View {
     let logs: [WorkoutLog]
+    let bodyGender: BodyGender
     @Binding var isPresented: Bool
 
     var body: some View {
@@ -53,7 +55,7 @@ struct ExpandedMuscleMapView: View {
 
                 HStack(spacing: 20) {
                     VStack(spacing: 8) {
-                        BodyView(gender: .male, side: .front, style: .minimal)
+                        BodyView(gender: bodyGender, side: .front, style: .minimal)
                             .heatmap(muscleIntensities(from: logs), colorScale: volumeColorScale)
                             .frame(height: 240)
                             .allowsHitTesting(false)
@@ -64,7 +66,7 @@ struct ExpandedMuscleMapView: View {
                     }
 
                     VStack(spacing: 8) {
-                        BodyView(gender: .male, side: .back, style: .minimal)
+                        BodyView(gender: bodyGender, side: .back, style: .minimal)
                             .heatmap(muscleIntensities(from: logs), colorScale: volumeColorScale)
                             .frame(height: 240)
                             .allowsHitTesting(false)

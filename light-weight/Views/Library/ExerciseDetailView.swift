@@ -1,4 +1,5 @@
 import Charts
+import MuscleMap
 import SwiftUI
 import SwiftData
 
@@ -10,6 +11,15 @@ struct ExerciseDetailView: View {
         sort: \WorkoutLog.startedAt,
         order: .reverse
     ) private var allLogs: [WorkoutLog]
+    @Query private var profiles: [UserProfile]
+
+    private struct TargetMuscleDisplay: Identifiable {
+        let id: String
+        let name: String
+        let percentage: Int
+        let weight: Double
+        let mappedMuscle: Muscle?
+    }
 
     private var exerciseLogs: [(date: Date, entry: LogEntry)] {
         let normalizedName = ExerciseNameResolver.normalize(exercise.name)
@@ -24,12 +34,56 @@ struct ExerciseDetailView: View {
         }
     }
 
+    private var bodyGender: BodyGender {
+        guard let gender = profiles.first?.gender else { return .male }
+        return gender.localizedCaseInsensitiveCompare("Female") == .orderedSame ? .female : .male
+    }
+
+    private var targetMuscleRows: [TargetMuscleDisplay] {
+        exercise.targetMuscles
+            .reduce(into: [String: Double]()) { result, target in
+                guard target.weight > 0 else { return }
+                result[target.muscle, default: 0] += target.weight
+            }
+            .map { muscle, weight in
+                let mappedMuscle = Muscle(rawValue: muscle)
+                return TargetMuscleDisplay(
+                    id: muscle,
+                    name: mappedMuscle?.displayName ?? humanizedMuscleName(muscle),
+                    percentage: Int((weight * 100).rounded()),
+                    weight: weight,
+                    mappedMuscle: mappedMuscle
+                )
+            }
+            .sorted {
+                if $0.weight == $1.weight {
+                    return $0.name < $1.name
+                }
+                return $0.weight > $1.weight
+            }
+    }
+
+    private var targetMuscleMapIntensities: [MuscleIntensity] {
+        let mappedRows = targetMuscleRows.compactMap { row -> (Muscle, Double)? in
+            guard let muscle = row.mappedMuscle else { return nil }
+            return (muscle, row.weight)
+        }
+        let maxWeight = mappedRows.map { $0.1 }.max() ?? 0
+
+        guard maxWeight > 0 else { return [] }
+
+        return mappedRows.map { muscle, weight in
+            MuscleIntensity(muscle: muscle, intensity: weight / maxWeight)
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 titleArea
                 exerciseImage
                 descriptionSection
+                targetMusclesSection
                 howToSection
                 statsSection
                 progressChartSection
@@ -84,6 +138,74 @@ struct ExerciseDetailView: View {
                 .padding(.top, 20)
                 .padding(.horizontal, 20)
         }
+    }
+
+    // MARK: - Target Muscles
+
+    private var targetMusclesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Target Muscles")
+                .font(.custom("SpaceGrotesk-Bold", size: 18))
+                .tracking(-0.18)
+                .foregroundStyle(Color.textHeading)
+
+            if targetMuscleRows.isEmpty {
+                Text("Target muscles aren't available for this exercise yet.")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(Color.textMuted)
+            } else {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 20) {
+                        targetMuscleMapView(side: .front, title: "FRONT")
+                        targetMuscleMapView(side: .back, title: "BACK")
+                    }
+
+                    VStack(spacing: 0) {
+                        ForEach(Array(targetMuscleRows.enumerated()), id: \.element.id) { index, row in
+                            HStack {
+                                Text(row.name)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(Color.textHeading)
+
+                                Spacer()
+
+                                Text("\(row.percentage)%")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Color.textMuted)
+                            }
+                            .padding(.vertical, 10)
+
+                            if index < targetMuscleRows.count - 1 {
+                                Divider()
+                                    .background(Color.appSurfaceAlt)
+                            }
+                        }
+                    }
+                }
+                .padding(16)
+                .background(Color.appSurfaceSubtle)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(.top, 24)
+        .padding(.horizontal, 20)
+    }
+
+    private func targetMuscleMapView(side: BodySide, title: String) -> some View {
+        VStack(spacing: 8) {
+            BodyView(gender: bodyGender, side: side, style: .minimal)
+                .showSubGroups()
+                .heatmap(targetMuscleMapIntensities, colorScale: targetMuscleColorScale)
+                .frame(maxWidth: .infinity)
+                .frame(height: 180)
+                .allowsHitTesting(false)
+
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .tracking(0.8)
+                .foregroundStyle(Color.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - How to Perform
@@ -338,4 +460,17 @@ struct ExerciseDetailView: View {
         }
         .padding(.vertical, 10)
     }
+
+    private func humanizedMuscleName(_ rawValue: String) -> String {
+        rawValue
+            .replacingOccurrences(of: "-", with: " ")
+            .localizedCapitalized
+    }
 }
+
+private let targetMuscleColorScale = HeatmapColorScale(colors: [
+    Color(hex: 0xE5F7EB),
+    Color(hex: 0xA8E0B8),
+    Color(hex: 0x5AC878),
+    Color(hex: 0x1E7C3F)
+])

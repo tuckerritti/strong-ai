@@ -31,8 +31,13 @@ enum WorkoutCacheService {
         }
     }
 
-    static func clear() {
-        try? FileManager.default.removeItem(at: todayFile)
+    static func clearAll() {
+        let fileManager = FileManager.default
+        guard let files = try? fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else { return }
+
+        for file in files where file.lastPathComponent.hasPrefix("daily-workout-") {
+            try? fileManager.removeItem(at: file)
+        }
     }
 
     private static func cleanOldFiles() {
