@@ -114,9 +114,17 @@ struct SettingsView: View {
                         }
                         .padding(.vertical, -12)
                     }
-                    settingsSection("TOKEN COST") {
-                        Toggle("Show daily API cost", isOn: $state.showTokenCost)
-                            .tint(Color(hex: 0x34C759))
+                    settingsSection("ADVANCED") {
+                        NavigationLink(destination: AdvancedSettingsView()) {
+                            HStack {
+                                Text("Advanced settings")
+                                    .foregroundStyle(Color.textPrimary)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.textSecondary)
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
