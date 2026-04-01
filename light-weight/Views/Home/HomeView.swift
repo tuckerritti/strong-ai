@@ -152,7 +152,7 @@ struct HomeView: View {
                                 WorkoutCacheService.save(result.workout)
                                 ExerciseLibraryService.persist(workoutExercises: result.workout.exercises, existingExercises: exercises, modelContext: modelContext)
                                 errorMessage = nil
-                            case .usage, .text:
+                            case .usage, .text, .applying:
                                 break
                             }
                             continuation.yield(event)

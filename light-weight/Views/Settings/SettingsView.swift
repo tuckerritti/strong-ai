@@ -112,6 +112,7 @@ struct SettingsView: View {
                                 }
                             }
                         }
+                        .padding(.vertical, -12)
                     }
                     settingsSection("DATA") {
                         NavigationLink {
@@ -124,6 +125,18 @@ struct SettingsView: View {
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundStyle(Color.textTertiary)
+                            }
+                        }
+                    }
+                    settingsSection("ADVANCED") {
+                        NavigationLink(destination: AdvancedSettingsView()) {
+                            HStack {
+                                Text("Advanced settings")
+                                    .foregroundStyle(Color.textPrimary)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.textSecondary)
                             }
                         }
                     }

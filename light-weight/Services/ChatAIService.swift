@@ -7,6 +7,7 @@ private let logger = Logger(subsystem: "com.light-weight", category: "ChatAI")
 
 enum ChatStreamEvent: Sendable {
     case text(String)
+    case applying
     case result(ChatResult)
     case usage(TokenCost)
 }
@@ -96,6 +97,7 @@ struct ChatAIService {
                 var sentExplanationUpTo = 0
 
                 do {
+                    var hitSeparator = false
                     for try await chunk in tokenStream {
                         switch chunk {
                         case .text(let token):
@@ -108,6 +110,10 @@ struct ChatAIService {
                                     let new = String(explanation.dropFirst(sentExplanationUpTo))
                                     continuation.yield(.text(new))
                                     sentExplanationUpTo = explanation.count
+                                }
+                                if !hitSeparator {
+                                    hitSeparator = true
+                                    continuation.yield(.applying)
                                 }
                             } else {
                                 // Haven't hit separator yet — stream with holdback buffer

@@ -5,6 +5,7 @@ struct ChatMessage: Identifiable {
     let id = UUID()
     let role: Role
     var text: String
+    var isApplying: Bool = false
     var isApplied: Bool = false
     var tokenCost: TokenCost?
     var isError: Bool = false
@@ -208,19 +209,25 @@ struct ChatDrawerView: View {
             }
         case .assistant:
             VStack(alignment: .leading, spacing: 8) {
-                Text(message.text)
+                Text(message.text.trimmingCharacters(in: .whitespacesAndNewlines))
                     .font(.system(size: 15))
                     .lineSpacing(3)
                     .foregroundStyle(Color.textPrimary.opacity(0.85))
 
-                if message.isApplied {
+                if message.isApplied || message.isApplying {
                     HStack(spacing: 4) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text("Changes applied to your workout")
-                            .font(.system(size: 14, weight: .medium))
+                        if message.isApplied {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 12, weight: .semibold))
+                        } else {
+                            ProgressView()
+                                .controlSize(.mini)
+                        }
+                        Text(message.isApplied ? "Changes applied to your workout" : "Applying changes...")
+                            .font(.system(size: 13, weight: .medium))
                     }
-                    .foregroundStyle(Color.accent)
+                    .frame(height: 16)
+                    .foregroundStyle(message.isApplied ? Color.accent : Color.textSecondary)
                 }
 
                 if appState.showTokenCost, let cost = message.tokenCost, cost.estimatedCost > 0 {
@@ -263,10 +270,13 @@ struct ChatDrawerView: View {
                 switch event {
                 case .text(let delta):
                     messages[assistantIndex].text += delta
+                case .applying:
+                    messages[assistantIndex].isApplying = true
                 case .result(let result):
                     if !result.explanation.isEmpty {
                         messages[assistantIndex].text = result.explanation
                     }
+                    messages[assistantIndex].isApplying = false
                     messages[assistantIndex].isApplied = true
                 case .usage(let cost):
                     messages[assistantIndex].tokenCost = (messages[assistantIndex].tokenCost ?? .zero) + cost
@@ -279,6 +289,7 @@ struct ChatDrawerView: View {
                 messages[assistantIndex].text += "\n\nError: \(error.localizedDescription)"
             }
             messages[assistantIndex].isError = true
+            messages[assistantIndex].isApplying = false
         }
 
         isSending = false

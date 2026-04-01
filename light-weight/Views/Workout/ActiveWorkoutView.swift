@@ -303,7 +303,7 @@ struct ActiveWorkoutView: View {
                                     logger.info("Discarding stale chat workout update")
                                     continue
                                 }
-                            case .usage, .text:
+                            case .usage, .text, .applying:
                                 break
                             }
                             continuation.yield(event)
