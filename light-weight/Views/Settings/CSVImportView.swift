@@ -40,6 +40,14 @@ struct CSVImportView: View {
                 dismiss()
             }
         }
+        .onChange(of: mapping) { (old: [CSVColumnRole], new: [CSVColumnRole]) in
+            for i in new.indices {
+                guard new[i] != .skip, new[i] != old[i] else { continue }
+                for j in new.indices where j != i && mapping[j] == new[i] {
+                    mapping[j] = .skip
+                }
+            }
+        }
     }
 
     private var mapColumnsView: some View {

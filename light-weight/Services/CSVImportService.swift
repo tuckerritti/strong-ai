@@ -54,15 +54,21 @@ enum CSVImportService {
     // MARK: - Auto-mapping
 
     static func suggestMapping(headers: [String]) -> [CSVColumnRole] {
-        headers.map { header in
+        var used: Set<CSVColumnRole> = []
+        return headers.map { header in
             let lower = header.lowercased()
-            if lower.contains("exercise") { return .exerciseName }
-            if lower.contains("weight") { return .weight }
-            if lower.contains("rep") { return .reps }
-            if lower.contains("rpe") { return .rpe }
-            if lower.contains("date") { return .date }
-            if lower.contains("workout") { return .workoutName }
-            return .skip
+            let role: CSVColumnRole
+            if lower.contains("exercise") { role = .exerciseName }
+            else if lower.contains("weight") { role = .weight }
+            else if lower.contains("rep") { role = .reps }
+            else if lower.contains("rpe") { role = .rpe }
+            else if lower.contains("date") { role = .date }
+            else if lower.contains("workout") { role = .workoutName }
+            else { return .skip }
+
+            guard !used.contains(role) else { return .skip }
+            used.insert(role)
+            return role
         }
     }
 
