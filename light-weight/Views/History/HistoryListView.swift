@@ -143,8 +143,10 @@ struct HistoryListView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.textTertiary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
+        .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
