@@ -4,10 +4,17 @@
 The simulator UDID is saved to .context/simulator-udid.txt for use with MCP tools.
 """
 
+import argparse
 import json
 import subprocess
 import sys
 from pathlib import Path
+
+parser = argparse.ArgumentParser(description="Build and install the app on a per-worktree iOS simulator.")
+parser.add_argument("--release", action="store_true", help="Build with Release configuration instead of Debug")
+args = parser.parse_args()
+
+configuration = "Release" if args.release else "Debug"
 
 DEVICE_TYPE = "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro"
 BUNDLE_ID = "com.tuckerr.light-weight"
@@ -85,12 +92,13 @@ if udid is None:
 print(f"Simulator UDID: {udid}")
 
 # Build the app
-print("Building light-weight for simulator...")
+print(f"Building light-weight for simulator ({configuration})...")
 build_result = subprocess.run(
     [
         "xcodebuild",
         "-project", "light-weight.xcodeproj",
         "-scheme", "light-weight",
+        "-configuration", configuration,
         "-destination", f"platform=iOS Simulator,id={udid}",
         "-derivedDataPath", str(context_dir / "DerivedData"),
         "build",
