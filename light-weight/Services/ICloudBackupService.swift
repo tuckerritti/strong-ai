@@ -120,7 +120,8 @@ enum ICloudBackupService {
     static func restoreIfNeeded(modelContext: ModelContext) async {
         let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
         let logCount = (try? modelContext.fetchCount(FetchDescriptor<WorkoutLog>())) ?? 0
-        guard exerciseCount == 0 && logCount == 0 else { return }
+        let profileCount = (try? modelContext.fetchCount(FetchDescriptor<UserProfile>())) ?? 0
+        guard exerciseCount == 0 && logCount == 0 && profileCount == 0 else { return }
 
         guard let documentsURL else {
             logger.info("iCloud not available, skipping restore")
