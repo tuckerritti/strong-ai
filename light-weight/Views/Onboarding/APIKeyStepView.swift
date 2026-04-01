@@ -4,6 +4,13 @@ struct APIKeyStepView: View {
     @Binding var apiKey: String
     var onNext: () -> Void
 
+    @State private var isValidating = false
+    @State private var errorMessage: String?
+
+    private var canContinue: Bool {
+        !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isValidating
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             OnboardingProgressBar(current: 1, total: 7)
@@ -34,27 +41,58 @@ struct APIKeyStepView: View {
                     .background(Color(hex: 0xF5F5F5))
                     .clipShape(RoundedRectangle(cornerRadius: 14))
 
-                Text("Get your key at console.anthropic.com. Stored locally using iOS Keychain.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.black.opacity(0.3))
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.red)
+                } else {
+                    Text("Get your key at console.anthropic.com. Stored locally using iOS Keychain.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.black.opacity(0.3))
+                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 24)
 
             Spacer()
 
-            Button(action: onNext) {
-                Text("Continue")
-                    .font(.custom("SpaceGrotesk-Bold", size: 17))
-                    .tracking(-0.2)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color(hex: 0x0A0A0A))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            Button {
+                validateAndContinue()
+            } label: {
+                HStack(spacing: 8) {
+                    if isValidating {
+                        ProgressView()
+                            .tint(.white)
+                    }
+                    Text(isValidating ? "Verifying…" : "Continue")
+                        .font(.custom("SpaceGrotesk-Bold", size: 17))
+                        .tracking(-0.2)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(canContinue ? Color(hex: 0x0A0A0A) : Color(hex: 0x0A0A0A).opacity(0.3))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
+            .disabled(!canContinue)
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
+        }
+    }
+
+    private func validateAndContinue() {
+        isValidating = true
+        errorMessage = nil
+
+        Task {
+            do {
+                let api = ClaudeAPIService(apiKey: apiKey.trimmingCharacters(in: .whitespacesAndNewlines))
+                _ = try await api.send(systemPrompt: "Reply with OK", userMessage: "test")
+                onNext()
+            } catch {
+                errorMessage = "Invalid API key. Please check your key and try again."
+            }
+            isValidating = false
         }
     }
 }

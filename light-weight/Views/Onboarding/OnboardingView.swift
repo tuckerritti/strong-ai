@@ -66,9 +66,7 @@ struct OnboardingView: View {
         p.schedule = "\(trainingDays.count) days per week"
         p.onboardingCompleted = true
 
-        if !apiKey.isEmpty {
-            try? UserProfile.saveAPIKey(apiKey)
-        }
+        try? UserProfile.saveAPIKey(apiKey)
 
         try? modelContext.save()
     }
