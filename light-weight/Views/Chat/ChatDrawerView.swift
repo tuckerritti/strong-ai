@@ -209,23 +209,25 @@ struct ChatDrawerView: View {
             }
         case .assistant:
             VStack(alignment: .leading, spacing: 8) {
-                Text(message.text)
+                Text(message.text.trimmingCharacters(in: .whitespacesAndNewlines))
                     .font(.system(size: 15))
                     .lineSpacing(3)
                     .foregroundStyle(Color.textPrimary.opacity(0.85))
 
-                if message.isApplied {
+                if message.isApplied || message.isApplying {
                     HStack(spacing: 4) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text("Changes applied to your workout")
-                            .font(.system(size: 14, weight: .medium))
+                        if message.isApplied {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 12, weight: .semibold))
+                        } else {
+                            ProgressView()
+                                .controlSize(.mini)
+                        }
+                        Text(message.isApplied ? "Changes applied to your workout" : "Applying changes...")
+                            .font(.system(size: 13, weight: .medium))
                     }
-                    .foregroundStyle(Color.accent)
-                } else if message.isApplying {
-                    Text("Applying changes...")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.textSecondary)
+                    .frame(height: 16)
+                    .foregroundStyle(message.isApplied ? Color.accent : Color.textSecondary)
                 }
 
                 if appState.showTokenCost, let cost = message.tokenCost, cost.estimatedCost > 0 {
