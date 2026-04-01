@@ -36,10 +36,11 @@ enum ExerciseLibraryService {
         var resolvedMuscles: [String: [TargetMuscle]] = [:]
         if !needsTargetMuscles.isEmpty && !apiKey.isEmpty {
             do {
-                resolvedMuscles = try await WorkoutAIService.generateTargetMuscles(
+                let raw = try await WorkoutAIService.generateTargetMuscles(
                     apiKey: apiKey,
                     exercises: needsTargetMuscles
                 )
+                resolvedMuscles = Dictionary(uniqueKeysWithValues: raw.map { (normalize($0.key), $0.value) })
             } catch {
                 logger.error("Failed to resolve targetMuscles: \(error)")
             }
@@ -53,7 +54,7 @@ enum ExerciseLibraryService {
             guard !normalized.isEmpty, !insertedNames.contains(normalized) else { continue }
             insertedNames.insert(normalized)
 
-            let muscles = resolvedMuscles[trimmedName] ?? []
+            let muscles = resolvedMuscles[normalized] ?? []
             modelContext.insert(Exercise(
                 name: trimmedName,
                 muscleGroup: entry.muscleGroup,
@@ -63,7 +64,7 @@ enum ExerciseLibraryService {
 
         // Backfill existing exercises with empty targetMuscles
         for exercise in existingExercises where exercise.targetMuscles.isEmpty {
-            if let muscles = resolvedMuscles[exercise.name], !muscles.isEmpty {
+            if let muscles = resolvedMuscles[normalize(exercise.name)], !muscles.isEmpty {
                 exercise.targetMuscles = muscles
             }
         }

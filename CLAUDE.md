@@ -57,5 +57,5 @@ SwiftData models are `@MainActor`. To pass them to async services, views create 
 - `@Observable` for state (not `@StateObject`). Global default actor isolation is `@MainActor`.
 - Color system uses `Color(hex: UInt)` extension. Primary palette: `0x0A0A0A`, `0xF5F5F5`, `0x34C759`.
 - `JSONExtractor.extractObject()` robustly extracts JSON from AI responses by scanning for balanced braces.
-- `ExerciseLibraryService.persist()` deduplicates exercises by normalized name (lowercased, trimmed) after every AI generation.
+- `ExerciseLibraryService.resolveAndPersistNewExercises()` persists new exercises and resolves their `targetMuscles` at workout-finish time, deduplicating by normalized name.
 - `ActiveWorkoutViewModel.applyModifiedWorkout()` reconciles AI-modified workouts with already-logged sets, preserving user progress.
