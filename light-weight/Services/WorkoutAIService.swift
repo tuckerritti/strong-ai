@@ -26,7 +26,6 @@ struct WorkoutAIService {
             {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
-              "targetMuscles": [{"muscle": "chest", "weight": 0.6}, {"muscle": "front-deltoid", "weight": 0.2}, {"muscle": "triceps", "weight": 0.2}],
               "sets": [
                 { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
               ]
@@ -42,7 +41,7 @@ struct WorkoutAIService {
         - Weight in lbs. Use 0 for bodyweight exercises.
         - You MUST set targetRpe (1-10) for every set.
         - When the user's exercise library contains a matching exercise, use its EXACT name. Prefer library exercises over inventing new ones unless the workout calls for something different.
-        - targetMuscles: for each exercise, list muscles worked with a weight (0-1) representing that muscle's share of the work. Weights should sum to ~1.0. Valid muscle values: \(Muscle.validPromptValues)
+        - For new exercises, follow the naming style of the existing library (e.g., if "Tricep Pushdown - Cable, Straight Bar" exists, a rope variation should be "Tricep Pushdown - Cable, Rope").
         """
 
         let userMessage = buildUserContext(profile: profile, recentLogs: recentLogs, exercises: exercises, healthContext: healthContext)
@@ -78,7 +77,7 @@ struct WorkoutAIService {
         }.joined(separator: "\n"))
 
         Recent history:
-        \(recentLogs.prefix(5).map { "\($0.workoutName) — \($0.durationMinutes)min, \(Int($0.totalVolume))lbs total" }.joined(separator: "\n"))
+        \(recentLogs.prefix(14).map { "\($0.workoutName) — \($0.durationMinutes)min, \(Int($0.totalVolume))lbs total" }.joined(separator: "\n"))
 
         Goals: \(profile.goals)
         """
@@ -114,8 +113,11 @@ struct WorkoutAIService {
         }
 
         if !recentLogs.isEmpty {
-            let logsStr = recentLogs.prefix(5).map { log in
-                let exercises = log.entries.map { "\($0.exerciseName) \($0.sets.count)x\($0.sets.first.map { "\($0.reps)@\(Int($0.weight))lbs" } ?? "")" }.joined(separator: ", ")
+            let logsStr = recentLogs.prefix(14).map { log in
+                let exercises = log.entries.map { entry in
+                    let sets = entry.sets.map { "\(Int($0.weight))lbs x\($0.reps) @RPE\($0.rpe)" }.joined(separator: ", ")
+                    return "\(entry.exerciseName): \(sets)"
+                }.joined(separator: "; ")
                 return "- \(log.workoutName) (\(log.startedAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))): \(exercises)"
             }.joined(separator: "\n")
             parts.append("Recent workouts:\n\(logsStr)")
@@ -139,6 +141,32 @@ struct WorkoutAIService {
             logger.error("Workout decode failed: \(String(describing: error))")
             throw ParseError.decodingFailed(String(describing: error))
         }
+    }
+
+    static func generateTargetMuscles(
+        apiKey: String,
+        exercises: [(name: String, muscleGroup: String)]
+    ) async throws -> [String: [TargetMuscle]] {
+        let api = ClaudeAPIService(apiKey: apiKey)
+
+        let exerciseList = exercises.map { "\($0.name) (\($0.muscleGroup))" }.joined(separator: "\n")
+
+        let systemPrompt = """
+        For each exercise, list the muscles worked with a weight (0-1) representing that muscle's share of the work. Weights should sum to ~1.0.
+
+        Valid muscle values: \(Muscle.validPromptValues)
+
+        Respond with ONLY valid JSON — no markdown, no explanation. Use this schema:
+        {
+          "Exercise Name": [{"muscle": "chest", "weight": 0.6}, {"muscle": "front-deltoid", "weight": 0.2}, {"muscle": "triceps", "weight": 0.2}]
+        }
+        """
+
+        let response = try await api.send(systemPrompt: systemPrompt, userMessage: exerciseList)
+        let jsonString = JSONExtractor.extractObject(from: response)
+
+        guard let data = jsonString.data(using: .utf8) else { return [:] }
+        return (try? JSONDecoder().decode([String: [TargetMuscle]].self, from: data)) ?? [:]
     }
 
     enum ParseError: LocalizedError {

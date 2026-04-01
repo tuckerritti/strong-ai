@@ -120,7 +120,6 @@ struct HomeView: View {
             )
             todayWorkout = workout
             WorkoutCacheService.save(workout)
-            ExerciseLibraryService.persist(workoutExercises: workout.exercises, existingExercises: exercises, modelContext: modelContext)
         } catch {
             logger.error("Workout generation failed: \(error)")
             errorMessage = error.localizedDescription
@@ -150,7 +149,6 @@ struct HomeView: View {
                             case .result(let result):
                                 todayWorkout = result.workout
                                 WorkoutCacheService.save(result.workout)
-                                ExerciseLibraryService.persist(workoutExercises: result.workout.exercises, existingExercises: exercises, modelContext: modelContext)
                                 errorMessage = nil
                             case .usage, .text:
                                 break
@@ -181,7 +179,7 @@ struct HomeView: View {
     }
 
     private var logSnapshots: [WorkoutLogSnapshot] {
-        recentLogs.prefix(10).map { WorkoutLogSnapshot(from: $0) }
+        recentLogs.prefix(14).map { WorkoutLogSnapshot(from: $0) }
     }
 
     private var exerciseSnapshots: [ExerciseSnapshot] {

@@ -46,7 +46,6 @@ struct ChatAIService {
             {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
-              "targetMuscles": [{"muscle": "chest", "weight": 0.6}, {"muscle": "front-deltoid", "weight": 0.2}, {"muscle": "triceps", "weight": 0.2}],
               "sets": [
                 { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
               ]
@@ -55,7 +54,7 @@ struct ChatAIService {
         }
 
         You MUST set targetRpe (1-10) for every set.
-        targetMuscles: for each exercise, list muscles worked with a weight (0-1) representing that muscle's share of the work. Weights should sum to ~1.0. Valid muscle values: \(Muscle.validPromptValues)
+        For new exercises, follow the naming style of the existing library (e.g., if "Tricep Pushdown - Cable, Straight Bar" exists, a rope variation should be "Tricep Pushdown - Cable, Rope").
 
         \(currentWorkout != nil ? "The user has an existing workout. Modify it based on their request — keep exercises they didn't mention, adjust what they asked about." : "Create a new workout from scratch based on the user's request.")
         \(isActiveWorkout ? "\nIMPORTANT: This workout is in progress. Sets marked COMPLETED in the progress below cannot be changed. You MUST include them exactly as-is in your response. Only modify PLANNED sets and exercises." : "")

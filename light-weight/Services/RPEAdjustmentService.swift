@@ -36,7 +36,6 @@ struct RPEAdjustmentService {
             {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
-              "targetMuscles": [{"muscle": "chest", "weight": 0.6}],
               "sets": [
                 { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
               ]
