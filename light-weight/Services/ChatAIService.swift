@@ -35,6 +35,8 @@ struct ChatAIService {
 
         let mode = currentWorkout != nil ? "modify" : "create"
         let isActiveWorkout = progress != nil
+        let workoutReferences = (currentWorkout?.exercises.map(ExerciseReference.init) ?? [])
+            + exercises.map(ExerciseReference.init)
 
         let systemPrompt = """
         You are an expert strength coach. The user is asking you to \(mode) a workout via natural language.
@@ -58,6 +60,7 @@ struct ChatAIService {
         }
 
         You MUST set targetRpe (1-10) for every set.
+        Never return duplicate exercise names. If an exercise matches the current workout or the library, reuse its exact name.
         For new exercises, follow the naming style of the existing library (e.g., if "Tricep Pushdown - Cable, Straight Bar" exists, a rope variation should be "Tricep Pushdown - Cable, Rope").
 
         \(currentWorkout != nil ? "The user has an existing workout. Modify it based on their request — keep exercises they didn't mention, adjust what they asked about." : "Create a new workout from scratch based on the user's request.")
@@ -130,7 +133,11 @@ struct ChatAIService {
                     }
 
                     // Parse the final result
-                    let result = try parseResult(from: accumulated)
+                    var result = try parseResult(from: accumulated)
+                    result.workout = ExerciseNameResolver.canonicalize(
+                        workout: result.workout,
+                        references: workoutReferences
+                    )
                     continuation.yield(.result(result))
                     continuation.finish()
                 } catch {

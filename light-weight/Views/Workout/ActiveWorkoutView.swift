@@ -197,8 +197,11 @@ struct ActiveWorkoutView: View {
 
     private func exerciseSection(exerciseIndex: Int, entry: LogEntry) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            let normalizedEntryName = ExerciseNameResolver.normalize(entry.exerciseName)
             Group {
-                if let exercise = exercises.first(where: { $0.name == entry.exerciseName }) {
+                if let exercise = exercises.first(where: {
+                    ExerciseNameResolver.normalize($0.name) == normalizedEntryName
+                }) {
                     NavigationLink(value: exercise) {
                         exerciseHeader(entry: entry)
                     }
@@ -264,10 +267,15 @@ struct ActiveWorkoutView: View {
         }
     }
 
+    @MainActor
     private func finishWorkout() {
         showChat = false
         debriefRecentLogs = recentLogs.prefix(14).map { WorkoutLogSnapshot(from: $0) }
         let log = viewModel.finish()
+        log.entries = ExerciseNameResolver.canonicalize(
+            entries: log.entries,
+            references: exercises.map(ExerciseReference.init)
+        )
         modelContext.insert(log)
         finishedLog = log
         showingDebrief = true
@@ -287,7 +295,7 @@ struct ActiveWorkoutView: View {
             )
             var updatedEntries = log.entries
             for i in updatedEntries.indices {
-                let key = ExerciseLibraryService.normalize(updatedEntries[i].exerciseName)
+                let key = ExerciseNameResolver.normalize(updatedEntries[i].exerciseName)
                 if let muscles = resolved[key], !muscles.isEmpty {
                     updatedEntries[i].targetMuscles = muscles
                 }
@@ -549,7 +557,10 @@ final class ActiveWorkoutViewModel {
         var matchedExistingIndices = Set<Int>()
 
         for newExercise in newWorkout.exercises {
-            if let existingIndex = entries.firstIndex(where: { $0.exerciseName == newExercise.name }) {
+            let normalizedNewName = ExerciseNameResolver.normalize(newExercise.name)
+            if let existingIndex = entries.firstIndex(where: {
+                ExerciseNameResolver.normalize($0.exerciseName) == normalizedNewName
+            }) {
                 matchedExistingIndices.insert(existingIndex)
                 let existing = entries[existingIndex]
                 let completedSets = completedPrefix(from: existing.sets)

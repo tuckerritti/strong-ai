@@ -40,13 +40,18 @@ struct WorkoutAIService {
         - Rest seconds: 60-90 for hypertrophy, 120-180 for strength, 30-45 for accessories
         - Weight in lbs. Use 0 for bodyweight exercises.
         - You MUST set targetRpe (1-10) for every set.
+        - Never return duplicate exercise names. If an exercise matches the user's library, reuse its exact name.
         - When the user's exercise library contains a matching exercise, use its EXACT name. Prefer library exercises over inventing new ones unless the workout calls for something different.
         - For new exercises, follow the naming style of the existing library (e.g., if "Tricep Pushdown - Cable, Straight Bar" exists, a rope variation should be "Tricep Pushdown - Cable, Rope").
         """
 
         let userMessage = buildUserContext(profile: profile, recentLogs: recentLogs, exercises: exercises, healthContext: healthContext)
         let response = try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
-        return try parseWorkout(from: response)
+        let workout = try parseWorkout(from: response)
+        return ExerciseNameResolver.canonicalize(
+            workout: workout,
+            references: exercises.map(ExerciseReference.init)
+        )
     }
 
     static func generateDebrief(

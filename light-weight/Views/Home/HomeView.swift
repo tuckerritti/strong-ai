@@ -95,7 +95,14 @@ struct HomeView: View {
         guard todayWorkout == nil else { return }
 
         if let cached = WorkoutCacheService.loadToday() {
-            todayWorkout = cached
+            let canonicalWorkout = ExerciseNameResolver.canonicalize(
+                workout: cached,
+                references: exerciseSnapshots.map(ExerciseReference.init)
+            )
+            todayWorkout = canonicalWorkout
+            if canonicalWorkout != cached {
+                WorkoutCacheService.save(canonicalWorkout)
+            }
             return
         }
 

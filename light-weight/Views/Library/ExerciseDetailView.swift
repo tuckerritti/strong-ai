@@ -12,8 +12,13 @@ struct ExerciseDetailView: View {
     ) private var allLogs: [WorkoutLog]
 
     private var exerciseLogs: [(date: Date, entry: LogEntry)] {
-        allLogs.compactMap { log in
-            guard let entry = log.entries.first(where: { $0.exerciseName == exercise.name }) else { return nil }
+        let normalizedName = ExerciseNameResolver.normalize(exercise.name)
+        return allLogs.compactMap { log -> (date: Date, entry: LogEntry)? in
+            guard let entry = log.entries.first(where: {
+                ExerciseNameResolver.normalize($0.exerciseName) == normalizedName
+            }) else {
+                return nil
+            }
             guard entry.sets.contains(where: { $0.completedAt != nil }) else { return nil }
             return (log.startedAt, entry)
         }

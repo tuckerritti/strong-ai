@@ -23,11 +23,12 @@ struct ExerciseLibraryView: View {
                 let completedSets = entry.sets.filter { $0.completedAt != nil }
                 guard !completedSets.isEmpty else { continue }
 
-                var stats = map[entry.exerciseName, default: ExerciseStats()]
+                let normalizedName = ExerciseNameResolver.normalize(entry.exerciseName)
+                var stats = map[normalizedName, default: ExerciseStats()]
                 stats.timesPerformed += 1
                 let maxWeight = completedSets.map(\.weight).max() ?? 0
                 if maxWeight > stats.bestWeight { stats.bestWeight = maxWeight }
-                map[entry.exerciseName] = stats
+                map[normalizedName] = stats
             }
         }
         return map
@@ -168,7 +169,7 @@ struct ExerciseLibraryView: View {
     }
 
     private func exerciseRow(_ exercise: Exercise) -> some View {
-        let stats = exerciseStatsMap[exercise.name]
+        let stats = exerciseStatsMap[ExerciseNameResolver.normalize(exercise.name)]
         return VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
@@ -208,8 +209,10 @@ private struct AddExerciseSheet: View {
     private let commonGroups = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Forearms"]
 
     private var isDuplicateName: Bool {
-        let normalized = ExerciseLibraryService.normalize(name)
-        return !normalized.isEmpty && exercises.contains { ExerciseLibraryService.normalize($0.name) == normalized }
+        let normalizedName = ExerciseNameResolver.normalize(name)
+        return !normalizedName.isEmpty && exercises.contains {
+            ExerciseNameResolver.normalize($0.name) == normalizedName
+        }
     }
 
     var body: some View {
@@ -241,6 +244,13 @@ private struct AddExerciseSheet: View {
                     Button("Add") {
                         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
                         let trimmedGroup = muscleGroup.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let normalizedName = ExerciseNameResolver.normalize(trimmedName)
+                        guard !normalizedName.isEmpty else { return }
+                        guard !exercises.contains(where: {
+                            ExerciseNameResolver.normalize($0.name) == normalizedName
+                        }) else {
+                            return
+                        }
                         modelContext.insert(Exercise(name: trimmedName, muscleGroup: trimmedGroup))
                         dismiss()
                     }
