@@ -140,7 +140,6 @@ struct SettingsView: View {
         }
         .onDisappear {
             apiKeySaveTask?.cancel()
-            ICloudBackupService.backupAll(modelContext: modelContext)
         }
     }
 

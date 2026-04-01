@@ -25,11 +25,6 @@ struct light_weightApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .task {
-                    #if !DEBUG
-                    await ICloudBackupService.restoreIfNeeded(modelContext: container.mainContext)
-                    #endif
-                }
         }
         .modelContainer(container)
     }

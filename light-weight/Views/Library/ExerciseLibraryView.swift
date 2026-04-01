@@ -69,7 +69,6 @@ struct ExerciseLibraryView: View {
                         .onDelete { offsets in
                             for index in offsets {
                                 modelContext.delete(groupExercises[index])
-                                ICloudBackupService.backupAll(modelContext: modelContext)
                             }
                         }
                     } header: {
@@ -237,7 +236,6 @@ private struct AddExerciseSheet: View {
                         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
                         let trimmedGroup = muscleGroup.trimmingCharacters(in: .whitespacesAndNewlines)
                         modelContext.insert(Exercise(name: trimmedName, muscleGroup: trimmedGroup))
-                        ICloudBackupService.backupAll(modelContext: modelContext)
                         dismiss()
                     }
                     .disabled(

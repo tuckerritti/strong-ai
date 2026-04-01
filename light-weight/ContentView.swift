@@ -62,6 +62,9 @@ final class AppState {
 
 struct ContentView: View {
     @State private var appState = AppState()
+    @State private var isRestoring = true
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @Query private var profiles: [UserProfile]
 
     private var needsOnboarding: Bool {
@@ -70,13 +73,27 @@ struct ContentView: View {
     }
 
     var body: some View {
-if needsOnboarding {
-                OnboardingView()
-                    .environment(appState)
-            } else {
-                HomeView()
-                    .environment(appState)
-                    .onAppear { AppState.shared = appState }
-            }
+        if isRestoring {
+            Color(hex: 0x0A0A0A)
+                .ignoresSafeArea()
+                .task {
+                    #if !DEBUG
+                    await ICloudBackupService.restoreIfNeeded(modelContext: modelContext)
+                    #endif
+                    isRestoring = false
+                }
+        } else if needsOnboarding {
+            OnboardingView()
+                .environment(appState)
+        } else {
+            HomeView()
+                .environment(appState)
+                .onAppear { AppState.shared = appState }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .background {
+                        ICloudBackupService.backupAll(modelContext: modelContext)
+                    }
+                }
+        }
     }
 }
