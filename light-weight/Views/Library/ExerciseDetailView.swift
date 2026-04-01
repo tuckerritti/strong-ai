@@ -150,10 +150,6 @@ struct ExerciseDetailView: View {
                     .foregroundStyle(Color.textMuted)
             } else {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Darker green = more emphasis")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.textMuted)
-
                     HStack(spacing: 20) {
                         targetMuscleMapView(side: .front, title: "FRONT")
                         targetMuscleMapView(side: .back, title: "BACK")
@@ -193,6 +189,7 @@ struct ExerciseDetailView: View {
     private func targetMuscleMapView(side: BodySide, title: String) -> some View {
         VStack(spacing: 8) {
             BodyView(gender: bodyGender, side: side, style: .minimal)
+                .showSubGroups()
                 .heatmap(targetMuscleMapIntensities, colorScale: targetMuscleColorScale)
                 .frame(maxWidth: .infinity)
                 .frame(height: 180)
