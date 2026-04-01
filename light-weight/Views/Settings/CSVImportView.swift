@@ -41,6 +41,7 @@ struct CSVImportView: View {
             }
         }
         .onChange(of: mapping) { (old: [CSVColumnRole], new: [CSVColumnRole]) in
+            guard old.count == new.count else { return }
             for i in new.indices {
                 guard new[i] != .skip, new[i] != old[i] else { continue }
                 for j in new.indices where j != i && mapping[j] == new[i] {
