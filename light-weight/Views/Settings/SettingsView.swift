@@ -112,6 +112,7 @@ struct SettingsView: View {
                                 }
                             }
                         }
+                        .padding(.vertical, -12)
                     }
                     settingsSection("TOKEN COST") {
                         Toggle("Show daily API cost", isOn: $state.showTokenCost)
