@@ -116,10 +116,10 @@ enum CSVImportService {
             var exerciseRows: [String: [[String]]] = [:]
 
             for row in session.rows {
-                let exerciseName = value(row, index[.exerciseName]) ?? "Unknown Exercise"
+                // Strong app CSV exports include "Rest Timer" in the Set Order column — skip them
+                if row.contains(where: { $0.trimmingCharacters(in: .whitespaces) == "Rest Timer" }) { continue }
 
-                // Strong app CSV exports include "Rest Timer" rows — skip them
-                if exerciseName.lowercased() == "rest timer" { continue }
+                let exerciseName = value(row, index[.exerciseName]) ?? "Unknown Exercise"
 
                 if exerciseRows[exerciseName] == nil {
                     exerciseOrder.append(exerciseName)
