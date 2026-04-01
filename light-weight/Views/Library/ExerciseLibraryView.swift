@@ -201,10 +201,16 @@ struct ExerciseLibraryView: View {
 private struct AddExerciseSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Query private var exercises: [Exercise]
     @State private var name = ""
     @State private var muscleGroup = ""
 
     private let commonGroups = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Forearms"]
+
+    private var isDuplicateName: Bool {
+        let normalized = ExerciseLibraryService.normalize(name)
+        return !normalized.isEmpty && exercises.contains { ExerciseLibraryService.normalize($0.name) == normalized }
+    }
 
     var body: some View {
         NavigationStack {
@@ -240,7 +246,8 @@ private struct AddExerciseSheet: View {
                     }
                     .disabled(
                         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                        muscleGroup.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        muscleGroup.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                        isDuplicateName
                     )
                 }
             }

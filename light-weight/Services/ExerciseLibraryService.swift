@@ -14,7 +14,8 @@ enum ExerciseLibraryService {
         modelContext: ModelContext
     ) async {
         let existingExercises = (try? modelContext.fetch(FetchDescriptor<Exercise>())) ?? []
-        let libraryByName = Dictionary(uniqueKeysWithValues: existingExercises.map { (normalize($0.name), $0) })
+        let libraryByName = Dictionary(existingExercises.map { (normalize($0.name), $0) },
+                                       uniquingKeysWith: { _, latest in latest })
 
         // Collect exercises that need targetMuscles: new exercises + existing with empty targetMuscles
         var needsTargetMuscles: [(name: String, muscleGroup: String)] = []
@@ -40,7 +41,8 @@ enum ExerciseLibraryService {
                     apiKey: apiKey,
                     exercises: needsTargetMuscles
                 )
-                resolvedMuscles = Dictionary(uniqueKeysWithValues: raw.map { (normalize($0.key), $0.value) })
+                resolvedMuscles = Dictionary(raw.map { (normalize($0.key), $0.value) },
+                                             uniquingKeysWith: { _, latest in latest })
             } catch {
                 logger.error("Failed to resolve targetMuscles: \(error)")
             }
