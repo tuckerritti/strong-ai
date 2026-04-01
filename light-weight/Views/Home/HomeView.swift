@@ -1,6 +1,7 @@
 import os
 import SwiftUI
 import SwiftData
+import MuscleMap
 
 private let logger = Logger(subsystem: "com.light-weight", category: "HomeView")
 
@@ -30,6 +31,10 @@ struct HomeView: View {
     }
 
     private var profile: UserProfile? { profiles.first }
+
+    private var muscleMapGender: BodyGender {
+        profile?.gender == "Female" ? .female : .male
+    }
 
     var body: some View {
         @Bindable var state = appState
@@ -84,7 +89,11 @@ struct HomeView: View {
             }
 
             if muscleMapExpanded {
-                ExpandedMuscleMapView(logs: recentLogs, isPresented: $muscleMapExpanded)
+                ExpandedMuscleMapView(
+                    logs: recentLogs,
+                    bodyGender: muscleMapGender,
+                    isPresented: $muscleMapExpanded
+                )
             }
         }
     }
@@ -255,7 +264,11 @@ struct HomeView: View {
         HStack(spacing: 10) {
             StatCard(title: "THIS WEEK", value: "\(workoutsThisWeek)")
             StatCard(title: "STREAK", value: "\(recentLogs.streak)", highlight: recentLogs.streak > 0)
-            MuscleBodyMapCard(logs: recentLogs, isExpanded: $muscleMapExpanded)
+            MuscleBodyMapCard(
+                logs: recentLogs,
+                bodyGender: muscleMapGender,
+                isExpanded: $muscleMapExpanded
+            )
         }
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 20)
