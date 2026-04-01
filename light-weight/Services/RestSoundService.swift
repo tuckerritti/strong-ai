@@ -44,6 +44,10 @@ enum RestSound: String, CaseIterable, Identifiable {
             }
         }
     }
+
+    static func resetSelection() {
+        UserDefaults.standard.removeObject(forKey: "restSounds")
+    }
 }
 
 @MainActor
