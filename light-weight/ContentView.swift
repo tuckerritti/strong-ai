@@ -107,9 +107,7 @@ struct ContentView: View {
             Color(hex: 0x0A0A0A)
                 .ignoresSafeArea()
                 .task {
-                    #if !DEBUG
                     await ICloudBackupService.restoreIfNeeded(modelContext: modelContext)
-                    #endif
                     isRestoring = false
                 }
         } else if needsOnboarding {

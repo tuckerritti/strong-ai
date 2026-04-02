@@ -45,6 +45,13 @@ struct UserProfileBackup: Codable {
 enum ICloudBackupService {
 
     private static let backupFileName = "backup.json"
+    private static var isEnabled: Bool {
+        #if DEBUG
+        false
+        #else
+        true
+        #endif
+    }
 
     private static var documentsURL: URL? {
         guard let container = FileManager.default.url(forUbiquityContainerIdentifier: nil) else {
@@ -60,6 +67,11 @@ enum ICloudBackupService {
     // MARK: - Backup
 
     static func backupAll(modelContext: ModelContext) {
+        guard isEnabled else {
+            logger.info("iCloud backup disabled for Debug build")
+            return
+        }
+
         guard let documentsURL else {
             logger.info("iCloud not available, skipping backup")
             return
@@ -138,6 +150,11 @@ enum ICloudBackupService {
     // MARK: - Restore
 
     static func restoreIfNeeded(modelContext: ModelContext) async {
+        guard isEnabled else {
+            logger.info("iCloud backup disabled for Debug build")
+            return
+        }
+
         let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
         let logCount = (try? modelContext.fetchCount(FetchDescriptor<WorkoutLog>())) ?? 0
         let profileCount = (try? modelContext.fetchCount(FetchDescriptor<UserProfile>())) ?? 0
