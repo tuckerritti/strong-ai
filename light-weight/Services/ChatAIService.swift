@@ -60,6 +60,7 @@ struct ChatAIService {
         }
 
         You MUST set targetRpe (1-10) for every set.
+        All weights must be in 2.5 lb increments (real plate math). No odd numbers like 186 — use 185 or 187.5.
         Never return duplicate exercise names. If an exercise matches the current workout or the library, reuse its exact name.
         For new exercises, follow the naming style of the existing library (e.g., if "Tricep Pushdown - Cable, Straight Bar" exists, a rope variation should be "Tricep Pushdown - Cable, Rope").
 
