@@ -2,6 +2,12 @@ import Foundation
 import MuscleMap
 import SwiftData
 
+private extension Array {
+    func chunked(into size: Int) -> [[Element]] {
+        stride(from: 0, to: count, by: size).map { Array(self[$0..<Swift.min($0 + size, count)]) }
+    }
+}
+
 enum CSVColumnRole: String, CaseIterable, Identifiable {
     case exerciseName = "Exercise Name"
     case weight = "Weight"
@@ -157,14 +163,14 @@ enum CSVImportService {
         }
 
         // Persist new exercises to library
-        let workoutExercises = allExerciseNames.map {
-            WorkoutExercise(name: $0.name, muscleGroup: $0.muscleGroup, sets: [])
+        var knownNames = Set(existingExercises.map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
+        for (name, muscleGroup) in allExerciseNames {
+            let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let normalizedName = trimmedName.lowercased()
+            guard !normalizedName.isEmpty, !muscleGroup.isEmpty else { continue }
+            guard knownNames.insert(normalizedName).inserted else { continue }
+            modelContext.insert(Exercise(name: trimmedName, muscleGroup: muscleGroup))
         }
-        ExerciseLibraryService.persist(
-            workoutExercises: workoutExercises,
-            existingExercises: existingExercises,
-            modelContext: modelContext
-        )
 
         return CSVImportResult(
             workoutCount: sessions.count,
@@ -194,20 +200,25 @@ enum CSVImportService {
         - Return the exercise name exactly as provided.
         """
 
-        let nameList = names.map { "- \($0)" }.joined(separator: "\n")
-        let response = try await ClaudeAPIService(apiKey: apiKey).send(
-            systemPrompt: systemPrompt,
-            userMessage: "Classify these exercises:\n\(nameList)"
-        )
+        let api = ClaudeAPIService(apiKey: apiKey)
+        var classificationMap: [String: ClassifiedExercise] = [:]
 
-        let jsonString = JSONExtractor.extractObject(from: response)
-        guard let data = jsonString.data(using: .utf8) else { return }
-        let decoded = try JSONDecoder().decode(ClassificationResponse.self, from: data)
+        // Batch into groups of 15 to avoid exceeding the token limit
+        for batch in names.chunked(into: 15) {
+            let nameList = batch.map { "- \($0)" }.joined(separator: "\n")
+            let response = try await api.send(
+                systemPrompt: systemPrompt,
+                userMessage: "Classify these exercises:\n\(nameList)"
+            )
 
-        let classificationMap = Dictionary(
-            decoded.exercises.map { ($0.name.lowercased().trimmingCharacters(in: .whitespaces), $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
+            let jsonString = JSONExtractor.extractObject(from: response)
+            guard let data = jsonString.data(using: .utf8) else { continue }
+            let decoded = try JSONDecoder().decode(ClassificationResponse.self, from: data)
+
+            for exercise in decoded.exercises {
+                classificationMap[exercise.name.lowercased().trimmingCharacters(in: .whitespaces)] = exercise
+            }
+        }
 
         // Update Exercise library entries
         for exercise in exercises {

@@ -162,6 +162,13 @@ struct CSVImportView: View {
                     .font(.system(size: 15))
                     .foregroundStyle(Color.textSecondary)
             }
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            }
             Spacer()
             Button {
                 onReturnHome()
@@ -244,6 +251,7 @@ struct CSVImportView: View {
                     )
                 } catch {
                     classifiedCount = 0
+                    errorMessage = "Classification failed: \(error.localizedDescription)"
                 }
                 step = .done
             }
