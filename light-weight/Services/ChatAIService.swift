@@ -13,7 +13,7 @@ enum ChatStreamEvent: Sendable {
 }
 
 struct ChatResult: Sendable, Codable {
-    var workout: Workout
+    var workout: Workout?
     var explanation: String
 }
 
@@ -39,11 +39,13 @@ struct ChatAIService {
             + exercises.map(ExerciseReference.init)
 
         let systemPrompt = """
-        You are an expert strength coach. The user is asking you to \(mode) a workout via natural language.
+        You are an expert strength coach chatting with a user about their workout.
 
-        Respond in this EXACT format — explanation first, then JSON after a separator:
+        If the user is just asking a question or chatting, respond conversationally. Do NOT include workout JSON.
 
-        Write 1-2 sentences explaining what you did and why.
+        Only when the user asks you to \(mode) the workout, respond in this EXACT format — explanation first, then JSON after a separator:
+
+        Write a detailed explanation of what you changed and why — mention specific exercises, sets, reps, or weight choices and the reasoning behind them (e.g. muscle balance, fatigue management, progressive overload, the user's goals or injuries). Be thorough so the user understands your coaching decisions.
         ---JSON
         {
           "name": "Workout Name",
@@ -134,10 +136,12 @@ struct ChatAIService {
 
                     // Parse the final result
                     var result = try parseResult(from: accumulated)
-                    result.workout = ExerciseNameResolver.canonicalize(
-                        workout: result.workout,
-                        references: workoutReferences
-                    )
+                    if let workout = result.workout {
+                        result.workout = ExerciseNameResolver.canonicalize(
+                            workout: workout,
+                            references: workoutReferences
+                        )
+                    }
                     continuation.yield(.result(result))
                     continuation.finish()
                 } catch {
@@ -150,19 +154,18 @@ struct ChatAIService {
     }
 
     private static func parseResult(from response: String) throws -> ChatResult {
-        let explanation: String
-        let jsonString: String
-
-        if let match = response.firstMatch(of: separatorPattern) {
-            explanation = response[response.startIndex..<match.range.lowerBound]
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            let afterSeparator = String(response[match.range.upperBound...])
-            jsonString = JSONExtractor.extractObject(from: afterSeparator)
-        } else {
-            // Fallback: try to find JSON in the whole response
-            explanation = ""
-            jsonString = JSONExtractor.extractObject(from: response)
+        guard let match = response.firstMatch(of: separatorPattern) else {
+            // No separator — text-only response, no workout modification
+            return ChatResult(
+                workout: nil,
+                explanation: response.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
         }
+
+        let explanation = response[response.startIndex..<match.range.lowerBound]
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let afterSeparator = String(response[match.range.upperBound...])
+        let jsonString = JSONExtractor.extractObject(from: afterSeparator)
 
         guard let data = jsonString.data(using: .utf8) else {
             throw ChatParseError.invalidJSON

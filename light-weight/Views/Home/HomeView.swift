@@ -163,9 +163,11 @@ struct HomeView: View {
                         for try await event in stream {
                             switch event {
                             case .result(let result):
-                                todayWorkout = result.workout
-                                WorkoutCacheService.save(result.workout)
-                                errorMessage = nil
+                                if let workout = result.workout {
+                                    todayWorkout = workout
+                                    WorkoutCacheService.save(workout)
+                                    errorMessage = nil
+                                }
                             case .usage, .text, .applying:
                                 break
                             }

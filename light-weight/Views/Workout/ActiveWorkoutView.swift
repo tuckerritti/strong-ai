@@ -327,11 +327,13 @@ struct ActiveWorkoutView: View {
                         for try await event in stream {
                             switch event {
                             case .result(let result):
-                                if viewModel.shouldApplyAdjustment(generation: generation) {
-                                    viewModel.applyModifiedWorkout(result.workout)
-                                } else {
-                                    logger.info("Discarding stale chat workout update")
-                                    continue
+                                if let workout = result.workout {
+                                    if viewModel.shouldApplyAdjustment(generation: generation) {
+                                        viewModel.applyModifiedWorkout(workout)
+                                    } else {
+                                        logger.info("Discarding stale chat workout update")
+                                        continue
+                                    }
                                 }
                             case .usage, .text, .applying:
                                 break
