@@ -90,6 +90,7 @@ enum ExerciseLibraryService {
         return result
     }
 
+
     private static func sortedExercises(modelContext: ModelContext) -> [Exercise] {
         ((try? modelContext.fetch(FetchDescriptor<Exercise>())) ?? [])
             .sorted { $0.name < $1.name }

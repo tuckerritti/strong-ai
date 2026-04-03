@@ -737,7 +737,12 @@ final class ActiveWorkoutViewModel {
         let completedEntries = entries.compactMap { entry -> LogEntry? in
             let completedSets = entry.sets.filter { $0.completedAt != nil }
             guard !completedSets.isEmpty else { return nil }
-            return LogEntry(exerciseName: entry.exerciseName, muscleGroup: entry.muscleGroup, targetMuscles: entry.targetMuscles, sets: completedSets)
+            return LogEntry(
+                exerciseName: entry.exerciseName,
+                muscleGroup: entry.muscleGroup,
+                targetMuscles: entry.targetMuscles,
+                sets: completedSets
+            )
         }
         let log = WorkoutLog(
             workoutName: workoutName,
