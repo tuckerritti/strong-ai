@@ -1,4 +1,7 @@
 import SwiftUI
+import os
+
+private let logger = Logger(subsystem: "com.light-weight", category: "Onboarding")
 
 struct APIKeyStepView: View {
     @Binding var apiKey: String
@@ -85,11 +88,23 @@ struct APIKeyStepView: View {
         errorMessage = nil
 
         Task {
+            let startedAt = Date()
+            logger.info("api_key_validation start")
             do {
                 let api = ClaudeAPIService(apiKey: apiKey.trimmingCharacters(in: .whitespacesAndNewlines))
-                _ = try await api.send(systemPrompt: "Reply with OK", userMessage: "test")
+                _ = try await api.send(
+                    operation: "validate_api_key",
+                    systemPrompt: "Reply with OK",
+                    userMessage: "test"
+                )
+                let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+                logger.info("api_key_validation success durationMs=\(durationMs, privacy: .public)")
                 onNext()
             } catch {
+                let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+                logger.error(
+                    "api_key_validation failure durationMs=\(durationMs, privacy: .public) errorType=\(String(reflecting: type(of: error)), privacy: .public)"
+                )
                 errorMessage = "Invalid API key. Please check your key and try again."
             }
             isValidating = false

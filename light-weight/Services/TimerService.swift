@@ -28,6 +28,7 @@ final class TimerService {
         totalSeconds = seconds
         isRunning = true
         fireDate = Date().addingTimeInterval(TimeInterval(seconds))
+        logger.info("timer start seconds=\(seconds, privacy: .public)")
 
         cleanupWork?.cancel()
         cleanupWork = nil
@@ -69,6 +70,7 @@ final class TimerService {
 
     /// User tapped skip — stop everything immediately.
     func stop() {
+        let hadActiveTimer = isRunning || timer != nil || totalSeconds > 0
         timer?.invalidate()
         timer = nil
         isRunning = false
@@ -79,14 +81,18 @@ final class TimerService {
         cleanupWork = nil
         soundService.stopBackgroundAudio()
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest-timer"])
+        logger.info("timer stop hadActive=\(hadActiveTimer, privacy: .public)")
     }
 
     func requestPermission() {
+        logger.info("timer_permission start")
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             if let error {
                 logger.error("Notification permission error: \(error)")
             } else if !granted {
-                logger.info("Notification permission denied by user")
+                logger.info("timer_permission denied")
+            } else {
+                logger.info("timer_permission granted")
             }
         }
     }
@@ -110,6 +116,7 @@ final class TimerService {
         totalSeconds = 0
         fireDate = nil
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest-timer"])
+        logger.info("timer expire")
 
         soundService.playCompletionSound()
 
@@ -132,6 +139,8 @@ final class TimerService {
         UNUserNotificationCenter.current().add(request) { error in
             if let error {
                 logger.error("Failed to schedule notification: \(error)")
+            } else {
+                logger.info("timer_notification schedule_success seconds=\(seconds, privacy: .public)")
             }
         }
     }

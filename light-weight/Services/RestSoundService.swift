@@ -1,7 +1,7 @@
 import AVFoundation
 import os
 
-private let logger = Logger(subsystem: "com.strong-ai", category: "RestSoundService")
+private let logger = Logger(subsystem: "com.light-weight", category: "RestSoundService")
 
 enum RestSound: String, CaseIterable, Identifiable {
     case boxingBell = "boxing-bell"

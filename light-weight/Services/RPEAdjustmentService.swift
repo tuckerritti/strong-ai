@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-private let logger = Logger(subsystem: "com.strong-ai", category: "RPEAdjustment")
+private let logger = Logger(subsystem: "com.light-weight", category: "RPEAdjustment")
 
 struct RPEAdjustmentService {
 
@@ -14,6 +14,10 @@ struct RPEAdjustmentService {
         progress: [LogEntry]
     ) async -> Workout? {
         let api = ClaudeAPIService(apiKey: apiKey)
+        let completedSetCount = progress.flatMap(\.sets).filter { $0.completedAt != nil }.count
+        logger.info(
+            "rpe_adjustment start exercises=\(workout.exercises.count, privacy: .public) completedSets=\(completedSetCount, privacy: .public)"
+        )
 
         let systemPrompt = """
         You are an expert strength coach making real-time adjustments to a workout in progress.
@@ -66,10 +70,18 @@ struct RPEAdjustmentService {
         """
 
         do {
-            let response = try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
+            let response = try await api.send(
+                operation: "adjust_rpe_workout",
+                systemPrompt: systemPrompt,
+                userMessage: userMessage
+            )
             let jsonString = JSONExtractor.extractObject(from: response)
             guard let data = jsonString.data(using: .utf8) else { return nil }
             let adjustedWorkout = try JSONDecoder().decode(Workout.self, from: data)
+            let totalSets = adjustedWorkout.exercises.reduce(0) { $0 + $1.sets.count }
+            logger.info(
+                "rpe_adjustment success exercises=\(adjustedWorkout.exercises.count, privacy: .public) totalSets=\(totalSets, privacy: .public)"
+            )
             return ExerciseNameResolver.canonicalize(
                 workout: adjustedWorkout,
                 references: workout.exercises.map(ExerciseReference.init)

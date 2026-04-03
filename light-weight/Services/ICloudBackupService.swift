@@ -68,12 +68,12 @@ enum ICloudBackupService {
 
     static func backupAll(modelContext: ModelContext) {
         guard isEnabled else {
-            logger.info("iCloud backup disabled for Debug build")
+            logger.info("icloud_backup skip reason=disabled")
             return
         }
 
         guard let documentsURL else {
-            logger.info("iCloud not available, skipping backup")
+            logger.info("icloud_backup skip reason=unavailable")
             return
         }
 
@@ -83,6 +83,9 @@ enum ICloudBackupService {
                 predicate: #Predicate { $0.finishedAt != nil }
             ))
             let profiles = try modelContext.fetch(FetchDescriptor<UserProfile>())
+            logger.info(
+                "icloud_backup start exercises=\(exercises.count, privacy: .public) workoutLogs=\(logs.count, privacy: .public) profiles=\(profiles.count, privacy: .public)"
+            )
 
             let backup = AppBackup(
                 createdAt: .now,
@@ -124,26 +127,33 @@ enum ICloudBackupService {
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(backup)
             guard let backupFileURL else {
-                logger.info("iCloud not available, skipping backup")
+                logger.info("icloud_backup skip reason=unavailable")
                 return
             }
             try data.write(to: backupFileURL, options: .atomic)
 
-            logger.info("Backup written: \(exercises.count) exercises, \(logs.count) logs")
+            logger.info(
+                "icloud_backup success exercises=\(exercises.count, privacy: .public) workoutLogs=\(logs.count, privacy: .public) profiles=\(profiles.count, privacy: .public)"
+            )
         } catch {
-            logger.error("Backup failed: \(error)")
+            logger.error("icloud_backup failure error=\(String(describing: error), privacy: .public)")
         }
     }
 
     static func deleteBackup() {
-        guard let backupFileURL else { return }
+        guard let backupFileURL else {
+            logger.info("icloud_backup_delete skip reason=unavailable")
+            return
+        }
 
         do {
             try FileManager.default.removeItem(at: backupFileURL)
+            logger.info("icloud_backup_delete success")
         } catch let error as CocoaError where error.code == .fileNoSuchFile {
+            logger.info("icloud_backup_delete skip reason=missing")
             return
         } catch {
-            logger.error("Failed to delete backup: \(error)")
+            logger.error("icloud_backup_delete failure error=\(String(describing: error), privacy: .public)")
         }
     }
 
@@ -151,21 +161,27 @@ enum ICloudBackupService {
 
     static func restoreIfNeeded(modelContext: ModelContext) async {
         guard isEnabled else {
-            logger.info("iCloud backup disabled for Debug build")
+            logger.info("icloud_restore skip reason=disabled")
             return
         }
 
         let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
         let logCount = (try? modelContext.fetchCount(FetchDescriptor<WorkoutLog>())) ?? 0
         let profileCount = (try? modelContext.fetchCount(FetchDescriptor<UserProfile>())) ?? 0
-        guard exerciseCount == 0 && logCount == 0 && profileCount == 0 else { return }
+        guard exerciseCount == 0 && logCount == 0 && profileCount == 0 else {
+            logger.info(
+                "icloud_restore skip reason=local_data_present exercises=\(exerciseCount, privacy: .public) workoutLogs=\(logCount, privacy: .public) profiles=\(profileCount, privacy: .public)"
+            )
+            return
+        }
 
         guard let fileURL = backupFileURL else {
-            logger.info("iCloud not available, skipping restore")
+            logger.info("icloud_restore skip reason=unavailable")
             return
         }
 
         do {
+            logger.info("icloud_restore start")
             try FileManager.default.startDownloadingUbiquitousItem(at: fileURL)
 
             // Wait for iCloud to finish downloading (up to 30s)
@@ -217,11 +233,13 @@ enum ICloudBackupService {
                 }
             }
 
-            logger.info("Restored from backup: \(backup.exercises.count) exercises, \(backup.workoutLogs.count) logs")
+            logger.info(
+                "icloud_restore success exercises=\(backup.exercises.count, privacy: .public) workoutLogs=\(backup.workoutLogs.count, privacy: .public) profilePresent=\(backup.userProfile != nil, privacy: .public)"
+            )
         } catch let error as CocoaError where error.code == .fileNoSuchFile {
-            logger.info("No iCloud backup found, skipping restore")
+            logger.info("icloud_restore skip reason=missing")
         } catch {
-            logger.error("Restore failed: \(error)")
+            logger.error("icloud_restore failure error=\(String(describing: error), privacy: .public)")
         }
     }
 }

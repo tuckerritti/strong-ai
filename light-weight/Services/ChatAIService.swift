@@ -91,7 +91,14 @@ struct ChatAIService {
         }
         messages.append(Message(role: .user, content: [.text(userMessage)]))
 
-        let tokenStream = try await api.stream(systemPrompt: systemPrompt, messages: messages)
+        logger.info(
+            "chat_stream start mode=\(mode, privacy: .public) history=\(history.count, privacy: .public) currentWorkout=\(currentWorkout != nil, privacy: .public) activeWorkout=\(isActiveWorkout, privacy: .public)"
+        )
+        let tokenStream = try await api.stream(
+            operation: "chat_stream",
+            systemPrompt: systemPrompt,
+            messages: messages
+        )
 
         return AsyncThrowingStream { continuation in
             let task = Task {
@@ -137,6 +144,10 @@ struct ChatAIService {
                     result.workout = ExerciseNameResolver.canonicalize(
                         workout: result.workout,
                         references: workoutReferences
+                    )
+                    let totalSets = result.workout.exercises.reduce(0) { $0 + $1.sets.count }
+                    logger.info(
+                        "chat_stream success exercises=\(result.workout.exercises.count, privacy: .public) totalSets=\(totalSets, privacy: .public)"
                     )
                     continuation.yield(.result(result))
                     continuation.finish()

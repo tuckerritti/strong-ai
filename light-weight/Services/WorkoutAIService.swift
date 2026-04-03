@@ -46,7 +46,11 @@ struct WorkoutAIService {
         """
 
         let userMessage = buildUserContext(profile: profile, recentLogs: recentLogs, exercises: exercises, healthContext: healthContext)
-        let response = try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
+        let response = try await api.send(
+            operation: "generate_daily_workout",
+            systemPrompt: systemPrompt,
+            userMessage: userMessage
+        )
         let workout = try parseWorkout(from: response)
         return ExerciseNameResolver.canonicalize(
             workout: workout,
@@ -87,7 +91,11 @@ struct WorkoutAIService {
         Goals: \(profile.goals)
         """
 
-        return try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
+        return try await api.send(
+            operation: "generate_debrief",
+            systemPrompt: systemPrompt,
+            userMessage: userMessage
+        )
     }
 
     // MARK: - Private
@@ -167,11 +175,17 @@ struct WorkoutAIService {
         }
         """
 
-        let response = try await api.send(systemPrompt: systemPrompt, userMessage: exerciseList)
+        let response = try await api.send(
+            operation: "generate_target_muscles",
+            systemPrompt: systemPrompt,
+            userMessage: exerciseList
+        )
         let jsonString = JSONExtractor.extractObject(from: response)
 
         guard let data = jsonString.data(using: .utf8) else { return [:] }
-        return (try? JSONDecoder().decode([String: [TargetMuscle]].self, from: data)) ?? [:]
+        let result = (try? JSONDecoder().decode([String: [TargetMuscle]].self, from: data)) ?? [:]
+        logger.info("target_muscles_parse success exercises=\(result.count, privacy: .public)")
+        return result
     }
 
     enum ParseError: LocalizedError {
