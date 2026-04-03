@@ -115,14 +115,11 @@ if build_result.returncode != 0:
 
 # Find and install the .app
 derived_data = context_dir / "DerivedData"
-app_paths = list(derived_data.rglob("light-weight.app"))
-app_paths = [p for p in app_paths if p.is_dir()]
+app_path = derived_data / "Build" / "Products" / f"{configuration}-iphonesimulator" / "light-weight.app"
 
-if not app_paths:
+if not app_path.is_dir():
     print("Error: Build succeeded but .app not found", file=sys.stderr)
     sys.exit(1)
-
-app_path = app_paths[0]
 
 # Read actual bundle ID from built app (may differ from base, e.g. .debug suffix)
 plist_result = run(["plutil", "-extract", "CFBundleIdentifier", "raw", str(app_path / "Info.plist")])

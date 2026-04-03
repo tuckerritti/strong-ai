@@ -45,6 +45,13 @@ struct UserProfileBackup: Codable {
 enum ICloudBackupService {
 
     private static let backupFileName = "backup.json"
+    private static var isEnabled: Bool {
+        #if DEBUG
+        false
+        #else
+        true
+        #endif
+    }
 
     private static var documentsURL: URL? {
         guard let container = FileManager.default.url(forUbiquityContainerIdentifier: nil) else {
@@ -53,9 +60,18 @@ enum ICloudBackupService {
         return container.appending(path: "Documents")
     }
 
+    private static var backupFileURL: URL? {
+        documentsURL?.appending(path: backupFileName)
+    }
+
     // MARK: - Backup
 
     static func backupAll(modelContext: ModelContext) {
+        guard isEnabled else {
+            logger.info("iCloud backup disabled for Debug build")
+            return
+        }
+
         guard let documentsURL else {
             logger.info("iCloud not available, skipping backup")
             return
@@ -107,7 +123,11 @@ enum ICloudBackupService {
             encoder.dateEncodingStrategy = .iso8601
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(backup)
-            try data.write(to: documentsURL.appending(path: backupFileName), options: .atomic)
+            guard let backupFileURL else {
+                logger.info("iCloud not available, skipping backup")
+                return
+            }
+            try data.write(to: backupFileURL, options: .atomic)
 
             logger.info("Backup written: \(exercises.count) exercises, \(logs.count) logs")
         } catch {
@@ -115,20 +135,35 @@ enum ICloudBackupService {
         }
     }
 
+    static func deleteBackup() {
+        guard let backupFileURL else { return }
+
+        do {
+            try FileManager.default.removeItem(at: backupFileURL)
+        } catch let error as CocoaError where error.code == .fileNoSuchFile {
+            return
+        } catch {
+            logger.error("Failed to delete backup: \(error)")
+        }
+    }
+
     // MARK: - Restore
 
     static func restoreIfNeeded(modelContext: ModelContext) async {
+        guard isEnabled else {
+            logger.info("iCloud backup disabled for Debug build")
+            return
+        }
+
         let exerciseCount = (try? modelContext.fetchCount(FetchDescriptor<Exercise>())) ?? 0
         let logCount = (try? modelContext.fetchCount(FetchDescriptor<WorkoutLog>())) ?? 0
         let profileCount = (try? modelContext.fetchCount(FetchDescriptor<UserProfile>())) ?? 0
         guard exerciseCount == 0 && logCount == 0 && profileCount == 0 else { return }
 
-        guard let documentsURL else {
+        guard let fileURL = backupFileURL else {
             logger.info("iCloud not available, skipping restore")
             return
         }
-
-        let fileURL = documentsURL.appending(path: backupFileName)
 
         do {
             try FileManager.default.startDownloadingUbiquitousItem(at: fileURL)
@@ -183,6 +218,8 @@ enum ICloudBackupService {
             }
 
             logger.info("Restored from backup: \(backup.exercises.count) exercises, \(backup.workoutLogs.count) logs")
+        } catch let error as CocoaError where error.code == .fileNoSuchFile {
+            logger.info("No iCloud backup found, skipping restore")
         } catch {
             logger.error("Restore failed: \(error)")
         }

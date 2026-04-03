@@ -157,9 +157,6 @@ struct SettingsView: View {
         .onAppear {
             syncProfileState()
         }
-        .onChange(of: profiles.count) { _, _ in
-            syncProfileState()
-        }
         .onDisappear {
             apiKeySaveTask?.cancel()
         }

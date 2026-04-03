@@ -5,21 +5,32 @@ import SwiftData
 final class AppState {
     static var shared: AppState!
 
+    private var shouldPersistState = true
+
     var chatDetent: PresentationDetent = .height(90)
     var pendingMessage: String?
     var isWorkoutActive = false
     var showTokenCost = UserDefaults.standard.bool(forKey: "showTokenCost") {
-        didSet { UserDefaults.standard.set(showTokenCost, forKey: "showTokenCost") }
+        didSet {
+            guard shouldPersistState else { return }
+            UserDefaults.standard.set(showTokenCost, forKey: "showTokenCost")
+        }
     }
     var showRestTimer: Bool = {
         if UserDefaults.standard.object(forKey: "showRestTimer") == nil { return true }
         return UserDefaults.standard.bool(forKey: "showRestTimer")
     }() {
-        didSet { UserDefaults.standard.set(showRestTimer, forKey: "showRestTimer") }
+        didSet {
+            guard shouldPersistState else { return }
+            UserDefaults.standard.set(showRestTimer, forKey: "showRestTimer")
+        }
     }
 
     var dailyCost: TokenCost {
-        didSet { saveDailyCost() }
+        didSet {
+            guard shouldPersistState else { return }
+            saveDailyCost()
+        }
     }
 
     init() {
@@ -29,6 +40,25 @@ final class AppState {
     func recordCost(_ cost: TokenCost) {
         resetIfNewDay()
         dailyCost = dailyCost + cost
+    }
+
+    func resetPersistentState() {
+        let defaults = UserDefaults.standard
+        shouldPersistState = false
+        defer { shouldPersistState = true }
+
+        defaults.removeObject(forKey: "showTokenCost")
+        defaults.removeObject(forKey: "showRestTimer")
+        defaults.removeObject(forKey: "dailyCostInput")
+        defaults.removeObject(forKey: "dailyCostOutput")
+        defaults.removeObject(forKey: "dailyCostDate")
+
+        chatDetent = .height(90)
+        pendingMessage = nil
+        isWorkoutActive = false
+        showTokenCost = false
+        showRestTimer = true
+        dailyCost = .zero
     }
 
     private func resetIfNewDay() {
@@ -77,9 +107,7 @@ struct ContentView: View {
             Color(hex: 0x0A0A0A)
                 .ignoresSafeArea()
                 .task {
-                    #if !DEBUG
                     await ICloudBackupService.restoreIfNeeded(modelContext: modelContext)
-                    #endif
                     isRestoring = false
                 }
         } else if needsOnboarding {

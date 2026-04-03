@@ -129,7 +129,7 @@ struct ActiveWorkoutView: View {
             if appState.showRestTimer {
                 viewModel.timerService.requestPermission()
             }
-            ExerciseLibraryService.persist(workoutExercises: viewModel.currentWorkout.exercises, existingExercises: exercises, modelContext: modelContext)
+            // Exercises are persisted to library when the workout finishes
             Task {
                 try? await Task.sleep(for: .milliseconds(600))
                 showChat = true
@@ -197,8 +197,11 @@ struct ActiveWorkoutView: View {
 
     private func exerciseSection(exerciseIndex: Int, entry: LogEntry) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            let normalizedEntryName = ExerciseNameResolver.normalize(entry.exerciseName)
             Group {
-                if let exercise = exercises.first(where: { $0.name == entry.exerciseName }) {
+                if let exercise = exercises.first(where: {
+                    ExerciseNameResolver.normalize($0.name) == normalizedEntryName
+                }) {
                     NavigationLink(value: exercise) {
                         exerciseHeader(entry: entry)
                     }
@@ -264,13 +267,41 @@ struct ActiveWorkoutView: View {
         }
     }
 
+    @MainActor
     private func finishWorkout() {
         showChat = false
-        debriefRecentLogs = recentLogs.prefix(5).map { WorkoutLogSnapshot(from: $0) }
+        debriefRecentLogs = recentLogs.prefix(14).map { WorkoutLogSnapshot(from: $0) }
         let log = viewModel.finish()
+        log.entries = ExerciseNameResolver.canonicalize(
+            entries: log.entries,
+            references: exercises.map(ExerciseReference.init)
+        )
         modelContext.insert(log)
         finishedLog = log
         showingDebrief = true
+
+        // Persist new exercises to library and resolve targetMuscles in the background
+        Task {
+            await ExerciseLibraryService.resolveAndPersistNewExercises(
+                entries: log.entries,
+                apiKey: apiKey,
+                modelContext: modelContext
+            )
+
+            // Backfill targetMuscles on the log's entries so the muscle map works
+            let resolved = ExerciseLibraryService.resolvedTargetMuscles(
+                for: log.entries,
+                modelContext: modelContext
+            )
+            var updatedEntries = log.entries
+            for i in updatedEntries.indices {
+                let key = ExerciseNameResolver.normalize(updatedEntries[i].exerciseName)
+                if let muscles = resolved[key], !muscles.isEmpty {
+                    updatedEntries[i].targetMuscles = muscles
+                }
+            }
+            log.entries = updatedEntries
+        }
     }
 
     private func streamMidWorkoutChat(_ message: String, history: [ChatMessage]) async -> AsyncThrowingStream<ChatStreamEvent, Error>? {
@@ -298,7 +329,6 @@ struct ActiveWorkoutView: View {
                             case .result(let result):
                                 if viewModel.shouldApplyAdjustment(generation: generation) {
                                     viewModel.applyModifiedWorkout(result.workout)
-                                    ExerciseLibraryService.persist(workoutExercises: result.workout.exercises, existingExercises: exercises, modelContext: modelContext)
                                 } else {
                                     logger.info("Discarding stale chat workout update")
                                     continue
@@ -527,7 +557,10 @@ final class ActiveWorkoutViewModel {
         var matchedExistingIndices = Set<Int>()
 
         for newExercise in newWorkout.exercises {
-            if let existingIndex = entries.firstIndex(where: { $0.exerciseName == newExercise.name }) {
+            let normalizedNewName = ExerciseNameResolver.normalize(newExercise.name)
+            if let existingIndex = entries.firstIndex(where: {
+                ExerciseNameResolver.normalize($0.exerciseName) == normalizedNewName
+            }) {
                 matchedExistingIndices.insert(existingIndex)
                 let existing = entries[existingIndex]
                 let completedSets = completedPrefix(from: existing.sets)
@@ -553,7 +586,7 @@ final class ActiveWorkoutViewModel {
                     updatedEntries.append(LogEntry(
                         exerciseName: newExercise.name,
                         muscleGroup: newExercise.muscleGroup,
-                        targetMuscles: newExercise.targetMuscles,
+                        targetMuscles: existing.targetMuscles,
                         sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: $0.targetRpe ?? 0) }
                     ))
                     updatedExercises.append(newExercise)

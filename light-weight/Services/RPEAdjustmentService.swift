@@ -36,7 +36,6 @@ struct RPEAdjustmentService {
             {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
-              "targetMuscles": [{"muscle": "chest", "weight": 0.6}],
               "sets": [
                 { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
               ]
@@ -50,6 +49,7 @@ struct RPEAdjustmentService {
         - Reps minimum: 1
         - If all RPEs are on target, return the workout unchanged
         - Be conservative — small adjustments are better than dramatic ones
+        - Never return duplicate exercise names. If an exercise matches the current workout, reuse its exact name.
         """
 
         guard let workoutJSON = try? JSONEncoder().encode(workout),
@@ -69,7 +69,11 @@ struct RPEAdjustmentService {
             let response = try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
             let jsonString = JSONExtractor.extractObject(from: response)
             guard let data = jsonString.data(using: .utf8) else { return nil }
-            return try JSONDecoder().decode(Workout.self, from: data)
+            let adjustedWorkout = try JSONDecoder().decode(Workout.self, from: data)
+            return ExerciseNameResolver.canonicalize(
+                workout: adjustedWorkout,
+                references: workout.exercises.map(ExerciseReference.init)
+            )
         } catch {
             logger.error("RPE adjustment failed: \(error)")
             return nil

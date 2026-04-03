@@ -125,4 +125,8 @@ final class UserProfile {
     static func saveAPIKey(_ apiKey: String) throws {
         try APIKeychainStore.save(apiKey)
     }
+
+    static func deleteSavedAPIKey() throws {
+        try APIKeychainStore.delete()
+    }
 }
