@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
+    let onReturnHome: () -> Void
     private let genderOptions = ["Male", "Female"]
 
     @Query private var profiles: [UserProfile]
@@ -127,7 +128,7 @@ struct SettingsView: View {
                         .padding(.vertical, -12)
                     }
                     settingsSection("ADVANCED") {
-                        NavigationLink(destination: AdvancedSettingsView()) {
+                        NavigationLink(destination: AdvancedSettingsView(onReturnHome: onReturnHome)) {
                             HStack {
                                 Text("Advanced settings")
                                     .foregroundStyle(Color.textPrimary)
