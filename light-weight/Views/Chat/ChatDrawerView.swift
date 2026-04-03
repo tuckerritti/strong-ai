@@ -29,6 +29,8 @@ struct ChatDrawerView: View {
     @State private var isSending = false
     @Environment(AppState.self) private var appState
     @State private var tappedInputBar = false
+    @State private var currentStreamTask: Task<Void, Error>?
+    @State private var applyingTimeoutTask: Task<Void, Never>?
     @State private var isSheetPresented = true
     private var isExpanded: Bool { selectedDetent != smallDetent }
     @FocusState private var isInputFocused: Bool
@@ -266,14 +268,22 @@ struct ChatDrawerView: View {
         let assistantIndex = messages.count
         messages.append(ChatMessage(role: .assistant, text: ""))
 
-        do {
+        currentStreamTask = Task {
             for try await event in stream {
+                try Task.checkCancellation()
                 switch event {
                 case .text(let delta):
                     messages[assistantIndex].text += delta
                 case .applying:
                     messages[assistantIndex].isApplying = true
+                    applyingTimeoutTask = Task {
+                        try? await Task.sleep(for: .seconds(30))
+                        guard !Task.isCancelled else { return }
+                        currentStreamTask?.cancel()
+                    }
                 case .result(let result):
+                    applyingTimeoutTask?.cancel()
+                    applyingTimeoutTask = nil
                     if !result.explanation.isEmpty {
                         messages[assistantIndex].text = result.explanation
                     }
@@ -283,6 +293,19 @@ struct ChatDrawerView: View {
                     messages[assistantIndex].tokenCost = (messages[assistantIndex].tokenCost ?? .zero) + cost
                 }
             }
+            try Task.checkCancellation()
+        }
+
+        do {
+            try await currentStreamTask?.value
+        } catch is CancellationError {
+            if messages[assistantIndex].text.isEmpty {
+                messages[assistantIndex].text = "Applying changes timed out. Please try again."
+            } else {
+                messages[assistantIndex].text += "\n\nApplying changes timed out. Please try again."
+            }
+            messages[assistantIndex].isError = true
+            messages[assistantIndex].isApplying = false
         } catch {
             if messages[assistantIndex].text.isEmpty {
                 messages[assistantIndex].text = "Error: \(error.localizedDescription)"
@@ -293,6 +316,9 @@ struct ChatDrawerView: View {
             messages[assistantIndex].isApplying = false
         }
 
+        applyingTimeoutTask?.cancel()
+        applyingTimeoutTask = nil
+        currentStreamTask = nil
         isSending = false
     }
 }
