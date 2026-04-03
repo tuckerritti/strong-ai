@@ -11,6 +11,7 @@ final class TimerService {
     var remainingSeconds: Int = 0
     var totalSeconds: Int = 0
     var isRunning: Bool = false
+    var expiredCount: Int = 0
 
     let soundService = RestSoundService()
 
@@ -112,6 +113,7 @@ final class TimerService {
         timer?.invalidate()
         timer = nil
         isRunning = false
+        expiredCount += 1
         remainingSeconds = 0
         totalSeconds = 0
         fireDate = nil

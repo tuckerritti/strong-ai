@@ -92,5 +92,6 @@ struct GoalsStepView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
         }
+        .sensoryFeedback(.selection, trigger: goals)
     }
 }

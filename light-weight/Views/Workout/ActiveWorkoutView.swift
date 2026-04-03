@@ -27,6 +27,7 @@ struct ActiveWorkoutView: View {
     @State private var chatDetent: PresentationDetent = .height(90)
     @State private var chatPendingMessage: String?
     @State private var showChat = false
+    @State private var workoutFinishedCount = 0
 
     private var profile: UserProfile? { profiles.first }
 
@@ -50,6 +51,8 @@ struct ActiveWorkoutView: View {
                 .padding(.bottom, 120)
             }
         }
+        .sensoryFeedback(.success, trigger: workoutFinishedCount)
+        .sensoryFeedback(.warning, trigger: viewModel.timerService.expiredCount)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
         .scrollDismissesKeyboard(.interactively)
@@ -274,6 +277,7 @@ struct ActiveWorkoutView: View {
 
     @MainActor
     private func finishWorkout() {
+        workoutFinishedCount += 1
         showChat = false
         debriefRecentLogs = recentLogs.prefix(14).map { WorkoutLogSnapshot(from: $0) }
         logger.info(

@@ -88,6 +88,10 @@ struct HomeView: View {
                 }
             }
 
+            .sensoryFeedback(.impact, trigger: appState.isWorkoutActive) { oldValue, newValue in
+                oldValue == false && newValue == true
+            }
+
             if muscleMapExpanded {
                 ExpandedMuscleMapView(
                     logs: recentLogs,
