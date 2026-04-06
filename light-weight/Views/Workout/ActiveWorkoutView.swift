@@ -18,7 +18,7 @@ struct ActiveWorkoutView: View {
     @Query private var profiles: [UserProfile]
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
 
-    let workout: Workout
+    private let workout: Workout
     @State private var viewModel: ActiveWorkoutViewModel
     @State private var showingDebrief = false
     @State private var finishedLog: WorkoutLog?
@@ -33,6 +33,11 @@ struct ActiveWorkoutView: View {
     init(workout: Workout) {
         self.workout = workout
         self._viewModel = State(initialValue: ActiveWorkoutViewModel(workout: workout))
+    }
+
+    init(restoredState state: ActiveWorkoutState) {
+        self.workout = Workout(name: state.workoutName, exercises: state.workoutExercises)
+        self._viewModel = State(initialValue: ActiveWorkoutViewModel(restoredState: state))
     }
 
     var body: some View {
@@ -122,6 +127,7 @@ struct ActiveWorkoutView: View {
         }
         .onAppear {
             appState.isWorkoutActive = true
+            appState.activeWorkoutViewModel = viewModel
             appState.chatDetent = .height(90)
             apiKey = UserProfileService.loadAPIKey()
             viewModel.apiKey = apiKey
@@ -137,6 +143,7 @@ struct ActiveWorkoutView: View {
         }
         .onDisappear {
             appState.isWorkoutActive = false
+            appState.activeWorkoutViewModel = nil
         }
     }
 
@@ -262,6 +269,7 @@ struct ActiveWorkoutView: View {
     private func dismissWorkout() {
         showChat = false
         viewModel.stop()
+        ActiveWorkoutCacheService.clear()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             dismiss()
         }
@@ -270,6 +278,7 @@ struct ActiveWorkoutView: View {
     @MainActor
     private func finishWorkout() {
         showChat = false
+        ActiveWorkoutCacheService.clear()
         debriefRecentLogs = recentLogs.prefix(14).map { WorkoutLogSnapshot(from: $0) }
         let log = viewModel.finish()
         log.entries = ExerciseNameResolver.canonicalize(
@@ -396,6 +405,7 @@ final class ActiveWorkoutViewModel {
     private var workoutExercises: [WorkoutExercise]
     private var elapsedTimer: Timer?
     private var hasStarted = false
+    private var isRestored = false
 
     var elapsedSeconds: Int = 0
 
@@ -438,11 +448,28 @@ final class ActiveWorkoutViewModel {
         }
     }
 
+    init(restoredState state: ActiveWorkoutState) {
+        self.workoutName = state.workoutName
+        self.workoutExercises = state.workoutExercises
+        self.entries = state.entries
+        self.startedAt = state.startedAt
+        self.isRestored = true
+    }
+
+    func toState() -> ActiveWorkoutState {
+        ActiveWorkoutState(
+            workoutName: workoutName,
+            workoutExercises: workoutExercises,
+            entries: entries,
+            startedAt: startedAt
+        )
+    }
+
     func start() {
         guard !hasStarted else { return }
         hasStarted = true
-        startedAt = .now
-        elapsedSeconds = 0
+        if !isRestored { startedAt = .now }
+        elapsedSeconds = Int(Date().timeIntervalSince(startedAt))
         elapsedTimer?.invalidate()
         elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self else { return }
@@ -505,6 +532,8 @@ final class ActiveWorkoutViewModel {
         if !apiKey.isEmpty && missedTarget {
             requestRPEAdjustment()
         }
+
+        ActiveWorkoutCacheService.save(toState())
     }
 
     func editSet(exerciseIndex: Int, setIndex: Int, weight: Double, reps: Int, rpe: Int) {
@@ -517,6 +546,8 @@ final class ActiveWorkoutViewModel {
             workoutExercises[exerciseIndex].sets[setIndex].weight = weight
             workoutExercises[exerciseIndex].sets[setIndex].reps = reps
         }
+
+        ActiveWorkoutCacheService.save(toState())
     }
 
     func nextAdjustmentGeneration() -> Int {

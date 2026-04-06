@@ -10,6 +10,7 @@ final class AppState {
     var chatDetent: PresentationDetent = .height(90)
     var pendingMessage: String?
     var isWorkoutActive = false
+    var activeWorkoutViewModel: ActiveWorkoutViewModel?
     var showTokenCost = UserDefaults.standard.bool(forKey: "showTokenCost") {
         didSet {
             guard shouldPersistState else { return }
@@ -56,6 +57,7 @@ final class AppState {
         chatDetent = .height(90)
         pendingMessage = nil
         isWorkoutActive = false
+        activeWorkoutViewModel = nil
         showTokenCost = false
         showRestTimer = true
         dailyCost = .zero
@@ -119,6 +121,9 @@ struct ContentView: View {
                 .onAppear { AppState.shared = appState }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .background {
+                        if let vm = appState.activeWorkoutViewModel {
+                            ActiveWorkoutCacheService.save(vm.toState())
+                        }
                         ICloudBackupService.backupAll(modelContext: modelContext)
                     }
                 }

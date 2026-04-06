@@ -27,7 +27,7 @@ struct HomeView: View {
     @State private var navigationPath = NavigationPath()
 
     private enum Destination: Hashable {
-        case library, history, settings, activeWorkout(Workout)
+        case library, history, settings, activeWorkout(Workout), restoreWorkout(ActiveWorkoutState)
     }
 
     private var profile: UserProfile? { profiles.first }
@@ -59,6 +59,9 @@ struct HomeView: View {
                 }
                 .onAppear {
                     apiKey = UserProfileService.loadAPIKey()
+                    if let savedState = ActiveWorkoutCacheService.load() {
+                        navigationPath.append(Destination.restoreWorkout(savedState))
+                    }
                     Task {
                         await generateWorkoutIfNeeded()
                     }
@@ -84,6 +87,7 @@ struct HomeView: View {
                     case .history: HistoryListView()
                     case .settings: SettingsView()
                     case .activeWorkout(let workout): ActiveWorkoutView(workout: workout)
+                    case .restoreWorkout(let state): ActiveWorkoutView(restoredState: state)
                     }
                 }
             }
