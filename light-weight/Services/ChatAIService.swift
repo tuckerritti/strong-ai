@@ -166,30 +166,30 @@ struct ChatAIService {
     }
 
     private static func parseResult(from response: String) throws -> ChatResult {
-        guard let match = response.firstMatch(of: separatorPattern) else {
-            // No separator — text-only response, no workout modification
-            return ChatResult(
-                workout: nil,
-                explanation: response.trimmingCharacters(in: .whitespacesAndNewlines)
-            )
+        let explanation: String
+        let jsonString: String
+
+        if let match = response.firstMatch(of: separatorPattern) {
+            explanation = response[response.startIndex..<match.range.lowerBound]
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let afterSeparator = String(response[match.range.upperBound...])
+            jsonString = JSONExtractor.extractObject(from: afterSeparator)
+        } else {
+            // Fallback: try to find JSON in the whole response
+            explanation = ""
+            jsonString = JSONExtractor.extractObject(from: response)
         }
 
-        let explanation = response[response.startIndex..<match.range.lowerBound]
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let afterSeparator = String(response[match.range.upperBound...])
-        let jsonString = JSONExtractor.extractObject(from: afterSeparator)
-
-        guard let data = jsonString.data(using: .utf8) else {
-            throw ChatParseError.invalidJSON
+        guard let data = jsonString.data(using: .utf8),
+              let workout = try? JSONDecoder().decode(Workout.self, from: data) else {
+            // No valid workout JSON found — treat as text-only
+            let text = explanation.isEmpty
+                ? response.trimmingCharacters(in: .whitespacesAndNewlines)
+                : explanation
+            return ChatResult(workout: nil, explanation: text)
         }
 
-        do {
-            let workout = try JSONDecoder().decode(Workout.self, from: data)
-            return ChatResult(workout: workout, explanation: explanation)
-        } catch {
-            logger.error("Chat workout decode failed: \(String(describing: error))")
-            throw ChatParseError.decodingFailed(String(describing: error))
-        }
+        return ChatResult(workout: workout, explanation: explanation)
     }
 
     enum ChatParseError: LocalizedError {
