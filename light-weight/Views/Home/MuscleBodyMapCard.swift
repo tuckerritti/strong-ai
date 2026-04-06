@@ -113,7 +113,7 @@ private func muscleIntensities(from logs: [WorkoutLog]) -> [MuscleIntensity] {
 
         for entry in log.entries {
             let entryVolume = entry.sets
-                .filter { $0.completedAt != nil }
+                .filter { $0.completedAt != nil && !$0.isWarmup }
                 .reduce(0.0) { $0 + $1.weight * Double($1.reps) }
             guard entryVolume > 0 else { continue }
 

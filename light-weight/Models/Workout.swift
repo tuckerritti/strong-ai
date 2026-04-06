@@ -8,7 +8,7 @@ struct Workout: Codable, Sendable, Hashable {
     var totalSets: Int { exercises.reduce(0) { $0 + $1.sets.filter { !$0.isWarmup }.count } }
     var estimatedMinutes: Int {
         let totalRest = exercises.flatMap(\.sets).reduce(0) { $0 + $1.restSeconds }
-        let workTime = totalSets * 45 // ~45s per set
+        let workTime = exercises.flatMap(\.sets).count * 45 // ~45s per set
         return (totalRest + workTime) / 60
     }
 }
