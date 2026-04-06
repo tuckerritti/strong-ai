@@ -12,7 +12,7 @@ struct MuscleBodyMapCard: View {
                 .heatmap(muscleIntensities(from: logs), colorScale: volumeColorScale)
                 .frame(height: 80)
                 .allowsHitTesting(false)
-            Text("VOLUME")
+            Text("SORENESS")
                 .font(.system(size: 10, weight: .semibold))
                 .tracking(0.8)
                 .foregroundStyle(Color.textTertiary)
@@ -93,7 +93,7 @@ private let exerciseMuscles: [Muscle] = Muscle.allCases.filter {
     ![Muscle.head, .hands, .feet, .knees, .ankles].contains($0)
 }
 
-/// Green (low volume) → yellow → orange → red (high volume).
+/// Green (low soreness) → yellow → orange → red (high soreness).
 private let volumeColorScale = HeatmapColorScale(colors: [
     Color(hex: 0x34C759),
     .yellow,
@@ -101,34 +101,52 @@ private let volumeColorScale = HeatmapColorScale(colors: [
     .red
 ])
 
+/// DOMS fatigue curve: ramps 0–12h, peaks 12–48h, decays 48–120h.
+private func fatigueMultiplier(hoursSinceSet hours: Double) -> Double {
+    if hours < 0 { return 0 }
+    if hours < 12 { return 0.4 + 0.6 * (hours / 12.0) }
+    if hours < 48 { return 1.0 }
+    if hours < 120 { return 1.0 - (hours - 48.0) / 72.0 }
+    return 0
+}
+
+/// Effort scaling: RPE 10 → 1.0, RPE 5 → 0.75, RPE 0 (unset) → 0.5.
+private func effortMultiplier(rpe: Int) -> Double {
+    0.5 + 0.5 * (Double(rpe) / 10.0)
+}
+
 private func muscleIntensities(from logs: [WorkoutLog]) -> [MuscleIntensity] {
-    let calendar = Calendar.current
-    let today = calendar.startOfDay(for: .now)
-    var volumeByMuscle: [Muscle: Double] = Dictionary(uniqueKeysWithValues: exerciseMuscles.map { ($0, 0.0) })
+    let now = Date.now
+    var fatigueByMuscle: [Muscle: Double] = Dictionary(uniqueKeysWithValues: exerciseMuscles.map { ($0, 0.0) })
 
     for log in logs {
-        guard let finishedAt = log.finishedAt else { continue }
-        let daysSince = calendar.dateComponents([.day], from: calendar.startOfDay(for: finishedAt), to: today).day ?? 999
-        guard daysSince <= 6 else { continue }
+        guard log.finishedAt != nil else { continue }
 
         for entry in log.entries {
-            let entryVolume = entry.sets
-                .filter { $0.completedAt != nil }
-                .reduce(0.0) { $0 + $1.weight * Double($1.reps) }
-            guard entryVolume > 0 else { continue }
+            for set in entry.sets {
+                guard let completedAt = set.completedAt else { continue }
 
-            for target in entry.targetMuscles {
-                if let muscle = Muscle(rawValue: target.muscle) {
-                    volumeByMuscle[muscle, default: 0] += entryVolume * target.weight
+                let hours = now.timeIntervalSince(completedAt) / 3600.0
+                let fatigue = fatigueMultiplier(hoursSinceSet: hours)
+                guard fatigue > 0 else { continue }
+
+                let volume = set.weight * Double(set.reps)
+                let effort = effortMultiplier(rpe: set.rpe)
+                let contribution = volume * effort * fatigue
+
+                for target in entry.targetMuscles {
+                    if let muscle = Muscle(rawValue: target.muscle) {
+                        fatigueByMuscle[muscle, default: 0] += contribution * target.weight
+                    }
                 }
             }
         }
     }
 
-    let maxVolume = volumeByMuscle.values.max() ?? 0
-    guard maxVolume > 0 else {
-        return volumeByMuscle.map { MuscleIntensity(muscle: $0.key, intensity: 0) }
+    let maxFatigue = fatigueByMuscle.values.max() ?? 0
+    guard maxFatigue > 0 else {
+        return fatigueByMuscle.map { MuscleIntensity(muscle: $0.key, intensity: 0) }
     }
 
-    return volumeByMuscle.map { MuscleIntensity(muscle: $0.key, intensity: $0.value / maxVolume) }
+    return fatigueByMuscle.map { MuscleIntensity(muscle: $0.key, intensity: $0.value / maxFatigue) }
 }
