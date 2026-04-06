@@ -260,7 +260,7 @@ struct HomeView: View {
                     .tracking(-1.0)
                     .foregroundStyle(Color.textPrimary)
                 Spacer()
-                HStack(spacing: 8) {
+                HStack(spacing: 0) {
                     NavigationLink(value: Destination.library) {
                         Image(systemName: "book.fill")
                             .font(.system(size: 20))
@@ -286,6 +286,7 @@ struct HomeView: View {
                     }
                     .accessibilityLabel("Settings")
                 }
+                .padding(.leading, 12)
             }
         }
         .padding(.horizontal, 20)
