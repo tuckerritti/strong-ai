@@ -18,8 +18,6 @@ struct ActiveWorkoutView: View {
     @Query private var profiles: [UserProfile]
     @Query(sort: \Exercise.name) private var exercises: [Exercise]
 
-    let workout: Workout
-    @State private var viewModel: ActiveWorkoutViewModel
     @State private var showingDebrief = false
     @State private var finishedLog: WorkoutLog?
     @State private var apiKey = ""
@@ -31,22 +29,32 @@ struct ActiveWorkoutView: View {
 
     private var profile: UserProfile? { profiles.first }
 
-    init(workout: Workout) {
-        self.workout = workout
-        self._viewModel = State(initialValue: ActiveWorkoutViewModel(workout: workout))
+    var body: some View {
+        Group {
+            if let viewModel = appState.activeViewModel {
+                activeWorkoutContent(viewModel: viewModel)
+            } else {
+                Color.clear
+                    .onAppear {
+                        dismiss()
+                    }
+            }
+        }
     }
 
-    var body: some View {
+    private func activeWorkoutContent(viewModel: ActiveWorkoutViewModel) -> some View {
         VStack(spacing: 0) {
-            timerSection
+            timerSection(viewModel: viewModel)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    headerSection
+                    headerSection(viewModel: viewModel)
 
                     ForEach(Array(viewModel.entries.enumerated()), id: \.element.id) { exerciseIndex, entry in
-                        exerciseSection(exerciseIndex: exerciseIndex, entry: entry)
+                        exerciseSection(viewModel: viewModel, exerciseIndex: exerciseIndex, entry: entry)
                     }
+
+                    cancelButton(viewModel: viewModel)
                 }
                 .padding(.bottom, 120)
             }
@@ -61,17 +69,12 @@ struct ActiveWorkoutView: View {
         })
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    if viewModel.completedSets > 0 {
-                        showNativeAlert(
-                            title: "Discard Workout?",
-                            message: "You've logged \(viewModel.completedSets) sets. This can't be undone.",
-                            confirmTitle: "Discard",
-                            isDestructive: true
-                        ) { dismissWorkout() }
-                    } else {
-                        dismissWorkout()
-                    }
+                Button {
+                    showChat = false
+                    appState.isWorkoutActive = false
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
                 }
             }
             ToolbarItem(placement: .confirmationAction) {
@@ -81,7 +84,7 @@ struct ActiveWorkoutView: View {
                         message: "Save your workout with \(viewModel.completedSets) sets completed?",
                         confirmTitle: "Finish",
                         isDestructive: false
-                    ) { finishWorkout() }
+                    ) { finishWorkout(viewModel: viewModel) }
                 }
                 .disabled(viewModel.completedSets == 0)
             }
@@ -96,7 +99,7 @@ struct ActiveWorkoutView: View {
                     elapsedTime: viewModel.elapsedFormatted,
                     exerciseProgress: "\(viewModel.completedSets) of \(viewModel.totalSets) sets",
                     onSend: { message, history in
-                        await streamMidWorkoutChat(message, history: history)
+                        await streamMidWorkoutChat(viewModel: viewModel, message, history: history)
                     }
                 )
             }
@@ -108,6 +111,9 @@ struct ActiveWorkoutView: View {
             finishedLog = nil
             debriefRecentLogs = []
             dismiss()
+            DispatchQueue.main.async {
+                appState.activeViewModel = nil
+            }
         }) {
             if let log = finishedLog {
                 WorkoutDebriefView(
@@ -129,19 +135,20 @@ struct ActiveWorkoutView: View {
             apiKey = UserProfileService.loadAPIKey()
             viewModel.apiKey = apiKey
             viewModel.start()
+            viewModel.resumeTimer()
             logger.info(
                 "workout_session start exercises=\(viewModel.totalExercises, privacy: .public) totalSets=\(viewModel.totalSets, privacy: .public) apiKeyPresent=\(!apiKey.isEmpty, privacy: .public)"
             )
             if appState.showRestTimer {
                 viewModel.timerService.requestPermission()
             }
-            // Exercises are persisted to library when the workout finishes
             Task {
                 try? await Task.sleep(for: .milliseconds(600))
                 showChat = true
             }
         }
         .onDisappear {
+            appState.activeViewModel?.pauseTimer()
             appState.isWorkoutActive = false
             logger.info("workout_session disappear completedSets=\(viewModel.completedSets, privacy: .public)")
         }
@@ -149,7 +156,7 @@ struct ActiveWorkoutView: View {
 
     // MARK: - Header
 
-    private var headerSection: some View {
+    private func headerSection(viewModel: ActiveWorkoutViewModel) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(viewModel.workoutName)
                 .font(.custom("SpaceGrotesk-Bold", size: 28))
@@ -179,7 +186,7 @@ struct ActiveWorkoutView: View {
     // MARK: - Timer
 
     @ViewBuilder
-    private var timerSection: some View {
+    private func timerSection(viewModel: ActiveWorkoutViewModel) -> some View {
         if appState.showRestTimer && viewModel.timerService.isRunning {
             RestTimerView(timerService: viewModel.timerService)
                 .padding(.horizontal, 20)
@@ -202,7 +209,7 @@ struct ActiveWorkoutView: View {
 
     // MARK: - Exercise Section
 
-    private func exerciseSection(exerciseIndex: Int, entry: LogEntry) -> some View {
+    private func exerciseSection(viewModel: ActiveWorkoutViewModel, exerciseIndex: Int, entry: LogEntry) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             let normalizedEntryName = ExerciseNameResolver.normalize(entry.exerciseName)
             Group {
@@ -263,21 +270,45 @@ struct ActiveWorkoutView: View {
         }
     }
 
+    // MARK: - Cancel Button
+
+    private func cancelButton(viewModel: ActiveWorkoutViewModel) -> some View {
+        Button {
+            if viewModel.completedSets > 0 {
+                showNativeAlert(
+                    title: "Discard Workout?",
+                    message: "You've logged \(viewModel.completedSets) sets. This can't be undone.",
+                    confirmTitle: "Discard",
+                    isDestructive: true
+                ) { dismissWorkout(viewModel: viewModel) }
+            } else {
+                dismissWorkout(viewModel: viewModel)
+            }
+        } label: {
+            Text("Cancel Workout")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 32)
+    }
+
     // MARK: - Actions
 
-
-
-    private func dismissWorkout() {
+    private func dismissWorkout(viewModel: ActiveWorkoutViewModel) {
         showChat = false
         viewModel.stop()
+        dismiss()
         logger.info("workout_session discard completedSets=\(viewModel.completedSets, privacy: .public)")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            dismiss()
+            appState.activeViewModel = nil
         }
     }
 
     @MainActor
-    private func finishWorkout() {
+    private func finishWorkout(viewModel: ActiveWorkoutViewModel) {
         workoutFinishedCount += 1
         showChat = false
         debriefRecentLogs = recentLogs.prefix(14).map { WorkoutLogSnapshot(from: $0) }
@@ -321,7 +352,11 @@ struct ActiveWorkoutView: View {
         }
     }
 
-    private func streamMidWorkoutChat(_ message: String, history: [ChatMessage]) async -> AsyncThrowingStream<ChatStreamEvent, Error>? {
+    private func streamMidWorkoutChat(
+        viewModel: ActiveWorkoutViewModel,
+        _ message: String,
+        history: [ChatMessage]
+    ) async -> AsyncThrowingStream<ChatStreamEvent, Error>? {
         let currentWorkout = viewModel.currentWorkout
         let profileSnapshot = UserProfileSnapshot(from: profile)
         let generation = viewModel.nextAdjustmentGeneration()
@@ -467,8 +502,12 @@ final class ActiveWorkoutViewModel {
         hasStarted = true
         startedAt = .now
         elapsedSeconds = 0
+        resumeTimer()
         logger.info("workout_session_clock start exercises=\(self.entries.count, privacy: .public) totalSets=\(self.totalSets, privacy: .public)")
-        elapsedTimer?.invalidate()
+    }
+
+    func resumeTimer() {
+        guard elapsedTimer == nil else { return }
         elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self else { return }
             MainActor.assumeIsolated {
@@ -477,9 +516,13 @@ final class ActiveWorkoutViewModel {
         }
     }
 
-    func stop() {
+    func pauseTimer() {
         elapsedTimer?.invalidate()
         elapsedTimer = nil
+    }
+
+    func stop() {
+        pauseTimer()
         timerService.stop()
         logger.info("workout_session_clock stop elapsedSeconds=\(self.elapsedSeconds, privacy: .public)")
     }

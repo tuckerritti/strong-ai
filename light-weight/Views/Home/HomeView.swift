@@ -27,7 +27,7 @@ struct HomeView: View {
     @State private var navigationPath = NavigationPath()
 
     private enum Destination: Hashable {
-        case library, history, settings, activeWorkout(Workout)
+        case library, history, settings, activeWorkout
     }
 
     private var profile: UserProfile? { profiles.first }
@@ -67,7 +67,7 @@ struct HomeView: View {
                     apiKey = UserProfileService.loadAPIKey()
                 }
                 .overlay {
-                    if !appState.isWorkoutActive && navigationPath.isEmpty {
+                    if navigationPath.isEmpty {
                         ChatDrawerView(
                             selectedDetent: $state.chatDetent,
                             pendingMessage: $state.pendingMessage,
@@ -83,7 +83,7 @@ struct HomeView: View {
                     case .library: ExerciseLibraryView()
                     case .history: HistoryListView()
                     case .settings: SettingsView()
-                    case .activeWorkout(let workout): ActiveWorkoutView(workout: workout)
+                    case .activeWorkout: ActiveWorkoutView()
                     }
                 }
             }
@@ -456,8 +456,13 @@ struct HomeView: View {
     }
 
     private func startButton(_ workout: Workout) -> some View {
-        NavigationLink(value: Destination.activeWorkout(workout)) {
-            Text("Start Workout")
+        Button {
+            if appState.activeViewModel == nil {
+                appState.activeViewModel = ActiveWorkoutViewModel(workout: workout)
+            }
+            navigationPath.append(Destination.activeWorkout)
+        } label: {
+            Text(appState.activeViewModel != nil ? "Resume Workout" : "Start Workout")
                 .font(.custom("SpaceGrotesk-Bold", size: 17))
                 .tracking(-0.2)
                 .foregroundStyle(Color.buttonPrimaryText)
