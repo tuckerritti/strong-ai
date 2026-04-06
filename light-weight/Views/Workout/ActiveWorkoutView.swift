@@ -359,11 +359,10 @@ struct ActiveWorkoutView: View {
     ) async -> AsyncThrowingStream<ChatStreamEvent, Error>? {
         let currentWorkout = viewModel.currentWorkout
         let profileSnapshot = UserProfileSnapshot(from: profile)
-        let generation = viewModel.nextAdjustmentGeneration()
+        let version = viewModel.claimNextMutationVersion()
         logger.info(
-            "mid_workout_chat start history=\(history.count, privacy: .public) generation=\(generation, privacy: .public) completedSets=\(viewModel.completedSets, privacy: .public)"
+            "mid_workout_chat start history=\(history.count, privacy: .public) version=\(version, privacy: .public) completedSets=\(viewModel.completedSets, privacy: .public)"
         )
-
         do {
             let stream = try await ChatAIService.stream(
                 apiKey: apiKey,
@@ -382,19 +381,26 @@ struct ActiveWorkoutView: View {
                         for try await event in stream {
                             switch event {
                             case .result(let result):
-                                if viewModel.shouldApplyAdjustment(generation: generation) {
-                                    viewModel.applyModifiedWorkout(result.workout)
-                                    logger.info(
-                                        "mid_workout_chat apply_success generation=\(generation, privacy: .public) exercises=\(result.workout.exercises.count, privacy: .public) totalSets=\(result.workout.totalSets, privacy: .public)"
-                                    )
+                                if let workout = result.workout {
+                                    if viewModel.tryApplyModifiedWorkout(workout, expectedVersion: version) {
+                                        logger.info(
+                                            "mid_workout_chat apply_success version=\(version, privacy: .public) exercises=\(workout.exercises.count, privacy: .public) totalSets=\(workout.totalSets, privacy: .public)"
+                                        )
+                                        continuation.yield(event)
+                                    } else {
+                                        logger.info("mid_workout_chat discard_stale version=\(version, privacy: .public)")
+                                        continuation.yield(.result(ChatResult(
+                                            workout: nil,
+                                            explanation: "The workout changed while I was responding, so I didn't apply these suggestions. Ask again if you still want to update the plan."
+                                        )))
+                                    }
                                 } else {
-                                    logger.info("mid_workout_chat discard_stale generation=\(generation, privacy: .public)")
-                                    continue
+                                    logger.info("mid_workout_chat no_workout_change version=\(version, privacy: .public)")
+                                    continuation.yield(event)
                                 }
                             case .usage, .text, .applying:
-                                break
+                                continuation.yield(event)
                             }
-                            continuation.yield(event)
                         }
                         continuation.finish()
                     } catch {
@@ -449,7 +455,7 @@ final class ActiveWorkoutViewModel {
     let timerService = TimerService()
     var apiKey: String = ""
     var updatedSetKeys: Set<String> = []
-    private var adjustmentGeneration = 0
+    private var latestClaimedVersion = 0
 
     private var workoutExercises: [WorkoutExercise]
     private var elapsedTimer: Timer?
@@ -591,22 +597,24 @@ final class ActiveWorkoutViewModel {
         }
     }
 
-    func nextAdjustmentGeneration() -> Int {
-        adjustmentGeneration += 1
-        return adjustmentGeneration
+    func claimNextMutationVersion() -> Int {
+        latestClaimedVersion += 1
+        return latestClaimedVersion
     }
 
-    func shouldApplyAdjustment(generation: Int) -> Bool {
-        generation == adjustmentGeneration
+    func tryApplyModifiedWorkout(_ newWorkout: Workout, expectedVersion: Int) -> Bool {
+        guard expectedVersion == latestClaimedVersion else { return false }
+        applyModifiedWorkout(newWorkout)
+        return true
     }
 
     private func requestRPEAdjustment() {
         let key = apiKey
         let workout = currentWorkout
         let progress = entries
-        let generation = nextAdjustmentGeneration()
+        let version = claimNextMutationVersion()
         logger.info(
-            "rpe_adjustment request generation=\(generation, privacy: .public) completedSets=\(self.completedSets, privacy: .public)"
+            "rpe_adjustment request version=\(version, privacy: .public) completedSets=\(self.completedSets, privacy: .public)"
         )
 
         Task {
@@ -615,21 +623,20 @@ final class ActiveWorkoutViewModel {
                 workout: workout,
                 progress: progress
             ) {
-                if shouldApplyAdjustment(generation: generation) {
-                    applyModifiedWorkout(adjusted)
+                if tryApplyModifiedWorkout(adjusted, expectedVersion: version) {
                     logger.info(
-                        "rpe_adjustment apply_success generation=\(generation, privacy: .public) exercises=\(adjusted.exercises.count, privacy: .public) totalSets=\(adjusted.totalSets, privacy: .public)"
+                        "rpe_adjustment apply_success version=\(version, privacy: .public) exercises=\(adjusted.exercises.count, privacy: .public) totalSets=\(adjusted.totalSets, privacy: .public)"
                     )
                 } else {
-                    logger.info("rpe_adjustment discard_stale generation=\(generation, privacy: .public)")
+                    logger.info("rpe_adjustment discard_stale version=\(version, privacy: .public)")
                 }
             } else {
-                logger.warning("rpe_adjustment no_change generation=\(generation, privacy: .public)")
+                logger.warning("rpe_adjustment no_change version=\(version, privacy: .public)")
             }
         }
     }
 
-    func applyModifiedWorkout(_ newWorkout: Workout) {
+    private func applyModifiedWorkout(_ newWorkout: Workout) {
         let previousExerciseCount = entries.count
         workoutName = newWorkout.name
 

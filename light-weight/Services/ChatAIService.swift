@@ -13,7 +13,7 @@ enum ChatStreamEvent: Sendable {
 }
 
 struct ChatResult: Sendable, Codable {
-    var workout: Workout
+    var workout: Workout?
     var explanation: String
 }
 
@@ -71,11 +71,13 @@ struct ChatAIService {
             + exercises.map(ExerciseReference.init)
 
         let systemPrompt = """
-        You are an expert strength coach. The user is asking you to \(mode) a workout via natural language.
+        You are an expert strength coach chatting with a user about their workout.
 
-        Respond in this EXACT format — explanation first, then JSON after a separator:
+        If the user is just asking a question or chatting, respond conversationally. Do NOT include workout JSON.
 
-        Write 1-2 sentences explaining what you did and why.
+        Only when the user asks you to \(mode) the workout, respond in this EXACT format — explanation first, then JSON after a separator:
+
+        Write a detailed explanation of what you changed and why — mention specific exercises, sets, reps, or weight choices and the reasoning behind them (e.g. muscle balance, fatigue management, progressive overload, the user's goals or injuries). Be thorough so the user understands your coaching decisions.
         ---JSON
         {
           "name": "Workout Name",
@@ -179,14 +181,16 @@ struct ChatAIService {
 
                     // Parse the final result
                     var result = try parseResult(from: accumulated)
-                    result.workout = ExerciseNameResolver.canonicalize(
-                        workout: result.workout,
-                        references: workoutReferences
-                    )
-                    let totalSets = result.workout.exercises.reduce(0) { $0 + $1.sets.count }
-                    logger.info(
-                        "chat_stream success exercises=\(result.workout.exercises.count, privacy: .public) totalSets=\(totalSets, privacy: .public)"
-                    )
+                    if let workout = result.workout {
+                        result.workout = ExerciseNameResolver.canonicalize(
+                            workout: workout,
+                            references: workoutReferences
+                        )
+                        let totalSets = workout.exercises.reduce(0) { $0 + $1.sets.count }
+                        logger.info(
+                            "chat_stream success exercises=\(workout.exercises.count, privacy: .public) totalSets=\(totalSets, privacy: .public)"
+                        )
+                    }
                     continuation.yield(.result(result))
                     continuation.finish()
                 } catch {
@@ -246,17 +250,16 @@ struct ChatAIService {
             jsonString = JSONExtractor.extractObject(from: response)
         }
 
-        guard let data = jsonString.data(using: .utf8) else {
-            throw ChatParseError.invalidJSON
+        guard let data = jsonString.data(using: .utf8),
+              let workout = try? JSONDecoder().decode(Workout.self, from: data) else {
+            // No valid workout JSON found — treat as text-only
+            let text = explanation.isEmpty
+                ? response.trimmingCharacters(in: .whitespacesAndNewlines)
+                : explanation
+            return ChatResult(workout: nil, explanation: text)
         }
 
-        do {
-            let workout = try JSONDecoder().decode(Workout.self, from: data)
-            return ChatResult(workout: workout, explanation: explanation)
-        } catch {
-            logger.error("Chat workout decode failed: \(String(describing: error))")
-            throw ChatParseError.decodingFailed(String(describing: error))
-        }
+        return ChatResult(workout: workout, explanation: explanation)
     }
 
     enum ChatParseError: LocalizedError {

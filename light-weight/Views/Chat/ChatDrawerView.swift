@@ -278,7 +278,7 @@ struct ChatDrawerView: View {
                         messages[assistantIndex].text = result.explanation
                     }
                     messages[assistantIndex].isApplying = false
-                    messages[assistantIndex].isApplied = true
+                    messages[assistantIndex].isApplied = result.workout != nil
                 case .usage(let cost):
                     messages[assistantIndex].tokenCost = (messages[assistantIndex].tokenCost ?? .zero) + cost
                 }
