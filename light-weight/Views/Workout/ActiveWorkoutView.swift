@@ -241,8 +241,9 @@ struct ActiveWorkoutView: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(entry.sets.enumerated()), id: \.element.id) { setIndex, set in
+                    let workingSetNumber = entry.sets.prefix(setIndex).filter { !$0.isWarmup }.count + 1
                     SetRowView(
-                        setNumber: setIndex + 1,
+                        setNumber: workingSetNumber,
                         logSet: set,
                         plannedSet: viewModel.plannedSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
                         isActive: viewModel.isActiveSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
@@ -421,12 +422,13 @@ final class ActiveWorkoutViewModel {
 
     var elapsedSeconds: Int = 0
 
-    var totalSets: Int { entries.reduce(0) { $0 + $1.sets.count } }
-    var completedSets: Int { entries.flatMap(\.sets).filter { $0.completedAt != nil }.count }
+    var totalSets: Int { entries.reduce(0) { $0 + $1.sets.filter { !$0.isWarmup }.count } }
+    var completedSets: Int { entries.flatMap(\.sets).filter { $0.completedAt != nil && !$0.isWarmup }.count }
     var totalExercises: Int { entries.count }
     var completedExercises: Int {
         entries.reduce(0) { count, entry in
-            entry.sets.allSatisfy { $0.completedAt != nil } ? count + 1 : count
+            let workingSets = entry.sets.filter { !$0.isWarmup }
+            return workingSets.allSatisfy({ $0.completedAt != nil }) ? count + 1 : count
         }
     }
 
@@ -454,7 +456,7 @@ final class ActiveWorkoutViewModel {
                 muscleGroup: exercise.muscleGroup,
                 targetMuscles: exercise.targetMuscles,
                 sets: exercise.sets.map { plannedSet in
-                    LogSet(reps: plannedSet.reps, weight: plannedSet.weight, rpe: plannedSet.targetRpe ?? 0)
+                    LogSet(reps: plannedSet.reps, weight: plannedSet.weight, rpe: plannedSet.targetRpe ?? 0, isWarmup: plannedSet.isWarmup)
                 }
             )
         }
@@ -608,7 +610,7 @@ final class ActiveWorkoutViewModel {
                         let setIndex = completedSets.count + i
                         if setIndex < newExercise.sets.count {
                             let planned = newExercise.sets[setIndex]
-                            sets.append(LogSet(reps: planned.reps, weight: planned.weight, rpe: planned.targetRpe ?? 0))
+                            sets.append(LogSet(reps: planned.reps, weight: planned.weight, rpe: planned.targetRpe ?? 0, isWarmup: planned.isWarmup))
                         }
                     }
                     updatedEntries.append(LogEntry(
@@ -623,7 +625,7 @@ final class ActiveWorkoutViewModel {
                         exerciseName: newExercise.name,
                         muscleGroup: newExercise.muscleGroup,
                         targetMuscles: existing.targetMuscles,
-                        sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: $0.targetRpe ?? 0) }
+                        sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: $0.targetRpe ?? 0, isWarmup: $0.isWarmup) }
                     ))
                     updatedExercises.append(newExercise)
                 }
@@ -632,7 +634,7 @@ final class ActiveWorkoutViewModel {
                     exerciseName: newExercise.name,
                     muscleGroup: newExercise.muscleGroup,
                     targetMuscles: newExercise.targetMuscles,
-                    sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: $0.targetRpe ?? 0) }
+                    sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: $0.targetRpe ?? 0, isWarmup: $0.isWarmup) }
                 ))
                 updatedExercises.append(newExercise)
             }
@@ -767,7 +769,8 @@ final class ActiveWorkoutViewModel {
             reps: completedSet.reps,
             weight: completedSet.weight,
             restSeconds: plannedSet?.restSeconds ?? 90,
-            targetRpe: plannedSet?.targetRpe
+            targetRpe: plannedSet?.targetRpe,
+            isWarmup: completedSet.isWarmup
         )
     }
 
