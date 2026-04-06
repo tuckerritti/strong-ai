@@ -421,12 +421,13 @@ final class ActiveWorkoutViewModel {
 
     var elapsedSeconds: Int = 0
 
-    var totalSets: Int { entries.reduce(0) { $0 + $1.sets.count } }
-    var completedSets: Int { entries.flatMap(\.sets).filter { $0.completedAt != nil }.count }
+    var totalSets: Int { entries.reduce(0) { $0 + $1.sets.filter { !$0.isWarmup }.count } }
+    var completedSets: Int { entries.flatMap(\.sets).filter { $0.completedAt != nil && !$0.isWarmup }.count }
     var totalExercises: Int { entries.count }
     var completedExercises: Int {
         entries.reduce(0) { count, entry in
-            entry.sets.allSatisfy { $0.completedAt != nil } ? count + 1 : count
+            let workingSets = entry.sets.filter { !$0.isWarmup }
+            return workingSets.allSatisfy({ $0.completedAt != nil }) ? count + 1 : count
         }
     }
 
@@ -767,7 +768,8 @@ final class ActiveWorkoutViewModel {
             reps: completedSet.reps,
             weight: completedSet.weight,
             restSeconds: plannedSet?.restSeconds ?? 90,
-            targetRpe: plannedSet?.targetRpe
+            targetRpe: plannedSet?.targetRpe,
+            isWarmup: completedSet.isWarmup
         )
     }
 
