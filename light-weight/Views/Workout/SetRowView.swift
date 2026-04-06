@@ -6,6 +6,8 @@ struct SetRowView: View {
     let plannedSet: WorkoutSet?
     let isActive: Bool
     let isUpdating: Bool
+    let isAdjusting: Bool
+    let adjustmentFailed: Bool
     let onLog: (Double, Int, Int) -> Void
     var onEdit: ((Double, Int, Int) -> Void)? = nil
 
@@ -15,6 +17,7 @@ struct SetRowView: View {
     @State private var didInit = false
     @State private var sweepPosition: CGFloat = 1.3
     @State private var contentOpacity: Double = 1.0
+    @State private var pulseOpacity: Double = 0.0
     @State private var isEditing = false
 
     private var isCompleted: Bool { logSet.completedAt != nil }
@@ -63,25 +66,40 @@ struct SetRowView: View {
                 rpeText = logSet.rpe > 0 ? String(logSet.rpe) : ""
             }
         }
+        .opacity((isAdjusting && !isCompleted ? 0.5 : 1.0) * contentOpacity)
+        .animation(.easeOut(duration: 0.2), value: isAdjusting)
         .overlay {
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        stops: [
-                            .init(color: .clear, location: max(0, min(1, sweepPosition - 0.15))),
-                            .init(color: Color.textQuaternary, location: max(0, min(1, sweepPosition))),
-                            .init(color: .clear, location: max(0, min(1, sweepPosition + 0.15))),
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
+            if !isCompleted {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: max(0, min(1, sweepPosition - 0.15))),
+                                .init(color: Color.textQuaternary, location: max(0, min(1, sweepPosition))),
+                                .init(color: .clear, location: max(0, min(1, sweepPosition + 0.15))),
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
                     )
-                )
-                .opacity(sweepPosition < 1.3 ? 1 : 0)
+                    .opacity(sweepPosition < 1.3 ? 1 : 0)
                 .allowsHitTesting(false)
+            }
         }
-        .opacity(contentOpacity)
+        .background {
+            Rectangle()
+                .fill(adjustmentFailed ? Color.red : Color.gray)
+                .opacity(pulseOpacity)
+        }
+        .onChange(of: adjustmentFailed) {
+            guard adjustmentFailed, !isCompleted else { return }
+            pulseOpacity = 0.0
+            withAnimation(.easeInOut(duration: 0.25).repeatCount(10, autoreverses: true)) {
+                pulseOpacity = 0.3
+            }
+        }
         .onChange(of: isUpdating) {
-            guard isUpdating else { return }
+            guard isUpdating, !isCompleted else { return }
             sweepPosition = -0.3
             contentOpacity = 0.3
             withAnimation(.easeOut(duration: 0.8)) {
@@ -224,4 +242,3 @@ struct SetRowView: View {
         repsText = "\(logSet.reps)"
     }
 }
-

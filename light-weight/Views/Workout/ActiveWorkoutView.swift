@@ -92,7 +92,6 @@ struct ActiveWorkoutView: View {
                     workoutName: viewModel.workoutName,
                     elapsedTime: viewModel.elapsedFormatted,
                     exerciseProgress: "\(viewModel.completedSets) of \(viewModel.totalSets) sets",
-                    isAdjusting: viewModel.isAdjusting,
                     onSend: { message, history in
                         await streamMidWorkoutChat(message, history: history)
                     }
@@ -241,6 +240,8 @@ struct ActiveWorkoutView: View {
                         plannedSet: viewModel.plannedSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
                         isActive: viewModel.isActiveSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
                         isUpdating: viewModel.updatedSetKeys.contains("\(exerciseIndex)-\(setIndex)"),
+                        isAdjusting: viewModel.isAdjusting,
+                        adjustmentFailed: viewModel.adjustmentFailed,
                         onLog: { weight, reps, rpe in
                             viewModel.logSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight, reps: reps, rpe: rpe)
                         },
@@ -393,6 +394,7 @@ final class ActiveWorkoutViewModel {
     var apiKey: String = ""
     var updatedSetKeys: Set<String> = []
     var isAdjusting = false
+    var adjustmentFailed = false
     private var adjustmentGeneration = 0
 
     private var workoutExercises: [WorkoutExercise]
@@ -548,6 +550,12 @@ final class ActiveWorkoutViewModel {
                     applyModifiedWorkout(adjusted)
                 } else {
                     logger.info("Discarding stale RPE adjustment (generation \(generation))")
+                }
+            } else {
+                adjustmentFailed = true
+                Task {
+                    try? await Task.sleep(for: .seconds(2.5))
+                    adjustmentFailed = false
                 }
             }
         }
