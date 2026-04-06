@@ -323,7 +323,7 @@ struct ActiveWorkoutView: View {
     private func streamMidWorkoutChat(_ message: String, history: [ChatMessage]) async -> AsyncThrowingStream<ChatStreamEvent, Error>? {
         let currentWorkout = viewModel.currentWorkout
         let profileSnapshot = UserProfileSnapshot(from: profile)
-        let version = viewModel.currentWorkoutMutationVersion()
+        let version = viewModel.claimNextMutationVersion()
         logger.info(
             "mid_workout_chat start history=\(history.count, privacy: .public) version=\(version, privacy: .public) completedSets=\(viewModel.completedSets, privacy: .public)"
         )
@@ -419,7 +419,7 @@ final class ActiveWorkoutViewModel {
     let timerService = TimerService()
     var apiKey: String = ""
     var updatedSetKeys: Set<String> = []
-    private var workoutMutationVersion = 0
+    private var latestClaimedVersion = 0
 
     private var workoutExercises: [WorkoutExercise]
     private var elapsedTimer: Timer?
@@ -552,13 +552,13 @@ final class ActiveWorkoutViewModel {
         }
     }
 
-    func currentWorkoutMutationVersion() -> Int {
-        workoutMutationVersion
+    func claimNextMutationVersion() -> Int {
+        latestClaimedVersion += 1
+        return latestClaimedVersion
     }
 
     func tryApplyModifiedWorkout(_ newWorkout: Workout, expectedVersion: Int) -> Bool {
-        guard expectedVersion == workoutMutationVersion else { return false }
-        workoutMutationVersion += 1
+        guard expectedVersion == latestClaimedVersion else { return false }
         applyModifiedWorkout(newWorkout)
         return true
     }
@@ -567,7 +567,7 @@ final class ActiveWorkoutViewModel {
         let key = apiKey
         let workout = currentWorkout
         let progress = entries
-        let version = currentWorkoutMutationVersion()
+        let version = claimNextMutationVersion()
         logger.info(
             "rpe_adjustment request version=\(version, privacy: .public) completedSets=\(self.completedSets, privacy: .public)"
         )
