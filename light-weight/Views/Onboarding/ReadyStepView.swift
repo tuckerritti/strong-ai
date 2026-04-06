@@ -7,6 +7,7 @@ struct ReadyStepView: View {
     let selectedSplit: String
     let apiKeyPresent: Bool
     var onFinish: () -> Void
+    @State private var startTapCount = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -68,7 +69,10 @@ struct ReadyStepView: View {
 
             Spacer()
 
-            Button(action: onFinish) {
+            Button {
+                startTapCount += 1
+                onFinish()
+            } label: {
                 Text("Start Training")
                     .font(.custom("SpaceGrotesk-Bold", size: 17))
                     .tracking(-0.2)
@@ -81,6 +85,7 @@ struct ReadyStepView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
         }
+        .sensoryFeedback(.impact, trigger: startTapCount)
     }
 
     private var goalsText: String {

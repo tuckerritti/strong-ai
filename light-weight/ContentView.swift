@@ -1,5 +1,9 @@
 import SwiftUI
 import SwiftData
+import os
+
+private let appStateLogger = Logger(subsystem: "com.light-weight", category: "AppState")
+private let contentViewLogger = Logger(subsystem: "com.light-weight", category: "ContentView")
 
 @Observable
 final class AppState {
@@ -35,15 +39,20 @@ final class AppState {
 
     init() {
         dailyCost = Self.loadDailyCost()
+        appStateLogger.info("daily_cost load inputTokens=\(self.dailyCost.inputTokens, privacy: .public) outputTokens=\(self.dailyCost.outputTokens, privacy: .public)")
     }
 
     func recordCost(_ cost: TokenCost) {
         resetIfNewDay()
         dailyCost = dailyCost + cost
+        appStateLogger.info(
+            "token_cost record inputTokens=\(cost.inputTokens, privacy: .public) outputTokens=\(cost.outputTokens, privacy: .public) totalInputTokens=\(self.dailyCost.inputTokens, privacy: .public) totalOutputTokens=\(self.dailyCost.outputTokens, privacy: .public)"
+        )
     }
 
     func resetPersistentState() {
         let defaults = UserDefaults.standard
+        appStateLogger.info("persistent_state reset_start")
         shouldPersistState = false
         defer { shouldPersistState = true }
 
@@ -59,12 +68,14 @@ final class AppState {
         showTokenCost = false
         showRestTimer = true
         dailyCost = .zero
+        appStateLogger.info("persistent_state reset_success")
     }
 
     private func resetIfNewDay() {
         let storedDate = UserDefaults.standard.string(forKey: "dailyCostDate") ?? ""
         if storedDate != Self.todayString() {
             dailyCost = .zero
+            appStateLogger.info("daily_cost reset_new_day hadStoredDate=\(!storedDate.isEmpty, privacy: .public)")
         }
     }
 
@@ -102,26 +113,45 @@ struct ContentView: View {
         return !profile.onboardingCompleted
     }
 
+    private var currentRoute: String {
+        if isRestoring { return "restoring" }
+        return needsOnboarding ? "onboarding" : "home"
+    }
+
     var body: some View {
-        if isRestoring {
-            Color(hex: 0x0A0A0A)
-                .ignoresSafeArea()
-                .task {
-                    await ICloudBackupService.restoreIfNeeded(modelContext: modelContext)
-                    isRestoring = false
-                }
-        } else if needsOnboarding {
-            OnboardingView()
-                .environment(appState)
-        } else {
-            HomeView()
-                .environment(appState)
-                .onAppear { AppState.shared = appState }
-                .onChange(of: scenePhase) { _, newPhase in
-                    if newPhase == .background {
-                        ICloudBackupService.backupAll(modelContext: modelContext)
+        Group {
+            if isRestoring {
+                Color(hex: 0x0A0A0A)
+                    .ignoresSafeArea()
+                    .task {
+                        contentViewLogger.info("restore start")
+                        await ICloudBackupService.restoreIfNeeded(modelContext: modelContext)
+                        isRestoring = false
+                        contentViewLogger.info("restore success")
                     }
-                }
+            } else if needsOnboarding {
+                OnboardingView()
+                    .environment(appState)
+            } else {
+                HomeView()
+                    .environment(appState)
+                    .onAppear {
+                        AppState.shared = appState
+                        contentViewLogger.info("app_state_shared assign")
+                    }
+                    .onChange(of: scenePhase) { _, newPhase in
+                        if newPhase == .background {
+                            contentViewLogger.info("scene_phase background profiles=\(profiles.count, privacy: .public)")
+                            ICloudBackupService.backupAll(modelContext: modelContext)
+                        }
+                    }
+            }
+        }
+        .task(id: currentRoute) {
+            let onboardingCompleted = profiles.first?.onboardingCompleted ?? false
+            contentViewLogger.info(
+                "route state route=\(currentRoute, privacy: .public) profiles=\(profiles.count, privacy: .public) onboardingCompleted=\(onboardingCompleted, privacy: .public)"
+            )
         }
     }
 }

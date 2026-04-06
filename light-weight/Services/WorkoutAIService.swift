@@ -38,7 +38,7 @@ struct WorkoutAIService {
         - Use progressive overload: reference recent workout logs to pick appropriate weights
         - Vary muscle groups day-to-day so the user doesn't repeat the same muscles back-to-back
         - Rest seconds: 60-90 for hypertrophy, 120-180 for strength, 30-45 for accessories
-        - Weight in lbs. Use 0 for bodyweight exercises.
+        - Weight in lbs. Use 0 for bodyweight exercises. All weights must be in 2.5 lb increments (real plate math). No odd numbers like 186 — use 185 or 187.5.
         - You MUST set targetRpe (1-10) for every set.
         - Never return duplicate exercise names. If an exercise matches the user's library, reuse its exact name.
         - When the user's exercise library contains a matching exercise, use its EXACT name. Prefer library exercises over inventing new ones unless the workout calls for something different.
@@ -46,7 +46,11 @@ struct WorkoutAIService {
         """
 
         let userMessage = buildUserContext(profile: profile, recentLogs: recentLogs, exercises: exercises, healthContext: healthContext)
-        let response = try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
+        let response = try await api.send(
+            operation: "generate_daily_workout",
+            systemPrompt: systemPrompt,
+            userMessage: userMessage
+        )
         let workout = try parseWorkout(from: response)
         return ExerciseNameResolver.canonicalize(
             workout: workout,
@@ -87,7 +91,11 @@ struct WorkoutAIService {
         Goals: \(profile.goals)
         """
 
-        return try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
+        return try await api.send(
+            operation: "generate_debrief",
+            systemPrompt: systemPrompt,
+            userMessage: userMessage
+        )
     }
 
     // MARK: - Private
@@ -167,11 +175,17 @@ struct WorkoutAIService {
         }
         """
 
-        let response = try await api.send(systemPrompt: systemPrompt, userMessage: exerciseList)
+        let response = try await api.send(
+            operation: "generate_target_muscles",
+            systemPrompt: systemPrompt,
+            userMessage: exerciseList
+        )
         let jsonString = JSONExtractor.extractObject(from: response)
 
         guard let data = jsonString.data(using: .utf8) else { return [:] }
-        return (try? JSONDecoder().decode([String: [TargetMuscle]].self, from: data)) ?? [:]
+        let result = (try? JSONDecoder().decode([String: [TargetMuscle]].self, from: data)) ?? [:]
+        logger.info("target_muscles_parse success exercises=\(result.count, privacy: .public)")
+        return result
     }
 
     enum ParseError: LocalizedError {

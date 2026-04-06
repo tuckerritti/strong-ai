@@ -62,6 +62,7 @@ struct ChatAIService {
         }
 
         You MUST set targetRpe (1-10) for every set.
+        All weights must be in 2.5 lb increments (real plate math). No odd numbers like 186 — use 185 or 187.5.
         Never return duplicate exercise names. If an exercise matches the current workout or the library, reuse its exact name.
         For new exercises, follow the naming style of the existing library (e.g., if "Tricep Pushdown - Cable, Straight Bar" exists, a rope variation should be "Tricep Pushdown - Cable, Rope").
 
@@ -93,7 +94,14 @@ struct ChatAIService {
         }
         messages.append(Message(role: .user, content: [.text(userMessage)]))
 
-        let tokenStream = try await api.stream(systemPrompt: systemPrompt, messages: messages)
+        logger.info(
+            "chat_stream start mode=\(mode, privacy: .public) history=\(history.count, privacy: .public) currentWorkout=\(currentWorkout != nil, privacy: .public) activeWorkout=\(isActiveWorkout, privacy: .public)"
+        )
+        let tokenStream = try await api.stream(
+            operation: "chat_stream",
+            systemPrompt: systemPrompt,
+            messages: messages
+        )
 
         return AsyncThrowingStream { continuation in
             let task = Task {
@@ -140,6 +148,10 @@ struct ChatAIService {
                         result.workout = ExerciseNameResolver.canonicalize(
                             workout: workout,
                             references: workoutReferences
+                        )
+                        let totalSets = workout.exercises.reduce(0) { $0 + $1.sets.count }
+                        logger.info(
+                            "chat_stream success exercises=\(workout.exercises.count, privacy: .public) totalSets=\(totalSets, privacy: .public)"
                         )
                     }
                     continuation.yield(.result(result))

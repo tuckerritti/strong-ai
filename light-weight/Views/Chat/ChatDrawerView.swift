@@ -52,6 +52,7 @@ struct ChatDrawerView: View {
                     .interactiveDismissDisabled()
             }
             .onAppear { isSheetPresented = true }
+            .sensoryFeedback(.success, trigger: messages.filter(\.isApplied).count)
     }
 
     // MARK: - Sheet Content

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RestTimerView: View {
     let timerService: TimerService
+    @State private var skipCount = 0
 
     var body: some View {
         HStack {
@@ -25,6 +26,7 @@ struct RestTimerView: View {
 
             if timerService.isRunning {
                 Button {
+                    skipCount += 1
                     timerService.stop()
                 } label: {
                     Text("Skip")
@@ -41,5 +43,6 @@ struct RestTimerView: View {
         .padding(.horizontal, 16)
         .background(Color.restTimerBg)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        .sensoryFeedback(.selection, trigger: skipCount)
     }
 }
