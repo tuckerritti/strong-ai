@@ -98,9 +98,9 @@ extension Array where Element == LogEntry {
                 }
                 if set.completedAt != nil {
                     let rpeStr = " @RPE \(set.rpe)"
-                    return "  \(label): COMPLETED - \(Int(set.weight))lbs x \(set.reps)\(rpeStr)"
+                    return "  \(label): COMPLETED - \(set.weight.formattedWeight)lbs x \(set.reps)\(rpeStr)"
                 } else {
-                    return "  \(label): PLANNED - \(Int(set.weight))lbs x \(set.reps)"
+                    return "  \(label): PLANNED - \(set.weight.formattedWeight)lbs x \(set.reps)"
                 }
             }.joined(separator: "\n")
             return "\(entry.exerciseName) (\(entry.muscleGroup)):\n\(sets)"

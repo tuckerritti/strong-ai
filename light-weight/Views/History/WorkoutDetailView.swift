@@ -82,7 +82,7 @@ struct WorkoutDetailView: View {
                             .foregroundStyle(set.isWarmup ? .textTertiary : (set.completedAt != nil ? Color.accent : .textTertiary))
                             .frame(width: 40, alignment: .leading)
 
-                        Text(set.weight > 0 ? "\(Int(set.weight))" : "BW")
+                        Text(set.weight > 0 ? set.weight.formattedWeight : "BW")
                             .font(.system(size: 14, weight: .medium))
                             .frame(width: 72, alignment: .leading)
 
