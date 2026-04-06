@@ -87,13 +87,20 @@ struct LogEntry: Codable, Hashable, Sendable, Identifiable {
 extension Array where Element == LogEntry {
     func formattedProgress() -> String {
         map { entry in
-            let sets = entry.sets.enumerated().map { i, set in
-                let warmupTag = set.isWarmup ? " (WARMUP)" : ""
+            var workingSetCount = 0
+            let sets = entry.sets.map { set in
+                let label: String
+                if set.isWarmup {
+                    label = "Warmup"
+                } else {
+                    workingSetCount += 1
+                    label = "Set \(workingSetCount)"
+                }
                 if set.completedAt != nil {
                     let rpeStr = " @RPE \(set.rpe)"
-                    return "  Set \(i + 1)\(warmupTag): COMPLETED - \(Int(set.weight))lbs x \(set.reps)\(rpeStr)"
+                    return "  \(label): COMPLETED - \(Int(set.weight))lbs x \(set.reps)\(rpeStr)"
                 } else {
-                    return "  Set \(i + 1)\(warmupTag): PLANNED - \(Int(set.weight))lbs x \(set.reps)"
+                    return "  \(label): PLANNED - \(Int(set.weight))lbs x \(set.reps)"
                 }
             }.joined(separator: "\n")
             return "\(entry.exerciseName) (\(entry.muscleGroup)):\n\(sets)"

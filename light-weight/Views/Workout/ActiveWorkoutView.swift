@@ -241,8 +241,9 @@ struct ActiveWorkoutView: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(entry.sets.enumerated()), id: \.element.id) { setIndex, set in
+                    let workingSetNumber = entry.sets.prefix(setIndex).filter { !$0.isWarmup }.count + 1
                     SetRowView(
-                        setNumber: setIndex + 1,
+                        setNumber: workingSetNumber,
                         logSet: set,
                         plannedSet: viewModel.plannedSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
                         isActive: viewModel.isActiveSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
