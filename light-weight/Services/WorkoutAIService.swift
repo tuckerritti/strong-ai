@@ -27,7 +27,7 @@ struct WorkoutAIService {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
               "sets": [
-                { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
+                { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8, "isWarmup": false }
               ]
             }
           ]
@@ -40,6 +40,7 @@ struct WorkoutAIService {
         - Rest seconds: 60-90 for hypertrophy, 120-180 for strength, 30-45 for accessories
         - Weight in lbs. Use 0 for bodyweight exercises.
         - You MUST set targetRpe (1-10) for every set.
+        - Use "isWarmup": true for warmup sets (lighter weight, higher reps, lower RPE). Typically 1-2 warmup sets per compound exercise at 50-70% working weight.
         - Never return duplicate exercise names. If an exercise matches the user's library, reuse its exact name.
         - When the user's exercise library contains a matching exercise, use its EXACT name. Prefer library exercises over inventing new ones unless the workout calls for something different.
         - For new exercises, follow the naming style of the existing library (e.g., if "Tricep Pushdown - Cable, Straight Bar" exists, a rope variation should be "Tricep Pushdown - Cable, Rope").
@@ -128,7 +129,7 @@ struct WorkoutAIService {
         if !recentLogs.isEmpty {
             let logsStr = recentLogs.prefix(14).map { log in
                 let exercises = log.entries.map { entry in
-                    let sets = entry.sets.map { "\(Int($0.weight))lbs x\($0.reps) @RPE\($0.rpe)" }.joined(separator: ", ")
+                    let sets = entry.sets.map { "\($0.isWarmup ? "(warmup) " : "")\(Int($0.weight))lbs x\($0.reps) @RPE\($0.rpe)" }.joined(separator: ", ")
                     return "\(entry.exerciseName): \(sets)"
                 }.joined(separator: "; ")
                 return "- \(log.workoutName) (\(log.startedAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))): \(exercises)"

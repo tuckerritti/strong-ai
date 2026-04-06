@@ -15,13 +15,15 @@ struct LogSet: Codable, Hashable, Sendable, Identifiable {
     var weight: Double
     var rpe: Int
     var completedAt: Date?
+    var isWarmup: Bool
 
-    init(reps: Int, weight: Double, rpe: Int, completedAt: Date? = nil) {
+    init(reps: Int, weight: Double, rpe: Int, completedAt: Date? = nil, isWarmup: Bool = false) {
         self.id = UUID()
         self.reps = reps
         self.weight = weight
         self.rpe = rpe
         self.completedAt = completedAt
+        self.isWarmup = isWarmup
     }
 
     init(from decoder: Decoder) throws {
@@ -31,10 +33,11 @@ struct LogSet: Codable, Hashable, Sendable, Identifiable {
         weight = try container.decode(Double.self, forKey: .weight)
         rpe = try container.decode(Int.self, forKey: .rpe)
         completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
+        isWarmup = try container.decodeIfPresent(Bool.self, forKey: .isWarmup) ?? false
     }
 
     static func == (lhs: LogSet, rhs: LogSet) -> Bool {
-        lhs.reps == rhs.reps && lhs.weight == rhs.weight && lhs.rpe == rhs.rpe && lhs.completedAt == rhs.completedAt
+        lhs.reps == rhs.reps && lhs.weight == rhs.weight && lhs.rpe == rhs.rpe && lhs.completedAt == rhs.completedAt && lhs.isWarmup == rhs.isWarmup
     }
 
     func hash(into hasher: inout Hasher) {
@@ -42,6 +45,7 @@ struct LogSet: Codable, Hashable, Sendable, Identifiable {
         hasher.combine(weight)
         hasher.combine(rpe)
         hasher.combine(completedAt)
+        hasher.combine(isWarmup)
     }
 }
 
@@ -84,11 +88,12 @@ extension Array where Element == LogEntry {
     func formattedProgress() -> String {
         map { entry in
             let sets = entry.sets.enumerated().map { i, set in
+                let warmupTag = set.isWarmup ? " (WARMUP)" : ""
                 if set.completedAt != nil {
                     let rpeStr = " @RPE \(set.rpe)"
-                    return "  Set \(i + 1): COMPLETED - \(Int(set.weight))lbs x \(set.reps)\(rpeStr)"
+                    return "  Set \(i + 1)\(warmupTag): COMPLETED - \(Int(set.weight))lbs x \(set.reps)\(rpeStr)"
                 } else {
-                    return "  Set \(i + 1): PLANNED - \(Int(set.weight))lbs x \(set.reps)"
+                    return "  Set \(i + 1)\(warmupTag): PLANNED - \(Int(set.weight))lbs x \(set.reps)"
                 }
             }.joined(separator: "\n")
             return "\(entry.exerciseName) (\(entry.muscleGroup)):\n\(sets)"
@@ -121,14 +126,14 @@ final class WorkoutLog {
         }
     }
 
-    var totalSets: Int { entries.reduce(0) { $0 + $1.sets.filter { $0.completedAt != nil }.count } }
+    var totalSets: Int { entries.reduce(0) { $0 + $1.sets.filter { $0.completedAt != nil && !$0.isWarmup }.count } }
     var durationMinutes: Int {
         let end = finishedAt ?? .now
         return Int(end.timeIntervalSince(startedAt) / 60)
     }
     var totalVolume: Double {
         entries.flatMap(\.sets)
-            .filter { $0.completedAt != nil }
+            .filter { $0.completedAt != nil && !$0.isWarmup }
             .reduce(0) { $0 + $1.weight * Double($1.reps) }
     }
     var isInProgress: Bool { finishedAt == nil }

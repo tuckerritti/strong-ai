@@ -26,9 +26,9 @@ struct SetRowView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text("\(setNumber)")
+            Text(logSet.isWarmup ? "W" : "\(setNumber)")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(isCompleted ? Color.accent : .textSecondary)
+                .foregroundStyle(logSet.isWarmup ? .textTertiary : (isCompleted ? Color.accent : .textSecondary))
                 .frame(width: 40, alignment: .leading)
 
             if isCompleted && isEditing {

@@ -41,13 +41,14 @@ struct RPEAdjustmentService {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
               "sets": [
-                { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
+                { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8, "isWarmup": false }
               ]
             }
           ]
         }
 
         Rules for adjustments:
+        - Preserve the isWarmup flag on all sets. Do not convert warmup sets to working sets or vice versa.
         - Weight changes should use real plate increments (2.5 lb minimum)
         - Rest range: 30-300 seconds
         - Reps minimum: 1

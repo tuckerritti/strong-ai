@@ -44,12 +44,14 @@ struct WorkoutSet: Codable, Sendable, Hashable {
     var weight: Double
     var restSeconds: Int
     var targetRpe: Int?
+    var isWarmup: Bool
 
-    init(reps: Int, weight: Double, restSeconds: Int, targetRpe: Int? = nil) {
+    init(reps: Int, weight: Double, restSeconds: Int, targetRpe: Int? = nil, isWarmup: Bool = false) {
         self.reps = reps
         self.weight = weight
         self.restSeconds = restSeconds
         self.targetRpe = targetRpe
+        self.isWarmup = isWarmup
     }
 
     init(from decoder: Decoder) throws {
@@ -58,5 +60,6 @@ struct WorkoutSet: Codable, Sendable, Hashable {
         weight = max(0, min(2000, try container.decode(Double.self, forKey: .weight)))
         restSeconds = max(10, min(600, try container.decodeIfPresent(Int.self, forKey: .restSeconds) ?? 90))
         targetRpe = try container.decodeIfPresent(Int.self, forKey: .targetRpe).map { max(1, min(10, $0)) }
+        isWarmup = try container.decodeIfPresent(Bool.self, forKey: .isWarmup) ?? false
     }
 }
