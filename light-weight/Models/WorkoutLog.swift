@@ -86,9 +86,9 @@ extension Array where Element == LogEntry {
             let sets = entry.sets.enumerated().map { i, set in
                 if set.completedAt != nil {
                     let rpeStr = " @RPE \(set.rpe)"
-                    return "  Set \(i + 1): COMPLETED - \(Int(set.weight))lbs x \(set.reps)\(rpeStr)"
+                    return "  Set \(i + 1): COMPLETED - \(set.weight.formattedWeight)lbs x \(set.reps)\(rpeStr)"
                 } else {
-                    return "  Set \(i + 1): PLANNED - \(Int(set.weight))lbs x \(set.reps)"
+                    return "  Set \(i + 1): PLANNED - \(set.weight.formattedWeight)lbs x \(set.reps)"
                 }
             }.joined(separator: "\n")
             return "\(entry.exerciseName) (\(entry.muscleGroup)):\n\(sets)"

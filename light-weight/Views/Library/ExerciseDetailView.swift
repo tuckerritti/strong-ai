@@ -272,12 +272,12 @@ struct ExerciseDetailView: View {
                     .foregroundStyle(Color.textHeading)
 
                 HStack(spacing: 0) {
-                    exerciseStat(value: "\(Int(bestWeight))", label: "Best (lbs)")
+                    exerciseStat(value: bestWeight.formattedWeight, label: "Best (lbs)")
                     exerciseStat(value: "\(sessionCount)", label: "Sessions")
                     exerciseStat(value: "\(totalSets)", label: "Total Sets")
                     let change = weightChange
                     exerciseStat(
-                        value: "\(change >= 0 ? "+" : "")\(Int(change))",
+                        value: "\(change >= 0 ? "+" : "")\(change.formattedWeight)",
                         label: "lbs / 3 mo",
                         color: Color.accentAlt
                     )
@@ -440,7 +440,7 @@ struct ExerciseDetailView: View {
                     Text("\(completedSets.count) sets · \(totalReps) reps")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.textHeading)
-                    Text("\(Int(maxWeight)) lbs · \(entry.muscleGroup)")
+                    Text("\(maxWeight.formattedWeight) lbs · \(entry.muscleGroup)")
                         .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(Color.textMuted)
                 }

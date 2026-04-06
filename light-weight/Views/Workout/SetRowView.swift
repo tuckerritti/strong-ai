@@ -200,7 +200,7 @@ struct SetRowView: View {
 
     @ViewBuilder
     private var futureRow: some View {
-        Text(plannedSet.map { "\(Int($0.weight))" } ?? "—")
+        Text(plannedSet.map { $0.weight.formattedWeight } ?? "—")
             .font(.system(size: 14))
             .foregroundStyle(Color.textTertiary)
             .frame(maxWidth: .infinity)
@@ -219,14 +219,14 @@ struct SetRowView: View {
     }
 
     private func syncDisplayedValues() {
-        weightText = logSet.weight > 0 ? "\(Int(logSet.weight))" : ""
+        weightText = logSet.weight > 0 ? logSet.weight.formattedWeight : ""
         repsText = "\(logSet.reps)"
         rpeText = logSet.rpe > 0 ? String(logSet.rpe) : ""
     }
 
     private func syncPendingValues() {
         guard !isCompleted else { return }
-        weightText = logSet.weight > 0 ? "\(Int(logSet.weight))" : ""
+        weightText = logSet.weight > 0 ? logSet.weight.formattedWeight : ""
         repsText = "\(logSet.reps)"
     }
 }

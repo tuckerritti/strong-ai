@@ -82,7 +82,7 @@ struct WorkoutAIService {
         Duration: \(log.durationMinutes) min
         Exercises:
         \(log.entries.map { entry in
-            "- \(entry.exerciseName): \(entry.sets.map { "\(Int($0.weight))lbs x\($0.reps) @RPE\($0.rpe)" }.joined(separator: ", "))"
+            "- \(entry.exerciseName): \(entry.sets.map { "\($0.weight.formattedWeight)lbs x\($0.reps) @RPE\($0.rpe)" }.joined(separator: ", "))"
         }.joined(separator: "\n"))
 
         Recent history:
@@ -128,7 +128,7 @@ struct WorkoutAIService {
         if !recentLogs.isEmpty {
             let logsStr = recentLogs.prefix(14).map { log in
                 let exercises = log.entries.map { entry in
-                    let sets = entry.sets.map { "\(Int($0.weight))lbs x\($0.reps) @RPE\($0.rpe)" }.joined(separator: ", ")
+                    let sets = entry.sets.map { "\($0.weight.formattedWeight)lbs x\($0.reps) @RPE\($0.rpe)" }.joined(separator: ", ")
                     return "\(entry.exerciseName): \(sets)"
                 }.joined(separator: "; ")
                 return "- \(log.workoutName) (\(log.startedAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))): \(exercises)"
