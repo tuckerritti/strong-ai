@@ -77,9 +77,9 @@ struct WorkoutDetailView: View {
             VStack(spacing: 0) {
                 ForEach(Array(entry.sets.enumerated()), id: \.element.id) { setIndex, set in
                     HStack(spacing: 0) {
-                        Text("\(setIndex + 1)")
+                        Text(set.isWarmup ? "W" : "\(entry.sets.prefix(setIndex).filter { !$0.isWarmup }.count + 1)")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(set.completedAt != nil ? Color.accent : .textTertiary)
+                            .foregroundStyle(set.isWarmup ? .textTertiary : (set.completedAt != nil ? Color.accent : .textTertiary))
                             .frame(width: 40, alignment: .leading)
 
                         Text(set.weight > 0 ? "\(Int(set.weight))" : "BW")

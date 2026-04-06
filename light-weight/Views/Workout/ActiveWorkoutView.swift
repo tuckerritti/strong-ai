@@ -25,6 +25,7 @@ struct ActiveWorkoutView: View {
     @State private var chatDetent: PresentationDetent = .height(90)
     @State private var chatPendingMessage: String?
     @State private var showChat = false
+    @State private var workoutFinishedCount = 0
 
     private var profile: UserProfile? { profiles.first }
 
@@ -58,6 +59,8 @@ struct ActiveWorkoutView: View {
                 .padding(.bottom, 120)
             }
         }
+        .sensoryFeedback(.success, trigger: workoutFinishedCount)
+        .sensoryFeedback(.warning, trigger: viewModel.timerService.expiredCount)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
         .scrollDismissesKeyboard(.interactively)
@@ -133,6 +136,9 @@ struct ActiveWorkoutView: View {
             viewModel.apiKey = apiKey
             viewModel.start()
             viewModel.resumeTimer()
+            logger.info(
+                "workout_session start exercises=\(viewModel.totalExercises, privacy: .public) totalSets=\(viewModel.totalSets, privacy: .public) apiKeyPresent=\(!apiKey.isEmpty, privacy: .public)"
+            )
             if appState.showRestTimer {
                 viewModel.timerService.requestPermission()
             }
@@ -144,6 +150,7 @@ struct ActiveWorkoutView: View {
         .onDisappear {
             appState.activeViewModel?.pauseTimer()
             appState.isWorkoutActive = false
+            logger.info("workout_session disappear completedSets=\(viewModel.completedSets, privacy: .public)")
         }
     }
 
@@ -241,8 +248,9 @@ struct ActiveWorkoutView: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(entry.sets.enumerated()), id: \.element.id) { setIndex, set in
+                    let workingSetNumber = entry.sets.prefix(setIndex).filter { !$0.isWarmup }.count + 1
                     SetRowView(
-                        setNumber: setIndex + 1,
+                        setNumber: workingSetNumber,
                         logSet: set,
                         plannedSet: viewModel.plannedSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
                         isActive: viewModel.isActiveSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
@@ -293,6 +301,7 @@ struct ActiveWorkoutView: View {
         showChat = false
         viewModel.stop()
         dismiss()
+        logger.info("workout_session discard completedSets=\(viewModel.completedSets, privacy: .public)")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             appState.activeViewModel = nil
         }
@@ -300,8 +309,12 @@ struct ActiveWorkoutView: View {
 
     @MainActor
     private func finishWorkout(viewModel: ActiveWorkoutViewModel) {
+        workoutFinishedCount += 1
         showChat = false
         debriefRecentLogs = recentLogs.prefix(14).map { WorkoutLogSnapshot(from: $0) }
+        logger.info(
+            "workout_session finish_start completedSets=\(viewModel.completedSets, privacy: .public) completedExercises=\(viewModel.completedExercises, privacy: .public)"
+        )
         let log = viewModel.finish()
         log.entries = ExerciseNameResolver.canonicalize(
             entries: log.entries,
@@ -310,6 +323,9 @@ struct ActiveWorkoutView: View {
         modelContext.insert(log)
         finishedLog = log
         showingDebrief = true
+        logger.info(
+            "workout_session finish_success entries=\(log.entries.count, privacy: .public) totalSets=\(log.totalSets, privacy: .public) durationMinutes=\(log.durationMinutes, privacy: .public)"
+        )
 
         // Persist new exercises to library and resolve targetMuscles in the background
         Task {
@@ -332,6 +348,7 @@ struct ActiveWorkoutView: View {
                 }
             }
             log.entries = updatedEntries
+            logger.info("workout_session finish_backfill_success entries=\(updatedEntries.count, privacy: .public)")
         }
     }
 
@@ -343,6 +360,9 @@ struct ActiveWorkoutView: View {
         let currentWorkout = viewModel.currentWorkout
         let profileSnapshot = UserProfileSnapshot(from: profile)
         let generation = viewModel.nextAdjustmentGeneration()
+        logger.info(
+            "mid_workout_chat start history=\(history.count, privacy: .public) generation=\(generation, privacy: .public) completedSets=\(viewModel.completedSets, privacy: .public)"
+        )
 
         do {
             let stream = try await ChatAIService.stream(
@@ -364,8 +384,11 @@ struct ActiveWorkoutView: View {
                             case .result(let result):
                                 if viewModel.shouldApplyAdjustment(generation: generation) {
                                     viewModel.applyModifiedWorkout(result.workout)
+                                    logger.info(
+                                        "mid_workout_chat apply_success generation=\(generation, privacy: .public) exercises=\(result.workout.exercises.count, privacy: .public) totalSets=\(result.workout.totalSets, privacy: .public)"
+                                    )
                                 } else {
-                                    logger.info("Discarding stale chat workout update")
+                                    logger.info("mid_workout_chat discard_stale generation=\(generation, privacy: .public)")
                                     continue
                                 }
                             case .usage, .text, .applying:
@@ -375,14 +398,14 @@ struct ActiveWorkoutView: View {
                         }
                         continuation.finish()
                     } catch {
-                        logger.error("Mid-workout chat stream failed: \(error)")
+                        logger.error("mid_workout_chat failure errorType=\(String(reflecting: type(of: error)), privacy: .public)")
                         continuation.finish(throwing: error)
                     }
                 }
                 continuation.onTermination = { _ in task.cancel() }
             }
         } catch {
-            logger.error("Mid-workout chat setup failed: \(error)")
+            logger.error("mid_workout_chat setup_failure errorType=\(String(reflecting: type(of: error)), privacy: .public)")
             return AsyncThrowingStream { continuation in
                 continuation.yield(.text("Error: \(error.localizedDescription)"))
                 continuation.finish()
@@ -434,12 +457,13 @@ final class ActiveWorkoutViewModel {
 
     var elapsedSeconds: Int = 0
 
-    var totalSets: Int { entries.reduce(0) { $0 + $1.sets.count } }
-    var completedSets: Int { entries.flatMap(\.sets).filter { $0.completedAt != nil }.count }
+    var totalSets: Int { entries.reduce(0) { $0 + $1.sets.filter { !$0.isWarmup }.count } }
+    var completedSets: Int { entries.flatMap(\.sets).filter { $0.completedAt != nil && !$0.isWarmup }.count }
     var totalExercises: Int { entries.count }
     var completedExercises: Int {
         entries.reduce(0) { count, entry in
-            entry.sets.allSatisfy { $0.completedAt != nil } ? count + 1 : count
+            let workingSets = entry.sets.filter { !$0.isWarmup }
+            return workingSets.allSatisfy({ $0.completedAt != nil }) ? count + 1 : count
         }
     }
 
@@ -467,7 +491,7 @@ final class ActiveWorkoutViewModel {
                 muscleGroup: exercise.muscleGroup,
                 targetMuscles: exercise.targetMuscles,
                 sets: exercise.sets.map { plannedSet in
-                    LogSet(reps: plannedSet.reps, weight: plannedSet.weight, rpe: plannedSet.targetRpe ?? 0)
+                    LogSet(reps: plannedSet.reps, weight: plannedSet.weight, rpe: plannedSet.targetRpe ?? 0, isWarmup: plannedSet.isWarmup)
                 }
             )
         }
@@ -479,6 +503,7 @@ final class ActiveWorkoutViewModel {
         startedAt = .now
         elapsedSeconds = 0
         resumeTimer()
+        logger.info("workout_session_clock start exercises=\(self.entries.count, privacy: .public) totalSets=\(self.totalSets, privacy: .public)")
     }
 
     func resumeTimer() {
@@ -499,6 +524,7 @@ final class ActiveWorkoutViewModel {
     func stop() {
         pauseTimer()
         timerService.stop()
+        logger.info("workout_session_clock stop elapsedSeconds=\(self.elapsedSeconds, privacy: .public)")
     }
 
     deinit {
@@ -544,6 +570,9 @@ final class ActiveWorkoutViewModel {
         let missedTarget = planned.map { p in
             weight != p.weight || reps != p.reps || (p.targetRpe != nil && rpe != p.targetRpe)
         } ?? false
+        logger.info(
+            "workout_set complete exerciseIndex=\(exerciseIndex + 1, privacy: .public) setIndex=\(setIndex + 1, privacy: .public) missedTarget=\(missedTarget, privacy: .public) timerStarted=\(planned != nil && AppState.shared?.showRestTimer == true, privacy: .public)"
+        )
 
         if !apiKey.isEmpty && missedTarget {
             requestRPEAdjustment()
@@ -576,6 +605,9 @@ final class ActiveWorkoutViewModel {
         let workout = currentWorkout
         let progress = entries
         let generation = nextAdjustmentGeneration()
+        logger.info(
+            "rpe_adjustment request generation=\(generation, privacy: .public) completedSets=\(self.completedSets, privacy: .public)"
+        )
 
         Task {
             if let adjusted = await RPEAdjustmentService.adjustWorkout(
@@ -585,14 +617,20 @@ final class ActiveWorkoutViewModel {
             ) {
                 if shouldApplyAdjustment(generation: generation) {
                     applyModifiedWorkout(adjusted)
+                    logger.info(
+                        "rpe_adjustment apply_success generation=\(generation, privacy: .public) exercises=\(adjusted.exercises.count, privacy: .public) totalSets=\(adjusted.totalSets, privacy: .public)"
+                    )
                 } else {
-                    logger.info("Discarding stale RPE adjustment (generation \(generation))")
+                    logger.info("rpe_adjustment discard_stale generation=\(generation, privacy: .public)")
                 }
+            } else {
+                logger.warning("rpe_adjustment no_change generation=\(generation, privacy: .public)")
             }
         }
     }
 
     func applyModifiedWorkout(_ newWorkout: Workout) {
+        let previousExerciseCount = entries.count
         workoutName = newWorkout.name
 
         var updatedEntries: [LogEntry] = []
@@ -615,7 +653,7 @@ final class ActiveWorkoutViewModel {
                         let setIndex = completedSets.count + i
                         if setIndex < newExercise.sets.count {
                             let planned = newExercise.sets[setIndex]
-                            sets.append(LogSet(reps: planned.reps, weight: planned.weight, rpe: planned.targetRpe ?? 0))
+                            sets.append(LogSet(reps: planned.reps, weight: planned.weight, rpe: planned.targetRpe ?? 0, isWarmup: planned.isWarmup))
                         }
                     }
                     updatedEntries.append(LogEntry(
@@ -630,7 +668,7 @@ final class ActiveWorkoutViewModel {
                         exerciseName: newExercise.name,
                         muscleGroup: newExercise.muscleGroup,
                         targetMuscles: existing.targetMuscles,
-                        sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: $0.targetRpe ?? 0) }
+                        sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: $0.targetRpe ?? 0, isWarmup: $0.isWarmup) }
                     ))
                     updatedExercises.append(newExercise)
                 }
@@ -639,7 +677,7 @@ final class ActiveWorkoutViewModel {
                     exerciseName: newExercise.name,
                     muscleGroup: newExercise.muscleGroup,
                     targetMuscles: newExercise.targetMuscles,
-                    sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: $0.targetRpe ?? 0) }
+                    sets: newExercise.sets.map { LogSet(reps: $0.reps, weight: $0.weight, rpe: $0.targetRpe ?? 0, isWarmup: $0.isWarmup) }
                 ))
                 updatedExercises.append(newExercise)
             }
@@ -694,6 +732,9 @@ final class ActiveWorkoutViewModel {
         }
 
         resyncTimerIfNeeded()
+        logger.info(
+            "workout_apply success previousExercises=\(previousExerciseCount, privacy: .public) exercises=\(self.entries.count, privacy: .public) totalSets=\(self.totalSets, privacy: .public)"
+        )
     }
 
     private func resyncTimerIfNeeded() {
@@ -706,6 +747,7 @@ final class ActiveWorkoutViewModel {
                     if let planned = plannedSet(exerciseIndex: ei, setIndex: si),
                        planned.restSeconds != timerService.totalSeconds {
                         timerService.resync(newTotalSeconds: planned.restSeconds)
+                        logger.info("workout_timer resync seconds=\(planned.restSeconds, privacy: .public)")
                     }
                     return
                 }
@@ -770,7 +812,8 @@ final class ActiveWorkoutViewModel {
             reps: completedSet.reps,
             weight: completedSet.weight,
             restSeconds: plannedSet?.restSeconds ?? 90,
-            targetRpe: plannedSet?.targetRpe
+            targetRpe: plannedSet?.targetRpe,
+            isWarmup: completedSet.isWarmup
         )
     }
 
@@ -788,6 +831,9 @@ final class ActiveWorkoutViewModel {
             startedAt: startedAt
         )
         log.finishedAt = .now
+        logger.info(
+            "workout_session_log build_success entries=\(completedEntries.count, privacy: .public) totalSets=\(completedEntries.reduce(0) { $0 + $1.sets.count }, privacy: .public)"
+        )
         return log
     }
 }

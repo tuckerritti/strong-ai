@@ -21,6 +21,38 @@ struct ChatAIService {
 
     private static let separatorPattern = /---\s*JSON/
         .ignoresCase()
+    private static let applyingTimeout: Duration = .seconds(30)
+
+    enum StreamError: LocalizedError {
+        case applyingTimedOut
+
+        var errorDescription: String? {
+            switch self {
+            case .applyingTimedOut:
+                "Applying changes timed out. Please try again."
+            }
+        }
+    }
+
+    private actor StreamCursor {
+        var iterator: AsyncThrowingStream<StreamChunk, Error>.Iterator
+
+        init(stream: AsyncThrowingStream<StreamChunk, Error>) {
+            iterator = stream.makeAsyncIterator()
+        }
+
+        func next() async throws -> StreamChunk? {
+            var iterator = iterator
+            let chunk = try await iterator.next()
+            self.iterator = iterator
+            return chunk
+        }
+    }
+
+    private enum NextChunkResult: Sendable {
+        case chunk(StreamChunk?)
+        case timedOut
+    }
 
     static func stream(
         apiKey: String,
@@ -53,13 +85,15 @@ struct ChatAIService {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
               "sets": [
-                { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
+                { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8, "isWarmup": false }
               ]
             }
           ]
         }
 
         You MUST set targetRpe (1-10) for every set.
+        Use "isWarmup": true for warmup sets (lighter weight, higher reps, lower RPE). Typically 1-2 warmup sets per compound exercise at 50-70% working weight.
+        All weights must be in 2.5 lb increments (real plate math). No odd numbers like 186 — use 185 or 187.5.
         Never return duplicate exercise names. If an exercise matches the current workout or the library, reuse its exact name.
         For new exercises, follow the naming style of the existing library (e.g., if "Tricep Pushdown - Cable, Straight Bar" exists, a rope variation should be "Tricep Pushdown - Cable, Rope").
 
@@ -91,16 +125,27 @@ struct ChatAIService {
         }
         messages.append(Message(role: .user, content: [.text(userMessage)]))
 
-        let tokenStream = try await api.stream(systemPrompt: systemPrompt, messages: messages)
+        logger.info(
+            "chat_stream start mode=\(mode, privacy: .public) history=\(history.count, privacy: .public) currentWorkout=\(currentWorkout != nil, privacy: .public) activeWorkout=\(isActiveWorkout, privacy: .public)"
+        )
+        let tokenStream = try await api.stream(
+            operation: "chat_stream",
+            systemPrompt: systemPrompt,
+            messages: messages
+        )
 
         return AsyncThrowingStream { continuation in
             let task = Task {
                 var accumulated = ""
                 var sentExplanationUpTo = 0
+                let cursor = StreamCursor(stream: tokenStream)
 
                 do {
                     var hitSeparator = false
-                    for try await chunk in tokenStream {
+                    while let chunk = try await nextChunk(
+                        from: cursor,
+                        timeout: hitSeparator ? applyingTimeout : nil
+                    ) {
                         switch chunk {
                         case .text(let token):
                             accumulated += token
@@ -138,6 +183,10 @@ struct ChatAIService {
                         workout: result.workout,
                         references: workoutReferences
                     )
+                    let totalSets = result.workout.exercises.reduce(0) { $0 + $1.sets.count }
+                    logger.info(
+                        "chat_stream success exercises=\(result.workout.exercises.count, privacy: .public) totalSets=\(totalSets, privacy: .public)"
+                    )
                     continuation.yield(.result(result))
                     continuation.finish()
                 } catch {
@@ -146,6 +195,39 @@ struct ChatAIService {
                 }
             }
             continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private static func nextChunk(
+        from cursor: StreamCursor,
+        timeout: Duration?
+    ) async throws -> StreamChunk? {
+        guard let timeout else {
+            return try await cursor.next()
+        }
+
+        let result = try await withThrowingTaskGroup(of: NextChunkResult.self) { group in
+            group.addTask {
+                .chunk(try await cursor.next())
+            }
+            group.addTask {
+                try await Task.sleep(for: timeout)
+                return .timedOut
+            }
+
+            guard let firstResult = try await group.next() else {
+                return NextChunkResult.chunk(nil)
+            }
+
+            group.cancelAll()
+            return firstResult
+        }
+
+        switch result {
+        case .chunk(let chunk):
+            return chunk
+        case .timedOut:
+            throw StreamError.applyingTimedOut
         }
     }
 

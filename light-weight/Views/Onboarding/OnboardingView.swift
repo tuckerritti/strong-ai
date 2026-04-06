@@ -1,5 +1,8 @@
 import SwiftUI
 import SwiftData
+import os
+
+private let logger = Logger(subsystem: "com.light-weight", category: "Onboarding")
 
 struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
@@ -54,10 +57,15 @@ struct OnboardingView: View {
     }
 
     private func completeOnboarding() {
+        let createdProfile = profile == nil
         let p = profile ?? UserProfile()
         if profile == nil {
             modelContext.insert(p)
         }
+
+        logger.info(
+            "onboarding_complete start createdProfile=\(createdProfile, privacy: .public) goals=\(goals.count, privacy: .public) trainingDays=\(trainingDays.count, privacy: .public) apiKeyPresent=\(!apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, privacy: .public)"
+        )
 
         p.goals = goals.sorted().joined(separator: ", ")
         p.gender = gender
@@ -66,9 +74,26 @@ struct OnboardingView: View {
         p.schedule = "\(trainingDays.count) days per week"
         p.onboardingCompleted = true
 
-        try? UserProfile.saveAPIKey(apiKey)
+        var didFail = false
+        do {
+            try UserProfile.saveAPIKey(apiKey)
+        } catch {
+            didFail = true
+            logger.error("onboarding_complete api_key_failure error=\(String(describing: error), privacy: .public)")
+        }
 
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            didFail = true
+            logger.error("onboarding_complete save_failure error=\(String(describing: error), privacy: .public)")
+        }
+
+        if !didFail {
+            logger.info(
+                "onboarding_complete success createdProfile=\(createdProfile, privacy: .public) apiKeyPresent=\(!apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, privacy: .public)"
+            )
+        }
     }
 
     private func encodeDays(_ days: Set<Int>) -> String {

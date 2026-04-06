@@ -1,5 +1,8 @@
 import SwiftUI
 import SwiftData
+import os
+
+private let logger = Logger(subsystem: "com.light-weight", category: "AdvancedSettings")
 
 struct AdvancedSettingsView: View {
     @Environment(AppState.self) private var appState
@@ -90,10 +93,13 @@ struct AdvancedSettingsView: View {
     }
 
     private func resetAllData() {
+        logger.info("advanced_reset start")
         do {
             try AppResetService.resetAll(modelContext: modelContext, appState: appState)
+            logger.info("advanced_reset success")
         } catch {
             resetErrorMessage = error.localizedDescription
+            logger.error("advanced_reset failure error=\(String(describing: error), privacy: .public)")
         }
     }
 }

@@ -71,11 +71,15 @@ struct WorkoutDebriefView: View {
 
     private func loadDebrief() async {
         guard !apiKey.isEmpty else {
+            logger.info("workout_debrief skip reason=missing_api_key")
             debrief = "Great workout! Add your API key in Settings to get personalized AI analysis."
             isLoading = false
             return
         }
 
+        logger.info(
+            "workout_debrief start recentLogs=\(recentLogs.count, privacy: .public) totalSets=\(log.totalSets, privacy: .public)"
+        )
         do {
             let logSnapshot = WorkoutLogSnapshot(from: log)
             debrief = try await WorkoutAIService.generateDebrief(
@@ -84,8 +88,9 @@ struct WorkoutDebriefView: View {
                 recentLogs: recentLogs,
                 profile: profile
             )
+            logger.info("workout_debrief success totalSets=\(log.totalSets, privacy: .public) volume=\(Int(log.totalVolume), privacy: .public)")
         } catch {
-            logger.error("Debrief generation failed: \(error)")
+            logger.error("workout_debrief failure errorType=\(String(reflecting: type(of: error)), privacy: .public)")
             debrief = "Nice work finishing \(log.workoutName)! \(log.totalSets) sets, \(Int(log.totalVolume).formatted()) lbs total volume in \(log.durationMinutes) minutes."
         }
 

@@ -52,6 +52,7 @@ struct ChatDrawerView: View {
                     .interactiveDismissDisabled()
             }
             .onAppear { isSheetPresented = true }
+            .sensoryFeedback(.success, trigger: messages.filter(\.isApplied).count)
     }
 
     // MARK: - Sheet Content
@@ -282,17 +283,22 @@ struct ChatDrawerView: View {
                     messages[assistantIndex].tokenCost = (messages[assistantIndex].tokenCost ?? .zero) + cost
                 }
             }
+        } catch let error as ChatAIService.StreamError {
+            appendAssistantError(error.localizedDescription, at: assistantIndex)
         } catch {
-            if messages[assistantIndex].text.isEmpty {
-                messages[assistantIndex].text = "Error: \(error.localizedDescription)"
-            } else {
-                messages[assistantIndex].text += "\n\nError: \(error.localizedDescription)"
-            }
-            messages[assistantIndex].isError = true
-            messages[assistantIndex].isApplying = false
+            appendAssistantError("Error: \(error.localizedDescription)", at: assistantIndex)
         }
 
         isSending = false
     }
-}
 
+    private func appendAssistantError(_ text: String, at assistantIndex: Int) {
+        if messages[assistantIndex].text.isEmpty {
+            messages[assistantIndex].text = text
+        } else {
+            messages[assistantIndex].text += "\n\n\(text)"
+        }
+        messages[assistantIndex].isError = true
+        messages[assistantIndex].isApplying = false
+    }
+}

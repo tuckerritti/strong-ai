@@ -16,6 +16,7 @@ struct SetRowView: View {
     @State private var sweepPosition: CGFloat = 1.3
     @State private var contentOpacity: Double = 1.0
     @State private var isEditing = false
+    @State private var editSaveCount = 0
 
     private var isCompleted: Bool { logSet.completedAt != nil }
     private var canLog: Bool {
@@ -25,9 +26,9 @@ struct SetRowView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text("\(setNumber)")
+            Text(logSet.isWarmup ? "W" : "\(setNumber)")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(isCompleted ? Color.accent : .textSecondary)
+                .foregroundStyle(logSet.isWarmup ? .textTertiary : (isCompleted ? Color.accent : .textSecondary))
                 .frame(width: 40, alignment: .leading)
 
             if isCompleted && isEditing {
@@ -80,6 +81,10 @@ struct SetRowView: View {
                 .allowsHitTesting(false)
         }
         .opacity(contentOpacity)
+        .sensoryFeedback(.success, trigger: logSet.completedAt) { oldValue, newValue in
+            oldValue == nil && newValue != nil
+        }
+        .sensoryFeedback(.success, trigger: editSaveCount)
         .onChange(of: isUpdating) {
             guard isUpdating else { return }
             sweepPosition = -0.3
@@ -143,6 +148,7 @@ struct SetRowView: View {
                   let rpe = Int(rpeText) else { return }
             onEdit?(weight, reps, rpe)
             isEditing = false
+            editSaveCount += 1
         } label: {
             Image(systemName: "checkmark.circle")
                 .font(.system(size: 20))

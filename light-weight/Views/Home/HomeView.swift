@@ -88,6 +88,10 @@ struct HomeView: View {
                 }
             }
 
+            .sensoryFeedback(.impact, trigger: appState.isWorkoutActive) { oldValue, newValue in
+                oldValue == false && newValue == true
+            }
+
             if muscleMapExpanded {
                 ExpandedMuscleMapView(
                     logs: recentLogs,
@@ -101,7 +105,10 @@ struct HomeView: View {
     // MARK: - AI Generation
 
     private func generateWorkoutIfNeeded() async {
-        guard todayWorkout == nil else { return }
+        guard todayWorkout == nil else {
+            logger.info("daily_workout skip reason=in_memory")
+            return
+        }
 
         if let cached = WorkoutCacheService.loadToday() {
             let canonicalWorkout = ExerciseNameResolver.canonicalize(
@@ -111,19 +118,35 @@ struct HomeView: View {
             todayWorkout = canonicalWorkout
             if canonicalWorkout != cached {
                 WorkoutCacheService.save(canonicalWorkout)
+                logger.info("daily_workout cache_recanonicalized exercises=\(canonicalWorkout.exercises.count, privacy: .public)")
             }
+            logger.info("daily_workout cache_applied exercises=\(canonicalWorkout.exercises.count, privacy: .public)")
             return
         }
 
-        guard !apiKey.isEmpty else { return }
+        guard !apiKey.isEmpty else {
+            logger.info("daily_workout skip reason=missing_api_key")
+            return
+        }
 
         isLoading = true
         errorMessage = nil
+        logger.info(
+            "daily_workout start recentLogs=\(recentLogs.count, privacy: .public) exercises=\(exercises.count, privacy: .public) healthkitAvailable=\(HealthKitService.shared.isAvailable, privacy: .public)"
+        )
 
         if HealthKitService.shared.isAvailable {
             do { try await HealthKitService.shared.requestAuthorization() }
-            catch { logger.error("HealthKit authorization failed: \(error)") }
+            catch { logger.error("health_context authorization_failure error=\(String(describing: error), privacy: .public)") }
             healthContext = await HealthKitService.shared.fetchRecentHealthData()
+            if let healthContext {
+                let metricCount = [healthContext.sleepHours, healthContext.restingHeartRate, healthContext.hrv, healthContext.activeCaloriesToday]
+                    .compactMap { $0 }
+                    .count
+                logger.info("health_context success metrics=\(metricCount, privacy: .public)")
+            } else {
+                logger.info("health_context success metrics=0")
+            }
         }
 
         do {
@@ -136,8 +159,11 @@ struct HomeView: View {
             )
             todayWorkout = workout
             WorkoutCacheService.save(workout)
+            logger.info(
+                "daily_workout success exercises=\(workout.exercises.count, privacy: .public) totalSets=\(workout.totalSets, privacy: .public)"
+            )
         } catch {
-            logger.error("Workout generation failed: \(error)")
+            logger.error("daily_workout failure errorType=\(String(reflecting: type(of: error)), privacy: .public)")
             errorMessage = error.localizedDescription
         }
 
@@ -145,7 +171,14 @@ struct HomeView: View {
     }
 
     private func streamChat(_ message: String, history: [ChatMessage]) async -> AsyncThrowingStream<ChatStreamEvent, Error>? {
-        guard !apiKey.isEmpty else { return nil }
+        guard !apiKey.isEmpty else {
+            logger.info("home_chat skip reason=missing_api_key")
+            return nil
+        }
+
+        logger.info(
+            "home_chat start history=\(history.count, privacy: .public) currentWorkout=\(todayWorkout != nil, privacy: .public)"
+        )
 
         do {
             let stream = try await ChatAIService.stream(
@@ -166,6 +199,9 @@ struct HomeView: View {
                                 todayWorkout = result.workout
                                 WorkoutCacheService.save(result.workout)
                                 errorMessage = nil
+                                logger.info(
+                                    "home_chat apply_success exercises=\(result.workout.exercises.count, privacy: .public) totalSets=\(result.workout.totalSets, privacy: .public)"
+                                )
                             case .usage, .text, .applying:
                                 break
                             }
@@ -173,14 +209,14 @@ struct HomeView: View {
                         }
                         continuation.finish()
                     } catch {
-                        logger.error("Chat stream failed: \(error)")
+                        logger.error("home_chat failure errorType=\(String(reflecting: type(of: error)), privacy: .public)")
                         continuation.finish(throwing: error)
                     }
                 }
                 continuation.onTermination = { _ in task.cancel() }
             }
         } catch {
-            logger.error("Chat stream setup failed: \(error)")
+            logger.error("home_chat setup_failure errorType=\(String(reflecting: type(of: error)), privacy: .public)")
             return AsyncThrowingStream { continuation in
                 continuation.yield(.text("Error: \(error.localizedDescription)"))
                 continuation.finish()
@@ -224,7 +260,7 @@ struct HomeView: View {
                     .tracking(-1.0)
                     .foregroundStyle(Color.textPrimary)
                 Spacer()
-                HStack(spacing: 8) {
+                HStack(spacing: 0) {
                     NavigationLink(value: Destination.library) {
                         Image(systemName: "book.fill")
                             .font(.system(size: 20))
@@ -250,6 +286,7 @@ struct HomeView: View {
                     }
                     .accessibilityLabel("Settings")
                 }
+                .padding(.leading, 12)
             }
         }
         .padding(.horizontal, 20)

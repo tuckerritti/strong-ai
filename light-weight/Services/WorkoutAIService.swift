@@ -27,7 +27,7 @@ struct WorkoutAIService {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
               "sets": [
-                { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8 }
+                { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8, "isWarmup": false }
               ]
             }
           ]
@@ -38,15 +38,20 @@ struct WorkoutAIService {
         - Use progressive overload: reference recent workout logs to pick appropriate weights
         - Vary muscle groups day-to-day so the user doesn't repeat the same muscles back-to-back
         - Rest seconds: 60-90 for hypertrophy, 120-180 for strength, 30-45 for accessories
-        - Weight in lbs. Use 0 for bodyweight exercises.
+        - Weight in lbs. Use 0 for bodyweight exercises. All weights must be in 2.5 lb increments (real plate math). No odd numbers like 186 — use 185 or 187.5.
         - You MUST set targetRpe (1-10) for every set.
+        - Use "isWarmup": true for warmup sets (lighter weight, higher reps, lower RPE). Typically 1-2 warmup sets per compound exercise at 50-70% working weight.
         - Never return duplicate exercise names. If an exercise matches the user's library, reuse its exact name.
         - When the user's exercise library contains a matching exercise, use its EXACT name. Prefer library exercises over inventing new ones unless the workout calls for something different.
         - For new exercises, follow the naming style of the existing library (e.g., if "Tricep Pushdown - Cable, Straight Bar" exists, a rope variation should be "Tricep Pushdown - Cable, Rope").
         """
 
         let userMessage = buildUserContext(profile: profile, recentLogs: recentLogs, exercises: exercises, healthContext: healthContext)
-        let response = try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
+        let response = try await api.send(
+            operation: "generate_daily_workout",
+            systemPrompt: systemPrompt,
+            userMessage: userMessage
+        )
         let workout = try parseWorkout(from: response)
         return ExerciseNameResolver.canonicalize(
             workout: workout,
@@ -87,7 +92,11 @@ struct WorkoutAIService {
         Goals: \(profile.goals)
         """
 
-        return try await api.send(systemPrompt: systemPrompt, userMessage: userMessage)
+        return try await api.send(
+            operation: "generate_debrief",
+            systemPrompt: systemPrompt,
+            userMessage: userMessage
+        )
     }
 
     // MARK: - Private
@@ -120,7 +129,7 @@ struct WorkoutAIService {
         if !recentLogs.isEmpty {
             let logsStr = recentLogs.prefix(14).map { log in
                 let exercises = log.entries.map { entry in
-                    let sets = entry.sets.map { "\(Int($0.weight))lbs x\($0.reps) @RPE\($0.rpe)" }.joined(separator: ", ")
+                    let sets = entry.sets.map { "\($0.isWarmup ? "(warmup) " : "")\(Int($0.weight))lbs x\($0.reps) @RPE\($0.rpe)" }.joined(separator: ", ")
                     return "\(entry.exerciseName): \(sets)"
                 }.joined(separator: "; ")
                 return "- \(log.workoutName) (\(log.startedAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))): \(exercises)"
@@ -167,11 +176,17 @@ struct WorkoutAIService {
         }
         """
 
-        let response = try await api.send(systemPrompt: systemPrompt, userMessage: exerciseList)
+        let response = try await api.send(
+            operation: "generate_target_muscles",
+            systemPrompt: systemPrompt,
+            userMessage: exerciseList
+        )
         let jsonString = JSONExtractor.extractObject(from: response)
 
         guard let data = jsonString.data(using: .utf8) else { return [:] }
-        return (try? JSONDecoder().decode([String: [TargetMuscle]].self, from: data)) ?? [:]
+        let result = (try? JSONDecoder().decode([String: [TargetMuscle]].self, from: data)) ?? [:]
+        logger.info("target_muscles_parse success exercises=\(result.count, privacy: .public)")
+        return result
     }
 
     enum ParseError: LocalizedError {

@@ -17,6 +17,9 @@ enum ExerciseLibraryService {
         let existingReferences = existingExercises.map(ExerciseReference.init)
         let libraryByName = referencesByNormalizedName(existingReferences)
         let canonicalEntries = ExerciseNameResolver.canonicalize(entries: entries, references: existingReferences)
+        logger.info(
+            "exercise_library_resolve start entries=\(entries.count, privacy: .public) existingExercises=\(existingExercises.count, privacy: .public)"
+        )
 
         // Collect exercises that need targetMuscles: new exercises + existing with empty targetMuscles
         var needsTargetMuscles: [(name: String, muscleGroup: String)] = []
@@ -47,6 +50,8 @@ enum ExerciseLibraryService {
             } catch {
                 logger.error("Failed to resolve targetMuscles: \(error)")
             }
+        } else if !needsTargetMuscles.isEmpty {
+            logger.info("exercise_library_resolve skip_target_muscles reason=missing_api_key pending=\(needsTargetMuscles.count, privacy: .public)")
         }
 
         // Insert new exercises
@@ -66,11 +71,16 @@ enum ExerciseLibraryService {
         }
 
         // Backfill existing exercises with empty targetMuscles
+        var backfilledCount = 0
         for exercise in existingExercises where exercise.targetMuscles.isEmpty {
             if let muscles = resolvedMuscles[ExerciseNameResolver.normalize(exercise.name)], !muscles.isEmpty {
                 exercise.targetMuscles = muscles
+                backfilledCount += 1
             }
         }
+        logger.info(
+            "exercise_library_resolve success inserted=\(insertedNames.count, privacy: .public) backfilled=\(backfilledCount, privacy: .public) resolved=\(resolvedMuscles.count, privacy: .public)"
+        )
     }
 
     /// Returns resolved targetMuscles for the given entries, using the library as source of truth.
@@ -87,6 +97,7 @@ enum ExerciseLibraryService {
                 result[normalizedName] = exercise.targetMuscles
             }
         }
+        logger.info("exercise_library_lookup success entries=\(entries.count, privacy: .public) resolved=\(result.count, privacy: .public)")
         return result
     }
 
