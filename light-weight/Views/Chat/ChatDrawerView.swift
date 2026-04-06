@@ -22,6 +22,7 @@ struct ChatDrawerView: View {
     var workoutName: String?
     var elapsedTime: String?
     var exerciseProgress: String?
+    var isAdjusting: Bool = false
     var onSend: (String, [ChatMessage]) async -> AsyncThrowingStream<ChatStreamEvent, Error>?
 
     @State private var messages: [ChatMessage] = []
@@ -175,6 +176,17 @@ struct ChatDrawerView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
             .simultaneousGesture(TapGesture().onEnded { tappedInputBar = true })
+            .overlay(alignment: .bottom) {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.mini)
+                    Text("Updating workout...")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.textSecondary)
+                }
+                .offset(y: 14)
+                .opacity(isAdjusting ? 1 : 0)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
             if tappedInputBar && !isExpanded {

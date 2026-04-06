@@ -92,6 +92,7 @@ struct ActiveWorkoutView: View {
                     workoutName: viewModel.workoutName,
                     elapsedTime: viewModel.elapsedFormatted,
                     exerciseProgress: "\(viewModel.completedSets) of \(viewModel.totalSets) sets",
+                    isAdjusting: viewModel.isAdjusting,
                     onSend: { message, history in
                         await streamMidWorkoutChat(message, history: history)
                     }
@@ -391,6 +392,7 @@ final class ActiveWorkoutViewModel {
     let timerService = TimerService()
     var apiKey: String = ""
     var updatedSetKeys: Set<String> = []
+    var isAdjusting = false
     private var adjustmentGeneration = 0
 
     private var workoutExercises: [WorkoutExercise]
@@ -533,8 +535,10 @@ final class ActiveWorkoutViewModel {
         let workout = currentWorkout
         let progress = entries
         let generation = nextAdjustmentGeneration()
+        isAdjusting = true
 
         Task {
+            defer { isAdjusting = false }
             if let adjusted = await RPEAdjustmentService.adjustWorkout(
                 apiKey: key,
                 workout: workout,
