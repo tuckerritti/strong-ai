@@ -66,6 +66,11 @@ struct HomeView: View {
                 .onChange(of: profiles.count) { _, _ in
                     apiKey = UserProfileService.loadAPIKey()
                 }
+                .onChange(of: appState.rpeMode) { _, _ in
+                    todayWorkout = nil
+                    WorkoutCacheService.clearAll()
+                    Task { await generateWorkoutIfNeeded() }
+                }
                 .overlay {
                     if !appState.isWorkoutActive && navigationPath.isEmpty {
                         ChatDrawerView(
@@ -370,7 +375,9 @@ struct HomeView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.textPrimary)
                     Spacer()
-                    Text("\(exercise.sets.count) sets · \(exercise.sets.reduce(0) { $0 + $1.reps }) reps")
+                    Text(appState.rpeMode
+                        ? "\(exercise.sets.count) sets"
+                        : "\(exercise.sets.count) sets · \(exercise.sets.reduce(0) { $0 + $1.reps }) reps")
                         .font(.system(size: 13))
                         .foregroundStyle(Color.textSecondary)
                 }
