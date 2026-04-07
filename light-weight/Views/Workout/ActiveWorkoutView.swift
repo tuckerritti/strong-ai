@@ -4,6 +4,10 @@ import SwiftData
 
 private let logger = Logger(subsystem: "com.light-weight", category: "ActiveWorkout")
 
+private func debugActiveWorkoutLog(_ message: String) {
+    DebugLogStore.record(message, category: "ActiveWorkout")
+}
+
 struct ActiveWorkoutView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -255,6 +259,8 @@ struct ActiveWorkoutView: View {
                         plannedSet: viewModel.plannedSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
                         isActive: viewModel.isActiveSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
                         isUpdating: viewModel.updatedSetKeys.contains("\(exerciseIndex)-\(setIndex)"),
+                        isAdjusting: viewModel.isAdjusting,
+                        adjustmentFailed: viewModel.adjustmentFailed,
                         onLog: { weight, reps, rpe in
                             viewModel.logSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight, reps: reps, rpe: rpe)
                         },
@@ -454,6 +460,9 @@ final class ActiveWorkoutViewModel {
     var workoutName: String
     let timerService = TimerService()
     var apiKey: String = ""
+    private var adjustingCount = 0
+    var isAdjusting: Bool { adjustingCount > 0 }
+    var adjustmentFailed = false
     var updatedSetKeys: Set<String> = []
     private var latestClaimedVersion = 0
 
@@ -582,6 +591,12 @@ final class ActiveWorkoutViewModel {
             "workout_set complete exerciseIndex=\(exerciseIndex + 1, privacy: .public) setIndex=\(setIndex + 1, privacy: .public) missedTarget=\(missedTarget, privacy: .public) timerStarted=\(planned != nil && AppState.shared?.showRestTimer == true, privacy: .public) isWarmup=\(isWarmup, privacy: .public) fractionalWeight=\(fractionalWeight, privacy: .public)"
         )
 
+        debugActiveWorkoutLog(
+            "Logged set exercise=\(exerciseIndex) set=\(setIndex) " +
+            "weight=\(weight) reps=\(reps) rpe=\(rpe) " +
+            "missedTarget=\(missedTarget) hasAPIKey=\(!self.apiKey.isEmpty)"
+        )
+
         if !apiKey.isEmpty && missedTarget {
             requestRPEAdjustment()
         }
@@ -621,17 +636,27 @@ final class ActiveWorkoutViewModel {
         let workout = currentWorkout
         let progress = entries
         let version = claimNextMutationVersion()
+        adjustmentFailed = false
+        adjustingCount += 1
+
+        debugActiveWorkoutLog("Starting auto-RPE adjustment version=\(version) completedSets=\(self.completedSets)")
         logger.info(
             "rpe_adjustment request version=\(version, privacy: .public) completedSets=\(self.completedSets, privacy: .public)"
         )
 
         Task {
+            defer {
+                adjustingCount = max(0, adjustingCount - 1)
+                debugActiveWorkoutLog("Ending auto-RPE adjustment version=\(version)")
+            }
+
             if let adjusted = await RPEAdjustmentService.adjustWorkout(
                 apiKey: key,
                 workout: workout,
                 progress: progress
             ) {
                 if tryApplyModifiedWorkout(adjusted, expectedVersion: version) {
+                    debugActiveWorkoutLog("Applying auto-RPE adjustment version=\(version)")
                     logger.info(
                         "rpe_adjustment apply_success version=\(version, privacy: .public) exercises=\(adjusted.exercises.count, privacy: .public) totalSets=\(adjusted.totalSets, privacy: .public)"
                     )
@@ -639,8 +664,24 @@ final class ActiveWorkoutViewModel {
                     logger.info("rpe_adjustment discard_stale version=\(version, privacy: .public)")
                 }
             } else {
-                logger.warning("rpe_adjustment no_change version=\(version, privacy: .public)")
+                triggerAdjustmentFailure(expectedVersion: version)
             }
+        }
+    }
+
+    private func triggerAdjustmentFailure(expectedVersion version: Int) {
+        guard version == latestClaimedVersion else {
+            logger.info("rpe_adjustment discard_stale_failure version=\(version, privacy: .public)")
+            return
+        }
+
+        debugActiveWorkoutLog("Auto-RPE adjustment failed version=\(version)")
+        logger.warning("rpe_adjustment failure version=\(version, privacy: .public)")
+        adjustmentFailed = true
+        Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            guard version == latestClaimedVersion else { return }
+            adjustmentFailed = false
         }
     }
 
@@ -733,11 +774,11 @@ final class ActiveWorkoutViewModel {
         workoutExercises = updatedExercises
         entries = updatedEntries
 
-        // Flag non-completed sets for shadow sweep animation
+        // Flag non-completed sets for shadow sweep animation.
         var keys: Set<String> = []
-        for (ei, entry) in entries.enumerated() {
-            for (si, set) in entry.sets.enumerated() where set.completedAt == nil {
-                keys.insert("\(ei)-\(si)")
+        for (exerciseIndex, entry) in entries.enumerated() {
+            for (setIndex, set) in entry.sets.enumerated() where set.completedAt == nil {
+                keys.insert("\(exerciseIndex)-\(setIndex)")
             }
         }
         updatedSetKeys = keys
