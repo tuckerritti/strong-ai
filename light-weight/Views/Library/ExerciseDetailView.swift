@@ -244,21 +244,21 @@ struct ExerciseDetailView: View {
     // MARK: - Stats
 
     private var bestWeight: Double {
-        exerciseLogs.flatMap { $0.entry.sets }.filter { $0.completedAt != nil }.map(\.weight).max() ?? 0
+        exerciseLogs.flatMap { $0.entry.sets }.filter { $0.completedAt != nil && !$0.isWarmup }.map(\.weight).max() ?? 0
     }
 
     private var sessionCount: Int { exerciseLogs.count }
 
     private var totalSets: Int {
-        exerciseLogs.reduce(0) { $0 + $1.entry.sets.filter { $0.completedAt != nil }.count }
+        exerciseLogs.reduce(0) { $0 + $1.entry.sets.filter { $0.completedAt != nil && !$0.isWarmup }.count }
     }
 
     private var weightChange: Double {
         let threeMonthsAgo = Calendar.current.date(byAdding: .month, value: -3, to: .now) ?? .now
         let recentLogs = exerciseLogs.filter { $0.date >= threeMonthsAgo }
         guard let oldest = recentLogs.last, let newest = recentLogs.first else { return 0 }
-        let oldMax = oldest.entry.sets.filter { $0.completedAt != nil }.map(\.weight).max() ?? 0
-        let newMax = newest.entry.sets.filter { $0.completedAt != nil }.map(\.weight).max() ?? 0
+        let oldMax = oldest.entry.sets.filter { $0.completedAt != nil && !$0.isWarmup }.map(\.weight).max() ?? 0
+        let newMax = newest.entry.sets.filter { $0.completedAt != nil && !$0.isWarmup }.map(\.weight).max() ?? 0
         return newMax - oldMax
     }
 
@@ -272,12 +272,12 @@ struct ExerciseDetailView: View {
                     .foregroundStyle(Color.textHeading)
 
                 HStack(spacing: 0) {
-                    exerciseStat(value: "\(Int(bestWeight))", label: "Best (lbs)")
+                    exerciseStat(value: bestWeight.formattedWeight, label: "Best (lbs)")
                     exerciseStat(value: "\(sessionCount)", label: "Sessions")
                     exerciseStat(value: "\(totalSets)", label: "Total Sets")
                     let change = weightChange
                     exerciseStat(
-                        value: "\(change >= 0 ? "+" : "")\(Int(change))",
+                        value: "\(change >= 0 ? "+" : "")\(change.formattedWeight)",
                         label: "lbs / 3 mo",
                         color: Color.accentAlt
                     )
@@ -309,7 +309,7 @@ struct ExerciseDetailView: View {
         return exerciseLogs
             .filter { $0.date >= threeMonthsAgo }
             .compactMap { log in
-                let maxWeight = log.entry.sets.filter { $0.completedAt != nil }.map(\.weight).max()
+                let maxWeight = log.entry.sets.filter { $0.completedAt != nil && !$0.isWarmup }.map(\.weight).max()
                 guard let weight = maxWeight else { return nil }
                 return (log.date, weight)
             }
@@ -402,7 +402,7 @@ struct ExerciseDetailView: View {
 
                 ForEach(Array(recentEntries.enumerated()), id: \.offset) { index, log in
                     let completedMaxWeight = log.entry.sets
-                        .filter { $0.completedAt != nil }
+                        .filter { $0.completedAt != nil && !$0.isWarmup }
                         .map(\.weight)
                         .max() ?? 0
 
@@ -420,7 +420,7 @@ struct ExerciseDetailView: View {
     }
 
     private func historyRow(date: Date, entry: LogEntry, isPR: Bool) -> some View {
-        let completedSets = entry.sets.filter { $0.completedAt != nil }
+        let completedSets = entry.sets.filter { $0.completedAt != nil && !$0.isWarmup }
         let maxWeight = completedSets.map(\.weight).max() ?? 0
         let totalReps = completedSets.reduce(0) { $0 + $1.reps }
 
@@ -440,7 +440,7 @@ struct ExerciseDetailView: View {
                     Text("\(completedSets.count) sets · \(totalReps) reps")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.textHeading)
-                    Text("\(Int(maxWeight)) lbs · \(entry.muscleGroup)")
+                    Text("\(maxWeight.formattedWeight) lbs · \(entry.muscleGroup)")
                         .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(Color.textMuted)
                 }

@@ -1,7 +1,11 @@
 import SwiftUI
 import SwiftData
+import os
+
+private let logger = Logger(subsystem: "com.light-weight", category: "Settings")
 
 struct SettingsView: View {
+    let onReturnHome: () -> Void
     private let genderOptions = ["Male", "Female"]
 
     @Query private var profiles: [UserProfile]
@@ -127,7 +131,7 @@ struct SettingsView: View {
                         .padding(.vertical, -12)
                     }
                     settingsSection("ADVANCED") {
-                        NavigationLink(destination: AdvancedSettingsView()) {
+                        NavigationLink(destination: AdvancedSettingsView(onReturnHome: onReturnHome)) {
                             HStack {
                                 Text("Advanced settings")
                                     .foregroundStyle(Color.textPrimary)
@@ -199,20 +203,32 @@ struct SettingsView: View {
     }
 
     private func syncProfileState() {
+        let createdProfile = profiles.isEmpty
         if profiles.isEmpty {
             UserProfileService.ensureProfile(existingProfile: profile, modelContext: modelContext)
         }
 
         apiKey = UserProfileService.loadAPIKey()
         apiKeyError = nil
+        logger.info(
+            "settings_sync success createdProfile=\(createdProfile, privacy: .public) profileCount=\(profiles.count, privacy: .public) apiKeyPresent=\(!apiKey.isEmpty, privacy: .public)"
+        )
     }
 
     private func persistAPIKey(_ newValue: String) {
+        let trimmedValue = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        logger.info(
+            "api_key_persist start profilePresent=\(profile != nil, privacy: .public) empty=\(trimmedValue.isEmpty, privacy: .public)"
+        )
         do {
             try UserProfileService.saveAPIKey(newValue, for: profile, modelContext: modelContext)
             apiKeyError = nil
+            logger.info(
+                "api_key_persist success profilePresent=\(profile != nil, privacy: .public) empty=\(trimmedValue.isEmpty, privacy: .public)"
+            )
         } catch {
             apiKeyError = error.localizedDescription
+            logger.error("api_key_persist failure error=\(String(describing: error), privacy: .public)")
         }
     }
 }

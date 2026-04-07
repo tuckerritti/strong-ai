@@ -20,7 +20,7 @@ struct ExerciseLibraryView: View {
         var map: [String: ExerciseStats] = [:]
         for log in workoutLogs {
             for entry in log.entries {
-                let completedSets = entry.sets.filter { $0.completedAt != nil }
+                let completedSets = entry.sets.filter { $0.completedAt != nil && !$0.isWarmup }
                 guard !completedSets.isEmpty else { continue }
 
                 let normalizedName = ExerciseNameResolver.normalize(entry.exerciseName)

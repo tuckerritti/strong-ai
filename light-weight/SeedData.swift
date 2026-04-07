@@ -267,6 +267,7 @@ enum SeedData {
             // Week 4 (oldest)
             ("Upper Body Push", 25, [
                 logEntry("Bench Press", sets: [
+                    LogSet(reps: 10, weight: 65, rpe: 4, completedAt: daysAgo(25), isWarmup: true),
                     LogSet(reps: 8, weight: 125, rpe: 7, completedAt: daysAgo(25)),
                     LogSet(reps: 8, weight: 125, rpe: 8, completedAt: daysAgo(25)),
                     LogSet(reps: 7, weight: 125, rpe: 9, completedAt: daysAgo(25)),
@@ -358,6 +359,7 @@ enum SeedData {
             // Week 1 (most recent)
             ("Upper Body Push", 4, [
                 logEntry("Bench Press", sets: [
+                    LogSet(reps: 10, weight: 70, rpe: 4, completedAt: daysAgo(4), isWarmup: true),
                     LogSet(reps: 8, weight: 135, rpe: 7, completedAt: daysAgo(4)),
                     LogSet(reps: 8, weight: 135, rpe: 8, completedAt: daysAgo(4)),
                     LogSet(reps: 8, weight: 135, rpe: 8, completedAt: daysAgo(4)),

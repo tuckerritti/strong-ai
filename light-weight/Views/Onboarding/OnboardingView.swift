@@ -1,5 +1,8 @@
 import SwiftUI
 import SwiftData
+import os
+
+private let logger = Logger(subsystem: "com.light-weight", category: "Onboarding")
 
 struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
@@ -12,6 +15,7 @@ struct OnboardingView: View {
     @State private var experienceLevel = ""
     @State private var trainingDays: Set<Int> = [0, 1, 3, 5]
     @State private var selectedSplit = "Upper / Lower Split"
+    @State private var selectedSounds: Set<RestSound> = RestSound.selected
 
     private var profile: UserProfile? { profiles.first }
 
@@ -33,6 +37,8 @@ struct OnboardingView: View {
             case 6:
                 ScheduleStepView(trainingDays: $trainingDays, selectedSplit: $selectedSplit, onNext: nextStep)
             case 7:
+                SoundsStepView(selectedSounds: $selectedSounds, onNext: nextStep)
+            case 8:
                 ReadyStepView(
                     goals: goals,
                     experienceLevel: experienceLevel,
@@ -54,10 +60,15 @@ struct OnboardingView: View {
     }
 
     private func completeOnboarding() {
+        let createdProfile = profile == nil
         let p = profile ?? UserProfile()
         if profile == nil {
             modelContext.insert(p)
         }
+
+        logger.info(
+            "onboarding_complete start createdProfile=\(createdProfile, privacy: .public) goals=\(goals.count, privacy: .public) trainingDays=\(trainingDays.count, privacy: .public) apiKeyPresent=\(!apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, privacy: .public)"
+        )
 
         p.goals = goals.sorted().joined(separator: ", ")
         p.gender = gender
@@ -66,9 +77,26 @@ struct OnboardingView: View {
         p.schedule = "\(trainingDays.count) days per week"
         p.onboardingCompleted = true
 
-        try? UserProfile.saveAPIKey(apiKey)
+        var didFail = false
+        do {
+            try UserProfile.saveAPIKey(apiKey)
+        } catch {
+            didFail = true
+            logger.error("onboarding_complete api_key_failure error=\(String(describing: error), privacy: .public)")
+        }
 
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            didFail = true
+            logger.error("onboarding_complete save_failure error=\(String(describing: error), privacy: .public)")
+        }
+
+        if !didFail {
+            logger.info(
+                "onboarding_complete success createdProfile=\(createdProfile, privacy: .public) apiKeyPresent=\(!apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, privacy: .public)"
+            )
+        }
     }
 
     private func encodeDays(_ days: Set<Int>) -> String {

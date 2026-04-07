@@ -1,5 +1,6 @@
 {
     "scripts": {
-        "setup": "cp \"$CONDUCTOR_ROOT_PATH/.env\" .env 2>/dev/null || true"
+        "setup": "cp \"$CONDUCTOR_ROOT_PATH/.env\" .env 2>/dev/null || true",
+        "archive": "xcrun simctl delete $(cat .context/simulator-udid.txt) 2>/dev/null || true"
     }
 }

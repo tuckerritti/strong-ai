@@ -1,5 +1,8 @@
 import Combine
 import SwiftUI
+import os
+
+private let logger = Logger(subsystem: "com.light-weight", category: "ChatDrawerView")
 
 struct ChatMessage: Identifiable {
     let id = UUID()
@@ -52,6 +55,7 @@ struct ChatDrawerView: View {
                     .interactiveDismissDisabled()
             }
             .onAppear { isSheetPresented = true }
+            .sensoryFeedback(.success, trigger: messages.filter(\.isApplied).count)
     }
 
     // MARK: - Sheet Content
@@ -187,6 +191,10 @@ struct ChatDrawerView: View {
             pendingMessage = nil
             messages.append(ChatMessage(role: .user, text: message))
             selectedDetent = .medium
+            let historyCount = messages.dropLast().filter { !$0.isError }.count
+            logger.info(
+                "chat_drawer submit source=pending textLength=\(message.count, privacy: .public) history=\(historyCount, privacy: .public)"
+            )
             Task { await streamResponse(for: message) }
         }
     }
@@ -249,6 +257,10 @@ struct ChatDrawerView: View {
         messages.append(ChatMessage(role: .user, text: text))
         inputText = ""
         selectedDetent = .medium
+        let historyCount = messages.dropLast().filter { !$0.isError }.count
+        logger.info(
+            "chat_drawer submit source=manual textLength=\(text.count, privacy: .public) history=\(historyCount, privacy: .public)"
+        )
         await streamResponse(for: text)
     }
 
@@ -258,6 +270,7 @@ struct ChatDrawerView: View {
         // Pass prior messages as history (exclude the just-appended user message)
         let history = messages.dropLast().filter { !$0.isError }
         guard let stream = await onSend(text, history) else {
+            logger.info("chat_drawer stream_unavailable")
             isSending = false
             return
         }
@@ -277,22 +290,31 @@ struct ChatDrawerView: View {
                         messages[assistantIndex].text = result.explanation
                     }
                     messages[assistantIndex].isApplying = false
-                    messages[assistantIndex].isApplied = true
+                    messages[assistantIndex].isApplied = result.workout != nil
                 case .usage(let cost):
                     messages[assistantIndex].tokenCost = (messages[assistantIndex].tokenCost ?? .zero) + cost
                 }
             }
+        } catch let error as ChatAIService.StreamError {
+            appendAssistantError(error.localizedDescription, kind: "stream", at: assistantIndex)
         } catch {
-            if messages[assistantIndex].text.isEmpty {
-                messages[assistantIndex].text = "Error: \(error.localizedDescription)"
-            } else {
-                messages[assistantIndex].text += "\n\nError: \(error.localizedDescription)"
-            }
-            messages[assistantIndex].isError = true
-            messages[assistantIndex].isApplying = false
+            appendAssistantError("Error: \(error.localizedDescription)", kind: "generic", at: assistantIndex)
         }
 
         isSending = false
     }
-}
 
+    private func appendAssistantError(_ text: String, kind: String, at assistantIndex: Int) {
+        let appendedToExisting = !messages[assistantIndex].text.isEmpty
+        logger.info(
+            "chat_drawer error_presented kind=\(kind, privacy: .public) appendedToExisting=\(appendedToExisting, privacy: .public)"
+        )
+        if !appendedToExisting {
+            messages[assistantIndex].text = text
+        } else {
+            messages[assistantIndex].text += "\n\n\(text)"
+        }
+        messages[assistantIndex].isError = true
+        messages[assistantIndex].isApplying = false
+    }
+}

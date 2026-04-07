@@ -1,7 +1,12 @@
 import SwiftUI
 import SwiftData
+import os
+
+private let logger = Logger(subsystem: "com.light-weight", category: "AdvancedSettings")
 
 struct AdvancedSettingsView: View {
+    let onReturnHome: () -> Void
+
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @State private var showingResetConfirmation = false
@@ -19,6 +24,20 @@ struct AdvancedSettingsView: View {
 
             ScrollView {
                 VStack(spacing: 24) {
+                    settingsSection("DATA") {
+                        NavigationLink {
+                            CSVImportView(onReturnHome: onReturnHome)
+                        } label: {
+                            HStack {
+                                Text("Import Workouts (CSV)")
+                                    .foregroundStyle(Color.textPrimary)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.textSecondary)
+                            }
+                        }
+                    }
                     settingsSection("TOKEN COST") {
                         Toggle("Show daily API cost", isOn: $state.showTokenCost)
                             .tint(Color(hex: 0x34C759))
@@ -90,10 +109,13 @@ struct AdvancedSettingsView: View {
     }
 
     private func resetAllData() {
+        logger.info("advanced_reset start")
         do {
             try AppResetService.resetAll(modelContext: modelContext, appState: appState)
+            logger.info("advanced_reset success")
         } catch {
             resetErrorMessage = error.localizedDescription
+            logger.error("advanced_reset failure error=\(String(describing: error), privacy: .public)")
         }
     }
 }

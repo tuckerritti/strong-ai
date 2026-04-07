@@ -28,7 +28,10 @@ final class HealthKitService: Sendable {
     var isAvailable: Bool { HKHealthStore.isHealthDataAvailable() }
 
     func requestAuthorization() async throws {
-        guard isAvailable else { return }
+        guard isAvailable else {
+            logger.info("healthkit_authorization skip reason=unavailable")
+            return
+        }
 
         let readTypes: Set<HKObjectType> = [
             HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
@@ -37,10 +40,18 @@ final class HealthKitService: Sendable {
             HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
         ]
 
-        try await store.requestAuthorization(toShare: [], read: readTypes)
+        logger.info("healthkit_authorization start readTypes=\(readTypes.count, privacy: .public)")
+        do {
+            try await store.requestAuthorization(toShare: [], read: readTypes)
+            logger.info("healthkit_authorization success readTypes=\(readTypes.count, privacy: .public)")
+        } catch {
+            logger.error("healthkit_authorization failure error=\(String(describing: error), privacy: .public)")
+            throw error
+        }
     }
 
     func fetchRecentHealthData() async -> HealthContext {
+        logger.info("healthkit_fetch start")
         var sleepHours: Double?
         var rhr: Double?
         var hrv: Double?
@@ -58,12 +69,17 @@ final class HealthKitService: Sendable {
         do { cal = try await fetchTodaySum(.activeEnergyBurned, unit: .kilocalorie()) }
         catch { logger.error("Failed to fetch active calories: \(error)") }
 
-        return HealthContext(
+        let context = HealthContext(
             sleepHours: sleepHours,
             restingHeartRate: rhr,
             hrv: hrv,
             activeCaloriesToday: cal
         )
+        let metricCount = [context.sleepHours, context.restingHeartRate, context.hrv, context.activeCaloriesToday]
+            .compactMap { $0 }
+            .count
+        logger.info("healthkit_fetch success metrics=\(metricCount, privacy: .public)")
+        return context
     }
 
     // MARK: - Private

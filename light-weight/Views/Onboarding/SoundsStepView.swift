@@ -1,39 +1,22 @@
 import SwiftUI
-import MuscleMap
 
-struct GenderStepView: View {
-    @Binding var gender: String
+struct SoundsStepView: View {
+    @Binding var selectedSounds: Set<RestSound>
     var onNext: () -> Void
 
-    private let options = ["Male", "Female"]
-
-    private var bodyGender: BodyGender {
-        gender == "Female" ? .female : .male
-    }
-
-    private var decorativeIntensities: [MuscleIntensity] {
-        let highlighted: [Muscle] = [
-            .chest, .upperBack, .quadriceps, .gluteal,
-            .hamstring, .deltoids, .abs, .calves
-        ]
-        let subtle: [Muscle] = [
-            .biceps, .triceps, .forearm, .trapezius
-        ]
-        return highlighted.map { MuscleIntensity(muscle: $0, intensity: 0.7) }
-             + subtle.map { MuscleIntensity(muscle: $0, intensity: 0.3) }
-    }
+    @State private var soundPreview = RestSoundService()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            OnboardingProgressBar(current: 3, total: 8)
+            OnboardingProgressBar(current: 7, total: 8)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Select your gender")
+                Text("Set completion sounds")
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
                     .tracking(-0.84)
                     .foregroundStyle(Color(hex: 0x0A0A0A))
 
-                Text("This helps us track your muscle volume accurately.")
+                Text("Pick the sounds that play when your rest timer ends.")
                     .font(.system(size: 16))
                     .foregroundStyle(Color.black.opacity(0.4))
             }
@@ -41,12 +24,18 @@ struct GenderStepView: View {
             .padding(.top, 24)
 
             VStack(spacing: 8) {
-                ForEach(options, id: \.self) { option in
-                    let selected = gender == option
+                ForEach(RestSound.allCases) { sound in
+                    let selected = selectedSounds.contains(sound)
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            gender = option
+                        if selected {
+                            if selectedSounds.count > 1 {
+                                selectedSounds.remove(sound)
+                            }
+                        } else {
+                            selectedSounds.insert(sound)
+                            soundPreview.previewSound(sound)
                         }
+                        RestSound.selected = selectedSounds
                     } label: {
                         HStack(spacing: 14) {
                             ZStack {
@@ -64,12 +53,12 @@ struct GenderStepView: View {
                                         }
                                 }
                             }
-                            Text(option)
+                            Text(sound.displayName)
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(selected ? .white : Color(hex: 0x0A0A0A))
                             Spacer()
                         }
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 16)
                         .padding(.horizontal, 16)
                         .background(selected ? Color(hex: 0x0A0A0A) : Color(hex: 0xF5F5F5))
                         .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -82,23 +71,6 @@ struct GenderStepView: View {
 
             Spacer()
 
-            if !gender.isEmpty {
-                HStack(spacing: 16) {
-                    BodyView(gender: bodyGender, side: .front, style: .minimal)
-                        .heatmap(decorativeIntensities, colorScale: onboardingColorScale)
-                        .frame(height: 200)
-                        .allowsHitTesting(false)
-                    BodyView(gender: bodyGender, side: .back, style: .minimal)
-                        .heatmap(decorativeIntensities, colorScale: onboardingColorScale)
-                        .frame(height: 200)
-                        .allowsHitTesting(false)
-                }
-                .frame(maxWidth: .infinity)
-                .transition(.opacity.combined(with: .scale(scale: 0.95)))
-            }
-
-            Spacer()
-
             Button(action: onNext) {
                 Text("Continue")
                     .font(.custom("SpaceGrotesk-Bold", size: 17))
@@ -106,17 +78,12 @@ struct GenderStepView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(gender.isEmpty ? Color(hex: 0x0A0A0A).opacity(0.4) : Color(hex: 0x0A0A0A))
+                    .background(Color(hex: 0x0A0A0A))
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
-            .disabled(gender.isEmpty)
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
         }
+        .sensoryFeedback(.selection, trigger: selectedSounds)
     }
 }
-
-private let onboardingColorScale = HeatmapColorScale(colors: [
-    Color(hex: 0xFFB5B5),
-    Color(hex: 0x34C759),
-])

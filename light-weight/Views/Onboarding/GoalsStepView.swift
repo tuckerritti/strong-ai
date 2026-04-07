@@ -14,7 +14,7 @@ struct GoalsStepView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            OnboardingProgressBar(current: 4, total: 7)
+            OnboardingProgressBar(current: 4, total: 8)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("What are your goals?")
@@ -92,5 +92,6 @@ struct GoalsStepView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
         }
+        .sensoryFeedback(.selection, trigger: goals)
     }
 }
