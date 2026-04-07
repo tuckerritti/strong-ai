@@ -33,14 +33,13 @@ enum CSVImportService {
     // MARK: - Parsing
 
     static func parse(_ text: String) -> (headers: [String], rows: [[String]]) {
-        let lines = text.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-        guard let headerLine = lines.first else {
+        let allRows = parseCSVRows(text)
+        guard let headers = allRows.first else {
             logger.info("csv_import parse_empty")
             return ([], [])
         }
 
-        let headers = parseCSVLine(headerLine)
-        let rows = lines.dropFirst().map { parseCSVLine($0) }
+        let rows = Array(allRows.dropFirst())
         if rows.isEmpty {
             logger.info("csv_import parse_empty")
         } else {
@@ -49,23 +48,74 @@ enum CSVImportService {
         return (headers, rows)
     }
 
-    private static func parseCSVLine(_ line: String) -> [String] {
+    /// RFC 4180-aware CSV parser that handles escaped quotes (`""`) and multiline quoted fields.
+    private static func parseCSVRows(_ text: String) -> [[String]] {
+        var rows: [[String]] = []
         var fields: [String] = []
         var current = ""
         var inQuotes = false
+        var i = text.startIndex
 
-        for char in line {
-            if char == "\"" {
-                inQuotes.toggle()
-            } else if char == "," && !inQuotes {
-                fields.append(current)
-                current = ""
+        while i < text.endIndex {
+            let char = text[i]
+
+            if inQuotes {
+                if char == "\"" {
+                    let next = text.index(after: i)
+                    if next < text.endIndex, text[next] == "\"" {
+                        // Escaped quote ""
+                        current.append("\"")
+                        i = text.index(after: next)
+                    } else {
+                        // End of quoted field
+                        inQuotes = false
+                        i = text.index(after: i)
+                    }
+                } else {
+                    current.append(char)
+                    i = text.index(after: i)
+                }
             } else {
-                current.append(char)
+                if char == "\"" {
+                    inQuotes = true
+                    i = text.index(after: i)
+                } else if char == "," {
+                    fields.append(current)
+                    current = ""
+                    i = text.index(after: i)
+                } else if char == "\r" || char == "\n" {
+                    // Skip \r\n as a single line break
+                    if char == "\r" {
+                        let next = text.index(after: i)
+                        if next < text.endIndex, text[next] == "\n" {
+                            i = text.index(after: next)
+                        } else {
+                            i = text.index(after: i)
+                        }
+                    } else {
+                        i = text.index(after: i)
+                    }
+                    fields.append(current)
+                    current = ""
+                    // Only add the row if it has content (skip blank lines)
+                    if fields.contains(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) {
+                        rows.append(fields)
+                    }
+                    fields = []
+                } else {
+                    current.append(char)
+                    i = text.index(after: i)
+                }
             }
         }
+
+        // Flush last row
         fields.append(current)
-        return fields
+        if fields.contains(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) {
+            rows.append(fields)
+        }
+
+        return rows
     }
 
     // MARK: - Auto-mapping
@@ -138,7 +188,7 @@ enum CSVImportService {
 
         for session in sessions {
             let firstRow = session.rows[0]
-            let workoutDate = parseDate(value(firstRow, index[.date]))!
+            guard let workoutDate = parseDate(value(firstRow, index[.date])) else { continue }
             let workoutName = value(firstRow, index[.workoutName]) ?? "Imported Workout"
 
             // Group rows by exercise name, preserving order
@@ -242,11 +292,17 @@ enum CSVImportService {
             "csv_import_classification start names=\(names.count, privacy: .public) batches=\(batches.count, privacy: .public) exercises=\(exercises.count, privacy: .public) logs=\(workoutLogs.count, privacy: .public)"
         )
 
-        // Fire all batches in parallel
+        // Process batches with limited concurrency (max 3 in flight)
+        let maxConcurrency = 3
         let classificationMap: [String: ClassifiedExercise] = try await withThrowingTaskGroup(
             of: [ClassifiedExercise].self
         ) { group in
-            for batch in batches {
+            var batchIterator = batches.makeIterator()
+            var inFlight = 0
+            var result: [String: ClassifiedExercise] = [:]
+            var completed = 0
+
+            func addBatch(_ batch: [String]) {
                 group.addTask {
                     let nameList = batch.map { "- \($0)" }.joined(separator: "\n")
                     let response = try await api.send(
@@ -260,11 +316,17 @@ enum CSVImportService {
                     let decoded = try JSONDecoder().decode(ClassificationResponse.self, from: data)
                     return decoded.exercises
                 }
+                inFlight += 1
             }
 
-            var result: [String: ClassifiedExercise] = [:]
-            var completed = 0
+            // Seed initial batch of tasks
+            while inFlight < maxConcurrency, let batch = batchIterator.next() {
+                addBatch(batch)
+            }
+
+            // As each completes, start the next
             for try await classified in group {
+                inFlight -= 1
                 for exercise in classified {
                     result[exercise.name.lowercased().trimmingCharacters(in: .whitespaces)] = exercise
                 }
@@ -275,6 +337,10 @@ enum CSVImportService {
                 let batchNum = completed
                 await MainActor.run {
                     onBatchComplete?(batchNum)
+                }
+
+                if let batch = batchIterator.next() {
+                    addBatch(batch)
                 }
             }
             return result
