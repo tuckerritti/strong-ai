@@ -7,8 +7,12 @@ struct WorkoutDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 statsHeader
-                ForEach(Array(log.entries.enumerated()), id: \.element.id) { _, entry in
-                    exerciseSection(entry)
+                ForEach(Array(log.entries.entryGroups.enumerated()), id: \.offset) { _, group in
+                    if group.count > 1 {
+                        supersetGroupSection(group)
+                    } else if let first = group.first {
+                        exerciseSection(first.entry)
+                    }
                 }
             }
             .padding(.bottom, 20)
@@ -35,6 +39,29 @@ struct WorkoutDetailView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 8)
         }
+    }
+
+    // MARK: - Superset Group
+
+    private func supersetGroupSection(_ entries: [(flatIndex: Int, entry: LogEntry)]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("SUPERSET")
+                .font(.system(size: 11, weight: .bold))
+                .tracking(1.0)
+                .foregroundStyle(Color.accent)
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, -4)
+
+            ForEach(entries, id: \.entry.id) { _, entry in
+                exerciseSection(entry)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.accent.opacity(0.05))
+                .padding(.horizontal, 8)
+        )
     }
 
     // MARK: - Exercise Section

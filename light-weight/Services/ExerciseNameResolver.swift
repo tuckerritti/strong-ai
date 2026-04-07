@@ -138,7 +138,8 @@ enum ExerciseNameResolver {
                 name: trimmedName,
                 muscleGroup: trimmedGroup,
                 targetMuscles: exercise.targetMuscles,
-                sets: exercise.sets
+                sets: exercise.sets,
+                supersetGroupId: exercise.supersetGroupId
             )
         }
 
@@ -146,7 +147,8 @@ enum ExerciseNameResolver {
             name: reference.name,
             muscleGroup: reference.muscleGroup,
             targetMuscles: reference.targetMuscles.isEmpty ? exercise.targetMuscles : reference.targetMuscles,
-            sets: exercise.sets
+            sets: exercise.sets,
+            supersetGroupId: exercise.supersetGroupId
         )
     }
 
@@ -163,7 +165,8 @@ enum ExerciseNameResolver {
                 exerciseName: trimmedName,
                 muscleGroup: trimmedGroup,
                 targetMuscles: entry.targetMuscles,
-                sets: entry.sets
+                sets: entry.sets,
+                supersetGroupId: entry.supersetGroupId
             )
         }
 
@@ -171,7 +174,8 @@ enum ExerciseNameResolver {
             exerciseName: reference.name,
             muscleGroup: reference.muscleGroup,
             targetMuscles: reference.targetMuscles.isEmpty ? entry.targetMuscles : reference.targetMuscles,
-            sets: entry.sets
+            sets: entry.sets,
+            supersetGroupId: entry.supersetGroupId
         )
     }
 }

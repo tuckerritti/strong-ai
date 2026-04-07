@@ -40,6 +40,7 @@ struct RPEAdjustmentService {
             {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
+              "supersetGroupId": null,
               "sets": [
                 { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8, "isWarmup": false }
               ]
@@ -48,6 +49,7 @@ struct RPEAdjustmentService {
         }
 
         Rules for adjustments:
+        - Preserve supersetGroupId values exactly as they appear. Do not change groupings during RPE adjustments.
         - Preserve the isWarmup flag on all sets. Do not convert warmup sets to working sets or vice versa.
         - Weight changes should use real plate increments (2.5 lb minimum)
         - Rest range: 30-300 seconds

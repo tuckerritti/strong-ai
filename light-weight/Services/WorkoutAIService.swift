@@ -26,6 +26,7 @@ struct WorkoutAIService {
             {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
+              "supersetGroupId": null,
               "sets": [
                 { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8, "isWarmup": false }
               ]
@@ -38,6 +39,8 @@ struct WorkoutAIService {
         - Use progressive overload: reference recent workout logs to pick appropriate weights
         - Vary muscle groups day-to-day so the user doesn't repeat the same muscles back-to-back
         - Rest seconds: 60-90 for hypertrophy, 120-180 for strength, 30-45 for accessories
+        - Use supersetGroupId (integer) to group exercises into supersets. Exercises with the same supersetGroupId are performed back-to-back with minimal rest between them. Use null for standalone exercises. Use 1, 2, 3, etc. for superset groups. Superset exercises must be adjacent in the array.
+        - Use supersets for antagonist muscle pairings (e.g. biceps/triceps, chest/back), time-efficient workouts, or when the user's goals emphasize endurance, conditioning, or fat loss. Typically 2-3 exercises per superset.
         - Weight in lbs. Use 0 for bodyweight exercises. All weights must be in 2.5 lb increments (real plate math). No odd numbers like 186 — use 185 or 187.5.
         - You MUST set targetRpe (1-10) for every set.
         - Use "isWarmup": true for warmup sets (lighter weight, higher reps, lower RPE). Typically 1-2 warmup sets per compound exercise at 50-70% working weight.

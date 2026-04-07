@@ -415,6 +415,11 @@ struct HomeView: View {
                     Text(exercise.name)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.textPrimary)
+                    if exercise.supersetGroupId != nil {
+                        Text("SS")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color.accent)
+                    }
                     Spacer()
                     Text("\(exercise.sets.count) sets · \(exercise.sets.reduce(0) { $0 + $1.reps }) reps")
                         .font(.system(size: 13))

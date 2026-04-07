@@ -86,6 +86,7 @@ struct ChatAIService {
             {
               "name": "Exercise Name",
               "muscleGroup": "Muscle Group",
+              "supersetGroupId": null,
               "sets": [
                 { "reps": 8, "weight": 135, "restSeconds": 90, "targetRpe": 8, "isWarmup": false }
               ]
@@ -98,6 +99,7 @@ struct ChatAIService {
         All weights must be in 2.5 lb increments (real plate math). No odd numbers like 186 — use 185 or 187.5.
         Never return duplicate exercise names. If an exercise matches the current workout or the library, reuse its exact name.
         For new exercises, follow the naming style of the existing library (e.g., if "Tricep Pushdown - Cable, Straight Bar" exists, a rope variation should be "Tricep Pushdown - Cable, Rope").
+        Use supersetGroupId (integer) to group exercises into supersets — exercises with the same ID are performed back-to-back. Use null for standalone exercises. Superset exercises must be adjacent. Preserve existing supersetGroupId groupings unless the user asks to change them.
 
         \(currentWorkout != nil ? "The user has an existing workout. Modify it based on their request — keep exercises they didn't mention, adjust what they asked about." : "Create a new workout from scratch based on the user's request.")
         \(isActiveWorkout ? "\nIMPORTANT: This workout is in progress. Sets marked COMPLETED in the progress below cannot be changed. You MUST include them exactly as-is in your response. Only modify PLANNED sets and exercises." : "")
