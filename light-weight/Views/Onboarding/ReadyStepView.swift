@@ -11,7 +11,7 @@ struct ReadyStepView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            OnboardingProgressBar(current: 7, total: 7)
+            OnboardingProgressBar(current: 8, total: 8)
 
             VStack(alignment: .leading, spacing: 12) {
                 ZStack {

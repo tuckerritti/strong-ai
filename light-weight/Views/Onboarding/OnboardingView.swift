@@ -15,6 +15,7 @@ struct OnboardingView: View {
     @State private var experienceLevel = ""
     @State private var trainingDays: Set<Int> = [0, 1, 3, 5]
     @State private var selectedSplit = "Upper / Lower Split"
+    @State private var selectedSounds: Set<RestSound> = RestSound.selected
 
     private var profile: UserProfile? { profiles.first }
 
@@ -36,6 +37,8 @@ struct OnboardingView: View {
             case 6:
                 ScheduleStepView(trainingDays: $trainingDays, selectedSplit: $selectedSplit, onNext: nextStep)
             case 7:
+                SoundsStepView(selectedSounds: $selectedSounds, onNext: nextStep)
+            case 8:
                 ReadyStepView(
                     goals: goals,
                     experienceLevel: experienceLevel,

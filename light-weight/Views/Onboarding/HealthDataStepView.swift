@@ -6,7 +6,7 @@ struct HealthDataStepView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            OnboardingProgressBar(current: 2, total: 7)
+            OnboardingProgressBar(current: 2, total: 8)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Sync your health data")
