@@ -462,7 +462,7 @@ final class ActiveWorkoutViewModel {
     var workoutName: String
     let timerService = TimerService()
     var apiKey: String = ""
-    var showRestTimer: Bool
+    weak var appState: AppState?
     @ObservationIgnored var onCost: @Sendable (TokenCost) -> Void
     private var adjustingCount = 0
     var isAdjusting: Bool { adjustingCount > 0 }
@@ -499,11 +499,11 @@ final class ActiveWorkoutViewModel {
         )
     }
 
-    init(workout: Workout, showRestTimer: Bool = true, onCost: @Sendable @escaping (TokenCost) -> Void = { _ in }) {
+    init(workout: Workout, appState: AppState? = nil, onCost: @Sendable @escaping (TokenCost) -> Void = { _ in }) {
         self.workoutName = workout.name
         self.workoutExercises = workout.exercises
         self.startedAt = .now
-        self.showRestTimer = showRestTimer
+        self.appState = appState
         self.onCost = onCost
 
         self.entries = workout.exercises.map { exercise in
@@ -586,7 +586,7 @@ final class ActiveWorkoutViewModel {
             workoutExercises[exerciseIndex].sets[setIndex].reps = reps
         }
 
-        if let planned, showRestTimer {
+        if let planned, appState?.showRestTimer ?? false {
             timerService.start(seconds: planned.restSeconds)
         }
 
@@ -594,7 +594,7 @@ final class ActiveWorkoutViewModel {
             weight != p.weight || reps != p.reps || (p.targetRpe != nil && rpe != p.targetRpe)
         } ?? false
         logger.info(
-            "workout_set complete exerciseIndex=\(exerciseIndex + 1, privacy: .public) setIndex=\(setIndex + 1, privacy: .public) missedTarget=\(missedTarget, privacy: .public) timerStarted=\(planned != nil && self.showRestTimer, privacy: .public) isWarmup=\(isWarmup, privacy: .public) fractionalWeight=\(fractionalWeight, privacy: .public)"
+            "workout_set complete exerciseIndex=\(exerciseIndex + 1, privacy: .public) setIndex=\(setIndex + 1, privacy: .public) missedTarget=\(missedTarget, privacy: .public) timerStarted=\(planned != nil && (self.appState?.showRestTimer ?? false), privacy: .public) isWarmup=\(isWarmup, privacy: .public) fractionalWeight=\(fractionalWeight, privacy: .public)"
         )
 
         debugActiveWorkoutLog(
@@ -801,7 +801,7 @@ final class ActiveWorkoutViewModel {
     }
 
     private func resyncTimerIfNeeded() {
-        guard timerService.isRunning, showRestTimer else { return }
+        guard timerService.isRunning, appState?.showRestTimer ?? false else { return }
 
         // Find the last completed set and its new planned rest
         for (ei, entry) in entries.enumerated().reversed() {

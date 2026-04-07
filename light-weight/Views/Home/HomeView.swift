@@ -471,7 +471,7 @@ struct HomeView: View {
             if appState.activeViewModel == nil {
                 appState.activeViewModel = ActiveWorkoutViewModel(
                     workout: workout,
-                    showRestTimer: appState.showRestTimer,
+                    appState: appState,
                     onCost: { [appState] cost in appState.recordCost(cost) }
                 )
             }
