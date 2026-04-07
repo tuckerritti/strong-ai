@@ -1,11 +1,16 @@
 import SwiftUI
 
+private func debugSetRowLog(_ message: String) {
+    DebugLogStore.record(message, category: "SetRow")
+}
+
 struct SetRowView: View {
+    private static let errorPulseCount = 3
+
     let setNumber: Int
     let logSet: LogSet
     let plannedSet: WorkoutSet?
     let isActive: Bool
-    let isUpdating: Bool
     let isAdjusting: Bool
     let adjustmentFailed: Bool
     let onLog: (Double, Int, Int) -> Void
@@ -15,8 +20,7 @@ struct SetRowView: View {
     @State private var repsText: String = ""
     @State private var rpeText: String = ""
     @State private var didInit = false
-    @State private var sweepPosition: CGFloat = 1.3
-    @State private var contentOpacity: Double = 1.0
+    @State private var sweepProgress: CGFloat = 1.3
     @State private var pulseOpacity: Double = 0.0
     @State private var isEditing = false
 
@@ -54,6 +58,10 @@ struct SetRowView: View {
             guard !didInit else { return }
             didInit = true
             syncDisplayedValues()
+            debugSetRowLog("Row \(self.setNumber) appeared active=\(self.isActive) completed=\(self.isCompleted) adjusting=\(self.isAdjusting)")
+            if isAdjusting {
+                startSweep()
+            }
         }
         .onChange(of: logSet.weight) {
             syncPendingValues()
@@ -66,46 +74,71 @@ struct SetRowView: View {
                 rpeText = logSet.rpe > 0 ? String(logSet.rpe) : ""
             }
         }
-        .opacity((isAdjusting && !isCompleted ? 0.5 : 1.0) * contentOpacity)
+        .opacity(isAdjusting && !isCompleted ? 0.5 : 1.0)
         .animation(.easeOut(duration: 0.2), value: isAdjusting)
         .overlay {
             if !isCompleted {
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            stops: [
-                                .init(color: .clear, location: max(0, min(1, sweepPosition - 0.15))),
-                                .init(color: Color.textQuaternary, location: max(0, min(1, sweepPosition))),
-                                .init(color: .clear, location: max(0, min(1, sweepPosition + 0.15))),
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                GeometryReader { proxy in
+                    let bandWidth: CGFloat = 72
+                    let travel = proxy.size.width + (bandWidth * 2)
+                    let xOffset = (travel * sweepProgress) - bandWidth
+
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.gray.opacity(0.0),
+                                    Color.gray.opacity(0.45),
+                                    Color.gray.opacity(0.0),
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
-                    .opacity(sweepPosition < 1.3 ? 1 : 0)
-                .allowsHitTesting(false)
+                        .frame(width: bandWidth)
+                        .opacity(isAdjusting ? 0.9 : 0)
+                        .offset(x: xOffset)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                        .clipped()
+                        .allowsHitTesting(false)
+                }
             }
         }
         .background {
             Rectangle()
-                .fill(adjustmentFailed ? Color.red : Color.gray)
+                .fill(Color.red)
                 .opacity(pulseOpacity)
         }
         .onChange(of: adjustmentFailed) {
-            guard adjustmentFailed, !isCompleted else { return }
+            guard !isCompleted else { return }
+
+            guard adjustmentFailed else {
+                var transaction = Transaction()
+                transaction.animation = nil
+                withTransaction(transaction) {
+                    pulseOpacity = 0.0
+                }
+                return
+            }
+
             pulseOpacity = 0.0
-            withAnimation(.easeInOut(duration: 0.25).repeatCount(10, autoreverses: true)) {
+            withAnimation(
+                .easeInOut(duration: 0.25)
+                    .repeatCount(Self.errorPulseCount * 2, autoreverses: true)
+            ) {
                 pulseOpacity = 0.3
             }
         }
-        .onChange(of: isUpdating) {
-            guard isUpdating, !isCompleted else { return }
-            sweepPosition = -0.3
-            contentOpacity = 0.3
-            withAnimation(.easeOut(duration: 0.8)) {
-                sweepPosition = 1.3
-                contentOpacity = 1.0
+        .onChange(of: isAdjusting) {
+            debugSetRowLog("Row \(self.setNumber) adjusting=\(self.isAdjusting) completed=\(self.isCompleted)")
+            if isAdjusting {
+                startSweep()
+            } else {
+                stopSweep()
             }
+        }
+        .onDisappear {
+            stopSweep()
         }
     }
 
@@ -240,5 +273,31 @@ struct SetRowView: View {
         guard !isCompleted else { return }
         weightText = logSet.weight > 0 ? "\(Int(logSet.weight))" : ""
         repsText = "\(logSet.reps)"
+    }
+
+    private func startSweep() {
+        guard !isCompleted else { return }
+
+        debugSetRowLog("Starting sweep row=\(self.setNumber) active=\(self.isActive)")
+
+        var transaction = Transaction()
+        transaction.animation = nil
+        withTransaction(transaction) {
+            sweepProgress = -0.3
+        }
+
+        withAnimation(.linear(duration: 0.8).repeatForever(autoreverses: false)) {
+            sweepProgress = 1.3
+        }
+    }
+
+    private func stopSweep() {
+        debugSetRowLog("Stopping sweep row=\(self.setNumber) completed=\(self.isCompleted)")
+
+        var transaction = Transaction()
+        transaction.animation = nil
+        withTransaction(transaction) {
+            sweepProgress = 1.3
+        }
     }
 }

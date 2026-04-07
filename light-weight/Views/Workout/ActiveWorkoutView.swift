@@ -4,6 +4,16 @@ import SwiftData
 
 private let logger = Logger(subsystem: "com.light-weight", category: "ActiveWorkout")
 
+private func debugActiveWorkoutLog(_ message: String) {
+    DebugLogStore.record(message, category: "ActiveWorkout")
+}
+
+#if DEBUG
+private let stubAutoRPEFailure = true
+#else
+private let stubAutoRPEFailure = false
+#endif
+
 struct ActiveWorkoutView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -239,7 +249,6 @@ struct ActiveWorkoutView: View {
                         logSet: set,
                         plannedSet: viewModel.plannedSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
                         isActive: viewModel.isActiveSet(exerciseIndex: exerciseIndex, setIndex: setIndex),
-                        isUpdating: viewModel.updatedSetKeys.contains("\(exerciseIndex)-\(setIndex)"),
                         isAdjusting: viewModel.isAdjusting,
                         adjustmentFailed: viewModel.adjustmentFailed,
                         onLog: { weight, reps, rpe in
@@ -392,7 +401,6 @@ final class ActiveWorkoutViewModel {
     var workoutName: String
     let timerService = TimerService()
     var apiKey: String = ""
-    var updatedSetKeys: Set<String> = []
     var isAdjusting = false
     var adjustmentFailed = false
     private var adjustmentGeneration = 0
@@ -506,7 +514,16 @@ final class ActiveWorkoutViewModel {
             weight != p.weight || reps != p.reps || (p.targetRpe != nil && rpe != p.targetRpe)
         } ?? false
 
-        if !apiKey.isEmpty && missedTarget {
+        let shouldRequestAdjustment = missedTarget && (!apiKey.isEmpty || stubAutoRPEFailure)
+
+        debugActiveWorkoutLog(
+            "Logged set exercise=\(exerciseIndex) set=\(setIndex) " +
+            "weight=\(weight) reps=\(reps) rpe=\(rpe) " +
+            "missedTarget=\(missedTarget) hasAPIKey=\(!self.apiKey.isEmpty) " +
+            "stubFailure=\(stubAutoRPEFailure) shouldRequestAdjustment=\(shouldRequestAdjustment)"
+        )
+
+        if shouldRequestAdjustment {
             requestRPEAdjustment()
         }
     }
@@ -539,25 +556,44 @@ final class ActiveWorkoutViewModel {
         let generation = nextAdjustmentGeneration()
         isAdjusting = true
 
+        debugActiveWorkoutLog("Starting auto-RPE adjustment generation=\(generation) completedSets=\(self.completedSets)")
+
         Task {
-            defer { isAdjusting = false }
+            defer {
+                isAdjusting = false
+                debugActiveWorkoutLog("Ending auto-RPE adjustment generation=\(generation)")
+            }
+
+            if stubAutoRPEFailure {
+                debugActiveWorkoutLog("Stubbing auto-RPE failure generation=\(generation)")
+                try? await Task.sleep(for: .milliseconds(600))
+                triggerAdjustmentFailure(generation: generation)
+                return
+            }
+
             if let adjusted = await RPEAdjustmentService.adjustWorkout(
                 apiKey: key,
                 workout: workout,
                 progress: progress
             ) {
                 if shouldApplyAdjustment(generation: generation) {
+                    debugActiveWorkoutLog("Applying auto-RPE adjustment generation=\(generation)")
                     applyModifiedWorkout(adjusted)
                 } else {
                     logger.info("Discarding stale RPE adjustment (generation \(generation))")
                 }
             } else {
-                adjustmentFailed = true
-                Task {
-                    try? await Task.sleep(for: .seconds(2.5))
-                    adjustmentFailed = false
-                }
+                triggerAdjustmentFailure(generation: generation)
             }
+        }
+    }
+
+    private func triggerAdjustmentFailure(generation: Int) {
+        debugActiveWorkoutLog("Auto-RPE adjustment failed generation=\(generation)")
+        adjustmentFailed = true
+        Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            adjustmentFailed = false
         }
     }
 
@@ -648,19 +684,6 @@ final class ActiveWorkoutViewModel {
 
         workoutExercises = updatedExercises
         entries = updatedEntries
-
-        // Flag non-completed sets for shadow sweep animation
-        var keys: Set<String> = []
-        for (ei, entry) in entries.enumerated() {
-            for (si, set) in entry.sets.enumerated() where set.completedAt == nil {
-                keys.insert("\(ei)-\(si)")
-            }
-        }
-        updatedSetKeys = keys
-        Task {
-            try? await Task.sleep(for: .seconds(0.8))
-            updatedSetKeys = []
-        }
 
         resyncTimerIfNeeded()
     }
