@@ -22,11 +22,11 @@ struct APIKeyStepView: View {
                 Text("Connect your AI")
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
                     .tracking(-0.84)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
 
                 Text("We use Claude to personalize your workouts, analyze your progress, and adapt your training in real time. Your key stays on-device.")
                     .font(.system(size: 16))
-                    .foregroundStyle(Color.black.opacity(0.4))
+                    .foregroundStyle(Color.textTertiary)
             }
             .padding(.horizontal, 20)
             .padding(.top, 24)
@@ -34,14 +34,14 @@ struct APIKeyStepView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Anthropic API Key")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
 
                 SecureField("sk-ant-api03-...", text: $apiKey)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .padding(.vertical, 14)
                     .padding(.horizontal, 16)
-                    .background(Color(hex: 0xF5F5F5))
+                    .background(Color.appSurface)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
 
                 if let errorMessage {
@@ -51,7 +51,7 @@ struct APIKeyStepView: View {
                 } else {
                     Text("Get your key at console.anthropic.com. Stored locally using iOS Keychain.")
                         .font(.system(size: 13))
-                        .foregroundStyle(Color.black.opacity(0.3))
+                        .foregroundStyle(Color.textMuted)
                 }
             }
             .padding(.horizontal, 20)
@@ -65,16 +65,16 @@ struct APIKeyStepView: View {
                 HStack(spacing: 8) {
                     if isValidating {
                         ProgressView()
-                            .tint(.white)
+                            .tint(Color.buttonPrimaryText)
                     }
                     Text(isValidating ? "Verifying…" : "Continue")
                         .font(.custom("SpaceGrotesk-Bold", size: 17))
                         .tracking(-0.2)
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.buttonPrimaryText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(canContinue ? Color(hex: 0x0A0A0A) : Color(hex: 0x0A0A0A).opacity(0.3))
+                .background(canContinue ? Color.buttonPrimary : Color.buttonPrimary.opacity(0.3))
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .disabled(!canContinue)

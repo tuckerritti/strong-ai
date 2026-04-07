@@ -16,21 +16,21 @@ struct ReadyStepView: View {
             VStack(alignment: .leading, spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color(hex: 0x34C759).opacity(0.15))
+                        .fill(Color.accent.opacity(0.15))
                         .frame(width: 40, height: 40)
                     Image(systemName: "checkmark")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Color(hex: 0x34C759))
+                        .foregroundStyle(Color.accent)
                 }
 
                 Text("You're all set")
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
                     .tracking(-0.84)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
 
                 Text("Here's a summary of your profile. Your first workout is ready.")
                     .font(.system(size: 16))
-                    .foregroundStyle(Color.black.opacity(0.4))
+                    .foregroundStyle(Color.textTertiary)
             }
             .padding(.horizontal, 20)
             .padding(.top, 24)
@@ -48,21 +48,21 @@ struct ReadyStepView: View {
                 HStack {
                     Text("AI")
                         .font(.system(size: 14))
-                        .foregroundStyle(Color.black.opacity(0.35))
+                        .foregroundStyle(Color.textSecondary)
                     Spacer()
                     HStack(spacing: 6) {
                         Circle()
-                            .fill(apiKeyPresent ? Color(hex: 0x34C759) : Color.orange)
+                            .fill(apiKeyPresent ? Color.accent : Color.orange)
                             .frame(width: 8, height: 8)
                         Text(apiKeyPresent ? "Connected" : "Not connected")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color(hex: 0x0A0A0A))
+                            .foregroundStyle(Color.textPrimary)
                     }
                 }
                 .padding(.vertical, 14)
                 .padding(.horizontal, 16)
             }
-            .background(Color(hex: 0xF5F5F5))
+            .background(Color.appSurface)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .padding(.horizontal, 20)
             .padding(.top, 28)
@@ -76,10 +76,10 @@ struct ReadyStepView: View {
                 Text("Start Training")
                     .font(.custom("SpaceGrotesk-Bold", size: 17))
                     .tracking(-0.2)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.buttonPrimaryText)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color(hex: 0x0A0A0A))
+                    .background(Color.buttonPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .padding(.horizontal, 20)
@@ -106,11 +106,11 @@ struct ReadyStepView: View {
         HStack {
             Text(label)
                 .font(.system(size: 14))
-                .foregroundStyle(Color.black.opacity(0.35))
+                .foregroundStyle(Color.textSecondary)
             Spacer()
             Text(value)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color(hex: 0x0A0A0A))
+                .foregroundStyle(Color.textPrimary)
         }
         .padding(.vertical, 14)
         .padding(.horizontal, 16)
@@ -118,7 +118,7 @@ struct ReadyStepView: View {
 
     private var divider: some View {
         Rectangle()
-            .fill(Color.black.opacity(0.06))
+            .fill(Color.divider)
             .frame(height: 1)
             .padding(.horizontal, 16)
     }

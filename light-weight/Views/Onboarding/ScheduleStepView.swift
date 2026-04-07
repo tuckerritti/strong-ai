@@ -15,11 +15,11 @@ struct ScheduleStepView: View {
                 Text("How often can you train?")
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
                     .tracking(-0.84)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
 
                 Text("We'll build your split around this. You can always change it later.")
                     .font(.system(size: 16))
-                    .foregroundStyle(Color.black.opacity(0.4))
+                    .foregroundStyle(Color.textTertiary)
             }
             .padding(.horizontal, 20)
             .padding(.top, 24)
@@ -29,10 +29,10 @@ struct ScheduleStepView: View {
                 Text("\(trainingDays.count)")
                     .font(.custom("SpaceGrotesk-Bold", size: 72))
                     .tracking(-2)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
                 Text("days / week")
                     .font(.system(size: 18))
-                    .foregroundStyle(Color.black.opacity(0.4))
+                    .foregroundStyle(Color.textTertiary)
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 28)
@@ -51,9 +51,9 @@ struct ScheduleStepView: View {
                     } label: {
                         Text(dayLabels[index])
                             .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(selected ? .white : Color.black.opacity(0.3))
+                            .foregroundStyle(selected ? Color.buttonPrimaryText : Color.textMuted)
                             .frame(width: 44, height: 44)
-                            .background(selected ? Color(hex: 0x0A0A0A) : Color.black.opacity(0.06))
+                            .background(selected ? Color.buttonPrimary : Color.divider)
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
@@ -68,25 +68,25 @@ struct ScheduleStepView: View {
                     Text("RECOMMENDED SPLIT")
                         .font(.system(size: 13, weight: .semibold))
                         .tracking(0.5)
-                        .foregroundStyle(Color.black.opacity(0.35))
+                        .foregroundStyle(Color.textSecondary)
 
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
                             Text(splitRecommendation.name)
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Color(hex: 0x0A0A0A))
+                                .foregroundStyle(Color.textPrimary)
                             Spacer()
                             Text("Best match")
                                 .font(.system(size: 13))
-                                .foregroundStyle(Color(hex: 0x34C759))
+                                .foregroundStyle(Color.accent)
                         }
                         Text(splitRecommendation.description)
                             .font(.system(size: 13))
-                            .foregroundStyle(Color.black.opacity(0.35))
+                            .foregroundStyle(Color.textSecondary)
                             .lineSpacing(3)
                     }
                     .padding(16)
-                    .background(Color(hex: 0xF5F5F5))
+                    .background(Color.appSurface)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .padding(.horizontal, 20)
@@ -99,10 +99,10 @@ struct ScheduleStepView: View {
                 Text("Continue")
                     .font(.custom("SpaceGrotesk-Bold", size: 17))
                     .tracking(-0.2)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.buttonPrimaryText)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(trainingDays.isEmpty ? Color(hex: 0x0A0A0A).opacity(0.4) : Color(hex: 0x0A0A0A))
+                    .background(trainingDays.isEmpty ? Color.buttonPrimary.opacity(0.4) : Color.buttonPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .disabled(trainingDays.isEmpty)
