@@ -97,6 +97,7 @@ final class UserProfile {
     var experienceLevel: String
     var trainingDays: String
     var onboardingCompleted: Bool
+    var healthKitEnabled: Bool
 
     init(
         goals: String = "",
@@ -106,7 +107,8 @@ final class UserProfile {
         gender: String = "",
         experienceLevel: String = "",
         trainingDays: String = "",
-        onboardingCompleted: Bool = false
+        onboardingCompleted: Bool = false,
+        healthKitEnabled: Bool = false
     ) {
         self.goals = goals
         self.schedule = schedule
@@ -116,6 +118,7 @@ final class UserProfile {
         self.experienceLevel = experienceLevel
         self.trainingDays = trainingDays
         self.onboardingCompleted = onboardingCompleted
+        self.healthKitEnabled = healthKitEnabled
     }
 
     static func loadSavedAPIKey() -> String {

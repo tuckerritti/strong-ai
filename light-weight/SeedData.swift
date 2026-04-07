@@ -253,7 +253,8 @@ enum SeedData {
             gender: "Male",
             experienceLevel: "Intermediate",
             trainingDays: "[0,1,3,5]",
-            onboardingCompleted: true
+            onboardingCompleted: true,
+            healthKitEnabled: true
         )
         context.insert(profile)
 

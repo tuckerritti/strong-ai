@@ -15,6 +15,7 @@ struct OnboardingView: View {
     @State private var experienceLevel = ""
     @State private var trainingDays: Set<Int> = [0, 1, 3, 5]
     @State private var selectedSplit = "Upper / Lower Split"
+    @State private var healthKitEnabled = false
 
     private var profile: UserProfile? { profiles.first }
 
@@ -26,7 +27,7 @@ struct OnboardingView: View {
             case 1:
                 APIKeyStepView(apiKey: $apiKey, onNext: nextStep)
             case 2:
-                HealthDataStepView(onNext: nextStep, onSkip: nextStep)
+                HealthDataStepView(onNext: { healthKitEnabled = true; nextStep() }, onSkip: nextStep)
             case 3:
                 GenderStepView(gender: $gender, onNext: nextStep)
             case 4:
@@ -72,6 +73,7 @@ struct OnboardingView: View {
         p.experienceLevel = experienceLevel
         p.trainingDays = encodeDays(trainingDays)
         p.schedule = "\(trainingDays.count) days per week"
+        p.healthKitEnabled = healthKitEnabled
         p.onboardingCompleted = true
 
         var didFail = false
