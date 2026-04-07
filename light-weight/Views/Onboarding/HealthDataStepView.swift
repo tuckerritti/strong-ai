@@ -12,11 +12,11 @@ struct HealthDataStepView: View {
                 Text("Sync your health data")
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
                     .tracking(-0.84)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
 
                 Text("We read sleep, heart rate, and recovery data to tailor each workout to how your body is doing today.")
                     .font(.system(size: 16))
-                    .foregroundStyle(Color.black.opacity(0.4))
+                    .foregroundStyle(Color.textTertiary)
             }
             .padding(.horizontal, 20)
             .padding(.top, 24)
@@ -36,7 +36,7 @@ struct HealthDataStepView: View {
                 )
                 infoCard(
                     icon: "flame.fill",
-                    iconColor: Color(hex: 0x34C759),
+                    iconColor: Color.accent,
                     title: "Activity",
                     subtitle: "Steps and energy to gauge readiness"
                 )
@@ -58,17 +58,17 @@ struct HealthDataStepView: View {
                     Text("Enable HealthKit")
                         .font(.custom("SpaceGrotesk-Bold", size: 17))
                         .tracking(-0.2)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.buttonPrimaryText)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color(hex: 0x0A0A0A))
+                        .background(Color.buttonPrimary)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
 
                 Button(action: onSkip) {
                     Text("Skip for now")
                         .font(.system(size: 14))
-                        .foregroundStyle(Color.black.opacity(0.3))
+                        .foregroundStyle(Color.textMuted)
                 }
             }
             .padding(.horizontal, 20)
@@ -89,15 +89,15 @@ struct HealthDataStepView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
                 Text(subtitle)
                     .font(.system(size: 13))
-                    .foregroundStyle(Color.black.opacity(0.35))
+                    .foregroundStyle(Color.textSecondary)
             }
             Spacer()
         }
         .padding(16)
-        .background(Color(hex: 0xF5F5F5))
+        .background(Color.appSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }

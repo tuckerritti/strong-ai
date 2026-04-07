@@ -31,11 +31,11 @@ struct GenderStepView: View {
                 Text("Select your gender")
                     .font(.custom("SpaceGrotesk-Bold", size: 28))
                     .tracking(-0.84)
-                    .foregroundStyle(Color(hex: 0x0A0A0A))
+                    .foregroundStyle(Color.textPrimary)
 
                 Text("This helps us track your muscle volume accurately.")
                     .font(.system(size: 16))
-                    .foregroundStyle(Color.black.opacity(0.4))
+                    .foregroundStyle(Color.textTertiary)
             }
             .padding(.horizontal, 20)
             .padding(.top, 24)
@@ -51,11 +51,11 @@ struct GenderStepView: View {
                         HStack(spacing: 14) {
                             ZStack {
                                 Circle()
-                                    .stroke(selected ? Color(hex: 0x34C759) : Color.black.opacity(0.15), lineWidth: selected ? 0 : 1.5)
+                                    .stroke(selected ? Color.accent : Color.divider, lineWidth: selected ? 0 : 1.5)
                                     .frame(width: 24, height: 24)
                                 if selected {
                                     Circle()
-                                        .fill(Color(hex: 0x34C759))
+                                        .fill(Color.accent)
                                         .frame(width: 24, height: 24)
                                         .overlay {
                                             Image(systemName: "checkmark")
@@ -66,12 +66,12 @@ struct GenderStepView: View {
                             }
                             Text(option)
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(selected ? .white : Color(hex: 0x0A0A0A))
+                                .foregroundStyle(selected ? Color.buttonPrimaryText : Color.textPrimary)
                             Spacer()
                         }
                         .padding(.vertical, 14)
                         .padding(.horizontal, 16)
-                        .background(selected ? Color(hex: 0x0A0A0A) : Color(hex: 0xF5F5F5))
+                        .background(selected ? Color.buttonPrimary : Color.appSurface)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                     .buttonStyle(.plain)
@@ -103,10 +103,10 @@ struct GenderStepView: View {
                 Text("Continue")
                     .font(.custom("SpaceGrotesk-Bold", size: 17))
                     .tracking(-0.2)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.buttonPrimaryText)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(gender.isEmpty ? Color(hex: 0x0A0A0A).opacity(0.4) : Color(hex: 0x0A0A0A))
+                    .background(gender.isEmpty ? Color.buttonPrimary.opacity(0.4) : Color.buttonPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .disabled(gender.isEmpty)

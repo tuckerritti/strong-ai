@@ -8,7 +8,7 @@ struct OnboardingProgressBar: View {
         HStack(spacing: 6) {
             ForEach(0..<total, id: \.self) { index in
                 RoundedRectangle(cornerRadius: 1.5)
-                    .fill(index < current ? Color(hex: 0x0A0A0A) : Color.black.opacity(0.08))
+                    .fill(index < current ? Color.buttonPrimary : Color.divider)
                     .frame(maxWidth: .infinity)
                     .frame(height: 3)
             }
