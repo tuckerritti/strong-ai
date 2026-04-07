@@ -395,7 +395,8 @@ final class ActiveWorkoutViewModel {
     var workoutName: String
     let timerService = TimerService()
     var apiKey: String = ""
-    var isAdjusting = false
+    private var adjustingCount = 0
+    var isAdjusting: Bool { adjustingCount > 0 }
     var adjustmentFailed = false
     private var adjustmentGeneration = 0
 
@@ -545,13 +546,13 @@ final class ActiveWorkoutViewModel {
         let workout = currentWorkout
         let progress = entries
         let generation = nextAdjustmentGeneration()
-        isAdjusting = true
+        adjustingCount += 1
 
         debugActiveWorkoutLog("Starting auto-RPE adjustment generation=\(generation) completedSets=\(self.completedSets)")
 
         Task {
             defer {
-                isAdjusting = false
+                adjustingCount -= 1
                 debugActiveWorkoutLog("Ending auto-RPE adjustment generation=\(generation)")
             }
 
@@ -573,6 +574,10 @@ final class ActiveWorkoutViewModel {
     }
 
     private func triggerAdjustmentFailure(generation: Int) {
+        guard shouldApplyAdjustment(generation: generation) else {
+            logger.info("Discarding stale RPE adjustment failure (generation \(generation))")
+            return
+        }
         debugActiveWorkoutLog("Auto-RPE adjustment failed generation=\(generation)")
         adjustmentFailed = true
         Task {
