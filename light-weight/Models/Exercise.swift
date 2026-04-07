@@ -13,11 +13,17 @@ final class Exercise {
 
     var targetMusclesData: Data?
 
+    @Transient private var _instructionsCache: [String]?
+    @Transient private var _targetMusclesCache: [TargetMuscle]?
+
     var instructions: [String] {
         get {
+            if let cached = _instructionsCache { return cached }
             guard let data = instructionsData else { return [] }
             do {
-                return try JSONDecoder().decode([String].self, from: data)
+                let decoded = try JSONDecoder().decode([String].self, from: data)
+                _instructionsCache = decoded
+                return decoded
             } catch {
                 logger.error("Failed to decode instructions: \(error)")
                 return []
@@ -26,6 +32,7 @@ final class Exercise {
         set {
             do {
                 instructionsData = try JSONEncoder().encode(newValue)
+                _instructionsCache = newValue
             } catch {
                 logger.error("Failed to encode instructions: \(error)")
             }
@@ -34,11 +41,15 @@ final class Exercise {
 
     var targetMuscles: [TargetMuscle] {
         get {
+            if let cached = _targetMusclesCache { return cached }
             guard let data = targetMusclesData else { return [] }
-            return (try? JSONDecoder().decode([TargetMuscle].self, from: data)) ?? []
+            let decoded = (try? JSONDecoder().decode([TargetMuscle].self, from: data)) ?? []
+            _targetMusclesCache = decoded
+            return decoded
         }
         set {
             targetMusclesData = try? JSONEncoder().encode(newValue)
+            _targetMusclesCache = newValue
         }
     }
 

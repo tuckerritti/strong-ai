@@ -115,10 +115,15 @@ final class WorkoutLog {
     var finishedAt: Date?
     var entriesData: Data
 
+    @Transient private var _entriesCache: [LogEntry]?
+
     var entries: [LogEntry] {
         get {
+            if let cached = _entriesCache { return cached }
             do {
-                return try JSONDecoder().decode([LogEntry].self, from: entriesData)
+                let decoded = try JSONDecoder().decode([LogEntry].self, from: entriesData)
+                _entriesCache = decoded
+                return decoded
             } catch {
                 logger.error("Failed to decode workout entries: \(error)")
                 return []
@@ -127,6 +132,7 @@ final class WorkoutLog {
         set {
             do {
                 entriesData = try JSONEncoder().encode(newValue)
+                _entriesCache = newValue
             } catch {
                 logger.error("Failed to encode workout entries: \(error)")
             }
