@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		FEC68C762F8475A9004EC0CC /* AnthropicSwiftSDK in Frameworks */ = {isa = PBXBuildFile; productRef = AA00000200000000003BDB5D /* AnthropicSwiftSDK */; };
+		FEC68C772F8475A9004EC0CC /* MuscleMap in Frameworks */ = {isa = PBXBuildFile; productRef = AA00000400000000003BDB5D /* MuscleMap */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		FECA7CB12F64E0A6003BDB5D /* light-weight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "light-weight.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +28,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FEC68C772F8475A9004EC0CC /* MuscleMap in Frameworks */,
+				FEC68C762F8475A9004EC0CC /* AnthropicSwiftSDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -97,14 +104,14 @@
 			);
 			mainGroup = FECA7CA82F64E0A6003BDB5D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				AA00000100000000003BDB5D /* XCRemoteSwiftPackageReference "AnthropicSwiftSDK" */,
+				AA00000300000000003BDB5D /* XCRemoteSwiftPackageReference "MuscleMap" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FECA7CB22F64E0A6003BDB5D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
-			packageReferences = (
-				AA00000100000000003BDB5D /* AnthropicSwiftSDK */,
-				AA00000300000000003BDB5D /* MuscleMap */,
-			);
 			targets = (
 				FECA7CB02F64E0A6003BDB5D /* light-weight */,
 			);
@@ -283,7 +290,7 @@
 				DEVELOPMENT_TEAM = 4YWNLRMN7J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Info.plist";
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "LightWeight β";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Light Weight uses your health data (sleep, heart rate, HRV) to personalize your workout programming.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Light Weight does not write any data to Apple Health.";
@@ -324,7 +331,7 @@
 				DEVELOPMENT_TEAM = 4YWNLRMN7J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Info.plist";
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LightWeight;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Light Weight uses your health data (sleep, heart rate, HRV) to personalize your workout programming.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Light Weight does not write any data to Apple Health.";
@@ -378,7 +385,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		AA00000100000000003BDB5D /* AnthropicSwiftSDK */ = {
+		AA00000100000000003BDB5D /* XCRemoteSwiftPackageReference "AnthropicSwiftSDK" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/fumito-ito/AnthropicSwiftSDK.git";
 			requirement = {
@@ -386,7 +393,7 @@
 				minimumVersion = 0.14.0;
 			};
 		};
-		AA00000300000000003BDB5D /* MuscleMap */ = {
+		AA00000300000000003BDB5D /* XCRemoteSwiftPackageReference "MuscleMap" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/melihcolpan/MuscleMap.git";
 			requirement = {
@@ -399,12 +406,12 @@
 /* Begin XCSwiftPackageProductDependency section */
 		AA00000200000000003BDB5D /* AnthropicSwiftSDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = AA00000100000000003BDB5D /* AnthropicSwiftSDK */;
+			package = AA00000100000000003BDB5D /* XCRemoteSwiftPackageReference "AnthropicSwiftSDK" */;
 			productName = AnthropicSwiftSDK;
 		};
 		AA00000400000000003BDB5D /* MuscleMap */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = AA00000300000000003BDB5D /* MuscleMap */;
+			package = AA00000300000000003BDB5D /* XCRemoteSwiftPackageReference "MuscleMap" */;
 			productName = MuscleMap;
 		};
 /* End XCSwiftPackageProductDependency section */
