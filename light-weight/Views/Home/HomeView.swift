@@ -162,7 +162,8 @@ struct HomeView: View {
                 profile: profileSnapshot,
                 recentLogs: logSnapshots,
                 exercises: exerciseSnapshots,
-                healthContext: healthContext
+                healthContext: healthContext,
+                onCost: { [appState] cost in appState.recordCost(cost) }
             )
             todayWorkout = workout
             WorkoutCacheService.save(workout)
@@ -194,7 +195,8 @@ struct HomeView: View {
                 currentWorkout: todayWorkout,
                 profile: profileSnapshot,
                 exercises: exercises.map { ExerciseSnapshot(from: $0) },
-                history: history
+                history: history,
+                onCost: { [appState] cost in appState.recordCost(cost) }
             )
 
             return AsyncThrowingStream { continuation in
@@ -467,7 +469,11 @@ struct HomeView: View {
     private func startButton(_ workout: Workout) -> some View {
         Button {
             if appState.activeViewModel == nil {
-                appState.activeViewModel = ActiveWorkoutViewModel(workout: workout)
+                appState.activeViewModel = ActiveWorkoutViewModel(
+                    workout: workout,
+                    showRestTimer: appState.showRestTimer,
+                    onCost: { [appState] cost in appState.recordCost(cost) }
+                )
             }
             navigationPath.append(Destination.activeWorkout)
         } label: {

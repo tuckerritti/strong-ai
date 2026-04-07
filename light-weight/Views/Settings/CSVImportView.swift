@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 struct CSVImportView: View {
     let onReturnHome: () -> Void
 
+    @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query private var exercises: [Exercise]
@@ -267,7 +268,8 @@ struct CSVImportView: View {
                         modelContext: modelContext,
                         onBatchComplete: { completed in
                             batchesCompleted = completed
-                        }
+                        },
+                        onCost: { [appState] cost in appState.recordCost(cost) }
                     )
                 } catch {
                     classifiedCount = 0

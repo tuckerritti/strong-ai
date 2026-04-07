@@ -37,6 +37,7 @@ enum StreamChunk: Sendable {
 
 struct ClaudeAPIService: Sendable {
     var apiKey: String
+    var onCost: @Sendable (TokenCost) -> Void = { _ in }
     private static let modelName = "claude-sonnet-4-6"
 
     private var client: Anthropic { Anthropic(apiKey: apiKey) }
@@ -67,7 +68,7 @@ struct ClaudeAPIService: Sendable {
                 inputTokens: response.usage.inputTokens ?? 0,
                 outputTokens: response.usage.outputTokens ?? 0
             )
-            AppState.shared?.recordCost(cost)
+            onCost(cost)
 
             let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
             logger.info(
@@ -126,7 +127,7 @@ struct ClaudeAPIService: Sendable {
                                 finalCost.outputTokens = max(finalCost.outputTokens, messageDelta.usage.outputTokens ?? 0)
                             }
                         }
-                        AppState.shared?.recordCost(finalCost)
+                        onCost(finalCost)
                         continuation.yield(.usage(finalCost))
                         let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
                         logger.info(
