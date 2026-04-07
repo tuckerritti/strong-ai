@@ -6,11 +6,11 @@ enum DebugLogStore {
     private static let fileName = "workout-debug.log"
 
     static func record(_ message: String, category: String) {
+        #if DEBUG
         let line = "\(Date.now.ISO8601Format()) [\(category)] \(message)"
-
         logger.notice("\(line, privacy: .public)")
-        NSLog("%@", line)
         append(line)
+        #endif
     }
 
     static var logURL: URL {
