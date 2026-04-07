@@ -152,6 +152,8 @@ struct HomeView: View {
             } else {
                 logger.info("health_context success metrics=0")
             }
+        } else {
+            healthContext = nil
         }
 
         do {
