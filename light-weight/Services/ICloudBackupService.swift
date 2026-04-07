@@ -38,6 +38,7 @@ struct UserProfileBackup: Codable {
     var experienceLevel: String
     var trainingDays: String
     var onboardingCompleted: Bool
+    var healthKitEnabled: Bool?
 }
 
 // MARK: - Service
@@ -115,7 +116,8 @@ enum ICloudBackupService {
                         gender: $0.gender,
                         experienceLevel: $0.experienceLevel,
                         trainingDays: $0.trainingDays,
-                        onboardingCompleted: $0.onboardingCompleted
+                        onboardingCompleted: $0.onboardingCompleted,
+                        healthKitEnabled: $0.healthKitEnabled
                     )
                 }
             )
@@ -228,6 +230,7 @@ enum ICloudBackupService {
                 target.experienceLevel = p.experienceLevel
                 target.trainingDays = p.trainingDays
                 target.onboardingCompleted = p.onboardingCompleted
+                target.healthKitEnabled = p.healthKitEnabled ?? false
                 if existing == nil {
                     modelContext.insert(target)
                 }

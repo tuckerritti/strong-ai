@@ -90,6 +90,12 @@ struct SettingsView: View {
                         TextField("e.g. Bad left shoulder, avoid overhead", text: binding(\.injuries), axis: .vertical)
                             .lineLimit(2...4)
                     }
+                    if HealthKitService.shared.isAvailable {
+                        settingsSection("HEALTH DATA") {
+                            Toggle("HealthKit", isOn: healthKitBinding)
+                                .tint(Color(hex: 0x34C759))
+                        }
+                    }
                     settingsSection("REST TIMER") {
                         Toggle("Show rest timer between sets", isOn: $state.showRestTimer)
                             .tint(Color(hex: 0x34C759))
@@ -184,6 +190,18 @@ struct SettingsView: View {
         Binding(
             get: { profile?[keyPath: keyPath] ?? "" },
             set: { profile?[keyPath: keyPath] = $0 }
+        )
+    }
+
+    private var healthKitBinding: Binding<Bool> {
+        Binding(
+            get: { profile?.healthKitEnabled ?? false },
+            set: { newValue in
+                profile?.healthKitEnabled = newValue
+                if newValue {
+                    Task { try? await HealthKitService.shared.requestAuthorization() }
+                }
+            }
         )
     }
 

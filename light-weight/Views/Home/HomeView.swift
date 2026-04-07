@@ -140,7 +140,7 @@ struct HomeView: View {
             "daily_workout start recentLogs=\(recentLogs.count, privacy: .public) exercises=\(exercises.count, privacy: .public) healthkitAvailable=\(HealthKitService.shared.isAvailable, privacy: .public)"
         )
 
-        if HealthKitService.shared.isAvailable {
+        if profile?.healthKitEnabled == true && HealthKitService.shared.isAvailable {
             do { try await HealthKitService.shared.requestAuthorization() }
             catch { logger.error("health_context authorization_failure error=\(String(describing: error), privacy: .public)") }
             healthContext = await HealthKitService.shared.fetchRecentHealthData()
@@ -152,6 +152,8 @@ struct HomeView: View {
             } else {
                 logger.info("health_context success metrics=0")
             }
+        } else {
+            healthContext = nil
         }
 
         do {
