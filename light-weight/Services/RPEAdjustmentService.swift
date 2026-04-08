@@ -11,9 +11,10 @@ struct RPEAdjustmentService {
     static func adjustWorkout(
         apiKey: String,
         workout: Workout,
-        progress: [LogEntry]
+        progress: [LogEntry],
+        onCost: @Sendable @escaping (TokenCost) -> Void = { _ in }
     ) async -> Workout? {
-        let api = ClaudeAPIService(apiKey: apiKey)
+        let api = ClaudeAPIService(apiKey: apiKey, onCost: onCost)
         let completedSetCount = progress.flatMap(\.sets).filter { $0.completedAt != nil }.count
         logger.info(
             "rpe_adjustment start exercises=\(workout.exercises.count, privacy: .public) completedSets=\(completedSetCount, privacy: .public)"
