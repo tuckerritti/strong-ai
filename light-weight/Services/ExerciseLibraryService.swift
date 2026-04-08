@@ -11,7 +11,8 @@ enum ExerciseLibraryService {
     static func resolveAndPersistNewExercises(
         entries: [LogEntry],
         apiKey: String,
-        modelContext: ModelContext
+        modelContext: ModelContext,
+        onCost: @Sendable @escaping (TokenCost) -> Void = { _ in }
     ) async {
         let existingExercises = sortedExercises(modelContext: modelContext)
         let existingReferences = existingExercises.map(ExerciseReference.init)
@@ -43,7 +44,8 @@ enum ExerciseLibraryService {
             do {
                 let raw = try await WorkoutAIService.generateTargetMuscles(
                     apiKey: apiKey,
-                    exercises: needsTargetMuscles
+                    exercises: needsTargetMuscles,
+                    onCost: onCost
                 )
                 resolvedMuscles = Dictionary(raw.map { (ExerciseNameResolver.normalize($0.key), $0.value) },
                                              uniquingKeysWith: { current, _ in current })

@@ -34,6 +34,7 @@ struct ExpandedMuscleMapView: View {
     @Binding var isPresented: Bool
 
     var body: some View {
+        let intensities = muscleIntensities(from: logs)
         ZStack {
             Color.scrim
                 .ignoresSafeArea()
@@ -56,7 +57,7 @@ struct ExpandedMuscleMapView: View {
                 HStack(spacing: 20) {
                     VStack(spacing: 8) {
                         BodyView(gender: bodyGender, side: .front, style: .minimal)
-                            .heatmap(muscleIntensities(from: logs), colorScale: volumeColorScale)
+                            .heatmap(intensities, colorScale: volumeColorScale)
                             .frame(height: 240)
                             .allowsHitTesting(false)
                         Text("FRONT")
@@ -67,7 +68,7 @@ struct ExpandedMuscleMapView: View {
 
                     VStack(spacing: 8) {
                         BodyView(gender: bodyGender, side: .back, style: .minimal)
-                            .heatmap(muscleIntensities(from: logs), colorScale: volumeColorScale)
+                            .heatmap(intensities, colorScale: volumeColorScale)
                             .frame(height: 240)
                             .allowsHitTesting(false)
                         Text("BACK")

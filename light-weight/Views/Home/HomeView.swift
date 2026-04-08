@@ -10,29 +10,31 @@ struct HomeView: View {
         filter: #Predicate<WorkoutLog> { $0.finishedAt != nil },
         sort: \WorkoutLog.startedAt,
         order: .reverse
-    ) private var recentLogs: [WorkoutLog]
+    ) var recentLogs: [WorkoutLog]
 
-    @Query private var profiles: [UserProfile]
-    @Query(sort: \Exercise.name) private var exercises: [Exercise]
-    @Environment(\.modelContext) private var modelContext
-    @Environment(AppState.self) private var appState
+    @Query var profiles: [UserProfile]
+    @Query(sort: \Exercise.name) var exercises: [Exercise]
+    @Environment(\.modelContext) var modelContext
+    @Environment(AppState.self) var appState
 
-    @State private var todayWorkout: Workout?
-    @State private var isLoading = false
-    @State private var errorMessage: String?
-    @State private var healthContext: HealthContext?
-    @State private var exercisesExpanded = false
-    @State private var muscleMapExpanded = false
-    @State private var apiKey = ""
-    @State private var navigationPath = NavigationPath()
+    @State var todayWorkout: Workout?
+    @State var isLoading = false
+    @State var errorMessage: String?
+    @State var healthContext: HealthContext?
+    @State var exercisesExpanded = false
+    @State var muscleMapExpanded = false
+    @State var apiKey = ""
+    @State var navigationPath = NavigationPath()
 
-    private enum Destination: Hashable {
+    enum Destination: Hashable {
         case library, history, settings, activeWorkout
     }
 
-    private var profile: UserProfile? { profiles.first }
+    let maxVisibleExercises = 3
 
-    private var muscleMapGender: BodyGender {
+    var profile: UserProfile? { profiles.first }
+
+    var muscleMapGender: BodyGender {
         profile?.gender == "Female" ? .female : .male
     }
 
@@ -109,7 +111,7 @@ struct HomeView: View {
 
     // MARK: - AI Generation
 
-    private func generateWorkoutIfNeeded() async {
+    func generateWorkoutIfNeeded() async {
         guard todayWorkout == nil else {
             logger.info("daily_workout skip reason=in_memory")
             return
@@ -162,7 +164,8 @@ struct HomeView: View {
                 profile: profileSnapshot,
                 recentLogs: logSnapshots,
                 exercises: exerciseSnapshots,
-                healthContext: healthContext
+                healthContext: healthContext,
+                onCost: { [appState] cost in appState.recordCost(cost) }
             )
             todayWorkout = workout
             WorkoutCacheService.save(workout)
@@ -194,7 +197,8 @@ struct HomeView: View {
                 currentWorkout: todayWorkout,
                 profile: profileSnapshot,
                 exercises: exercises.map { ExerciseSnapshot(from: $0) },
-                history: history
+                history: history,
+                onCost: { [appState] cost in appState.recordCost(cost) }
             )
 
             return AsyncThrowingStream { continuation in
@@ -246,276 +250,4 @@ struct HomeView: View {
     private var exerciseSnapshots: [ExerciseSnapshot] {
         exercises.map { ExerciseSnapshot(from: $0) }
     }
-
-    // MARK: - Header
-
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()).uppercased())
-                    .font(.system(size: 13, weight: .medium))
-                    .tracking(0.8)
-                    .foregroundStyle(Color.textSecondary)
-                Spacer()
-                if appState.showTokenCost, appState.dailyCost.estimatedCost > 0 {
-                    Text("~$\(appState.dailyCost.estimatedCost, specifier: "%.4f")")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.textSecondary)
-                }
-            }
-            HStack(alignment: .center) {
-                Text(greeting)
-                    .font(.custom("SpaceGrotesk-Bold", size: 28))
-                    .tracking(-1.0)
-                    .foregroundStyle(Color.textPrimary)
-                Spacer()
-                HStack(spacing: 0) {
-                    NavigationLink(value: Destination.library) {
-                        Image(systemName: "book.fill")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Color.textPrimary)
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .accessibilityLabel("Exercise Library")
-                    NavigationLink(value: Destination.history) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Color.textPrimary)
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .accessibilityLabel("Workout History")
-                    NavigationLink(value: Destination.settings) {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Color.textPrimary)
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .accessibilityLabel("Settings")
-                }
-                .padding(.leading, 12)
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 8)
-    }
-
-    private var greeting: String {
-        let hour = Calendar.current.component(.hour, from: .now)
-        if hour < 12 { return "Good morning" }
-        if hour < 17 { return "Good afternoon" }
-        return "Good evening"
-    }
-
-    // MARK: - Stat Cards
-
-    private var statCards: some View {
-        HStack(spacing: 10) {
-            StatCard(title: "THIS WEEK", value: "\(workoutsThisWeek)")
-            StatCard(title: "STREAK", value: "\(recentLogs.streak)", highlight: recentLogs.streak > 0)
-            MuscleBodyMapCard(
-                logs: recentLogs,
-                bodyGender: muscleMapGender,
-                isExpanded: $muscleMapExpanded
-            )
-        }
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-    }
-
-    private var workoutsThisWeek: Int {
-        let startOfWeek = Calendar.current.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
-        return recentLogs.filter { $0.startedAt >= startOfWeek }.count
-    }
-
-    // MARK: - Loading / Error States
-
-    private var loadingSection: some View {
-        VStack(spacing: 12) {
-            ProgressView()
-            Text("Generating your workout...")
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(40)
-    }
-
-    private func errorSection(_ message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 24))
-                .foregroundStyle(.secondary)
-
-            if apiKey.isEmpty {
-                Text("Add your Claude API key in Settings to get AI-generated workouts.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            } else {
-                Text(message)
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-
-                Button("Retry") {
-                    Task { await generateWorkoutIfNeeded() }
-                }
-                .font(.system(size: 14, weight: .semibold))
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(40)
-    }
-
-    // MARK: - Workout Section
-
-    private func workoutSection(_ workout: Workout) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Today's Workout")
-                .font(.custom("SpaceGrotesk-Bold", size: 20))
-                .tracking(-0.4)
-                .foregroundStyle(Color.textPrimary)
-                .padding(.horizontal, 20)
-                .padding(.top, 28)
-
-            HStack(spacing: 8) {
-                Text(workout.name)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.textSecondary)
-                Text("\(workout.totalSets) sets · ~\(workout.estimatedMinutes) min")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.textTertiary)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 4)
-
-            exerciseList(workout.exercises)
-
-            if let insight = workout.insight {
-                insightCallout(insight)
-            }
-
-            startButton(workout)
-        }
-    }
-
-    private let maxVisibleExercises = 3
-
-    private func exerciseList(_ exercises: [WorkoutExercise]) -> some View {
-        let visible = exercisesExpanded ? exercises : Array(exercises.prefix(maxVisibleExercises))
-        let remaining = exercises.count - maxVisibleExercises
-
-        return VStack(spacing: 0) {
-            ForEach(Array(visible.enumerated()), id: \.offset) { _, exercise in
-                HStack {
-                    Text(exercise.name)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.textPrimary)
-                    Spacer()
-                    Text(exerciseSummary(exercise))
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.textSecondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-            }
-
-            if remaining > 0 {
-                Button {
-                    withAnimation(.snappy(duration: 0.3)) {
-                        exercisesExpanded.toggle()
-                    }
-                } label: {
-                    Text(exercisesExpanded ? "Show less" : "+\(remaining) more")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.textTertiary)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
-                }
-            }
-        }
-        .background(Color.appSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal, 20)
-        .padding(.top, 14)
-    }
-
-    private func exerciseSummary(_ exercise: WorkoutExercise) -> String {
-        switch exercise.exerciseType {
-        case .weightReps:
-            return "\(exercise.sets.count) sets \u{00B7} \(exercise.sets.reduce(0) { $0 + $1.reps }) reps"
-        case .timed:
-            let totalSec = exercise.sets.compactMap(\.durationSeconds).reduce(0, +)
-            return "\(exercise.sets.count) sets \u{00B7} \(totalSec)s"
-        case .timedDistance:
-            let totalSec = exercise.sets.compactMap(\.durationSeconds).reduce(0, +)
-            let totalDist = exercise.sets.compactMap(\.distanceMeters).reduce(0, +)
-            return "\(exercise.sets.count) sets \u{00B7} \(totalSec)s \u{00B7} \(totalDist.formattedDistance)"
-        }
-    }
-
-    private func insightCallout(_ insight: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "wand.and.stars")
-                .font(.system(size: 13))
-                .foregroundStyle(Color.insightIcon)
-                .padding(.top, 1)
-            Text(insight)
-                .font(.system(size: 13))
-                .lineSpacing(4)
-                .foregroundStyle(Color.insightText)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.insightBg)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .padding(.horizontal, 20)
-        .padding(.top, 16)
-    }
-
-    private func startButton(_ workout: Workout) -> some View {
-        Button {
-            if appState.activeViewModel == nil {
-                appState.activeViewModel = ActiveWorkoutViewModel(workout: workout)
-            }
-            navigationPath.append(Destination.activeWorkout)
-        } label: {
-            Text(appState.activeViewModel != nil ? "Resume Workout" : "Start Workout")
-                .font(.custom("SpaceGrotesk-Bold", size: 17))
-                .tracking(-0.2)
-                .foregroundStyle(Color.buttonPrimaryText)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(Color.buttonPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 16)
-    }
-
-    private var emptyWorkoutSection: some View {
-        VStack(spacing: 12) {
-            if apiKey.isEmpty {
-                Text("Add your API key in Settings to get started.")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("No workout planned")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Text("Ask the AI to generate one.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(40)
-    }
-
 }

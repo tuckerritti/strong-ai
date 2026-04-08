@@ -9,6 +9,7 @@ struct WorkoutDebriefView: View {
     let profile: UserProfileSnapshot
     let apiKey: String
 
+    @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var debrief: String?
     @State private var isLoading = true
@@ -86,7 +87,8 @@ struct WorkoutDebriefView: View {
                 apiKey: apiKey,
                 log: logSnapshot,
                 recentLogs: recentLogs,
-                profile: profile
+                profile: profile,
+                onCost: { [appState] cost in appState.recordCost(cost) }
             )
             logger.info("workout_debrief success totalSets=\(log.totalSets, privacy: .public) volume=\(Int(log.totalVolume), privacy: .public)")
         } catch {

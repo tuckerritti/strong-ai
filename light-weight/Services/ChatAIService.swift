@@ -61,9 +61,10 @@ struct ChatAIService {
         profile: UserProfileSnapshot,
         exercises: [ExerciseSnapshot],
         history: [ChatMessage] = [],
-        progress: [LogEntry]? = nil
+        progress: [LogEntry]? = nil,
+        onCost: @Sendable @escaping (TokenCost) -> Void = { _ in }
     ) async throws -> AsyncThrowingStream<ChatStreamEvent, Error> {
-        let api = ClaudeAPIService(apiKey: apiKey)
+        let api = ClaudeAPIService(apiKey: apiKey, onCost: onCost)
 
         let mode = currentWorkout != nil ? "modify" : "create"
         let isActiveWorkout = progress != nil

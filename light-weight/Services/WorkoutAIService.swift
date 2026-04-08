@@ -11,9 +11,10 @@ struct WorkoutAIService {
         profile: UserProfileSnapshot,
         recentLogs: [WorkoutLogSnapshot],
         exercises: [ExerciseSnapshot],
-        healthContext: HealthContext? = nil
+        healthContext: HealthContext? = nil,
+        onCost: @Sendable @escaping (TokenCost) -> Void = { _ in }
     ) async throws -> Workout {
-        let api = ClaudeAPIService(apiKey: apiKey)
+        let api = ClaudeAPIService(apiKey: apiKey, onCost: onCost)
 
         let systemPrompt = """
         You are an expert strength & conditioning coach. Generate a single workout as JSON.
@@ -72,9 +73,10 @@ struct WorkoutAIService {
         apiKey: String,
         log: WorkoutLogSnapshot,
         recentLogs: [WorkoutLogSnapshot],
-        profile: UserProfileSnapshot
+        profile: UserProfileSnapshot,
+        onCost: @Sendable @escaping (TokenCost) -> Void = { _ in }
     ) async throws -> String {
-        let api = ClaudeAPIService(apiKey: apiKey)
+        let api = ClaudeAPIService(apiKey: apiKey, onCost: onCost)
 
         let systemPrompt = """
         You are an expert strength coach reviewing a just-completed workout. Give a brief, \
@@ -199,9 +201,10 @@ struct WorkoutAIService {
 
     static func generateTargetMuscles(
         apiKey: String,
-        exercises: [(name: String, muscleGroup: String)]
+        exercises: [(name: String, muscleGroup: String)],
+        onCost: @Sendable @escaping (TokenCost) -> Void = { _ in }
     ) async throws -> [String: [TargetMuscle]] {
-        let api = ClaudeAPIService(apiKey: apiKey)
+        let api = ClaudeAPIService(apiKey: apiKey, onCost: onCost)
 
         let exerciseList = exercises.map { "\($0.name) (\($0.muscleGroup))" }.joined(separator: "\n")
 

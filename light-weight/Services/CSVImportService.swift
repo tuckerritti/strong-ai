@@ -282,7 +282,8 @@ enum CSVImportService {
         exercises: [Exercise],
         workoutLogs: [WorkoutLog],
         modelContext: ModelContext,
-        onBatchComplete: (@MainActor (Int) -> Void)? = nil
+        onBatchComplete: (@MainActor (Int) -> Void)? = nil,
+        onCost: @Sendable @escaping (TokenCost) -> Void = { _ in }
     ) async throws {
         let systemPrompt = """
         You are an exercise classification assistant. Given a list of exercise names, respond with ONLY valid JSON matching this schema:
@@ -297,7 +298,7 @@ enum CSVImportService {
         - Return the exercise name exactly as provided.
         """
 
-        let api = ClaudeAPIService(apiKey: apiKey)
+        let api = ClaudeAPIService(apiKey: apiKey, onCost: onCost)
 
         // Batch into groups of 15 to avoid exceeding the token limit
         let batches = names.chunked(into: 15)

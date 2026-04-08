@@ -13,26 +13,9 @@ struct ExerciseLibraryView: View {
     @State private var searchText = ""
     @State private var showingSearch = false
     @State private var showingAddExercise = false
+    @State private var exerciseStatsMap: [String: ExerciseStats] = [:]
 
     // MARK: - Computed Properties
-
-    private var exerciseStatsMap: [String: ExerciseStats] {
-        var map: [String: ExerciseStats] = [:]
-        for log in workoutLogs {
-            for entry in log.entries {
-                let completedSets = entry.sets.filter { $0.completedAt != nil && !$0.isWarmup }
-                guard !completedSets.isEmpty else { continue }
-
-                let normalizedName = ExerciseNameResolver.normalize(entry.exerciseName)
-                var stats = map[normalizedName, default: ExerciseStats()]
-                stats.timesPerformed += 1
-                let maxWeight = completedSets.map(\.weight).max() ?? 0
-                if maxWeight > stats.bestWeight { stats.bestWeight = maxWeight }
-                map[normalizedName] = stats
-            }
-        }
-        return map
-    }
 
     private var filteredExercises: [Exercise] {
         if searchText.isEmpty { return exercises }
@@ -97,6 +80,28 @@ struct ExerciseLibraryView: View {
         .sheet(isPresented: $showingAddExercise) {
             AddExerciseSheet()
         }
+        .onAppear { exerciseStatsMap = buildExerciseStatsMap() }
+        .onChange(of: workoutLogs.count) { exerciseStatsMap = buildExerciseStatsMap() }
+    }
+
+    // MARK: - Helpers
+
+    private func buildExerciseStatsMap() -> [String: ExerciseStats] {
+        var map: [String: ExerciseStats] = [:]
+        for log in workoutLogs {
+            for entry in log.entries {
+                let completedSets = entry.sets.filter { $0.completedAt != nil && !$0.isWarmup }
+                guard !completedSets.isEmpty else { continue }
+
+                let normalizedName = ExerciseNameResolver.normalize(entry.exerciseName)
+                var stats = map[normalizedName, default: ExerciseStats()]
+                stats.timesPerformed += 1
+                let maxWeight = completedSets.map(\.weight).max() ?? 0
+                if maxWeight > stats.bestWeight { stats.bestWeight = maxWeight }
+                map[normalizedName] = stats
+            }
+        }
+        return map
     }
 
     // MARK: - Subviews

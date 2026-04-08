@@ -7,8 +7,6 @@ private let contentViewLogger = Logger(subsystem: "com.light-weight", category: 
 
 @Observable
 final class AppState {
-    static var shared: AppState!
-
     private var shouldPersistState = true
 
     var chatDetent: PresentationDetent = .height(90)
@@ -137,10 +135,6 @@ struct ContentView: View {
             } else {
                 HomeView()
                     .environment(appState)
-                    .onAppear {
-                        AppState.shared = appState
-                        contentViewLogger.info("app_state_shared assign")
-                    }
                     .onChange(of: scenePhase) { _, newPhase in
                         if newPhase == .background {
                             contentViewLogger.info("scene_phase background profiles=\(profiles.count, privacy: .public)")
